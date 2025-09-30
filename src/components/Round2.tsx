@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Video, CheckCircle, XCircle } from 'lucide-react';
 import { round2Videos } from '../gameData';
 import { BetAmount } from '../types';
@@ -15,17 +15,33 @@ export default function Round2({ currentChips, onComplete }: Round2Props) {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
+  const [roundTimeLeft, setRoundTimeLeft] = useState(60); // 1 minute for entire round
+
+  // Timer for the entire round
+  useEffect(() => {
+    if (phase === 'playing' && roundTimeLeft > 0) {
+      const timer = setInterval(() => {
+        setRoundTimeLeft((prev) => {
+          if (prev <= 1) {
+            // Time's up - end the round
+            setPhase('results');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [phase, roundTimeLeft]);
 
   const handleBet = (amount: BetAmount) => {
     const bet = amount === 'ALL_IN' ? currentChips : amount;
     setCurrentBet(bet);
     setPhase('playing');
+    setRoundTimeLeft(60); // Reset timer when starting the round
   };
 
   const handleAnswer = (answer: 'real' | 'ai') => {
-    const currentVideo = round2Videos[currentVideoIndex];
-    const isCorrect = (answer === 'ai' && currentVideo.isAI) || (answer === 'real' && !currentVideo.isAI);
-
     setAnswers([...answers, answer]);
     setShowResult(true);
 
@@ -111,6 +127,9 @@ export default function Round2({ currentChips, onComplete }: Round2Props) {
     const isCorrect = hasAnswered &&
       ((answers[currentVideoIndex] === 'ai' && currentVideo.isAI) ||
        (answers[currentVideoIndex] === 'real' && !currentVideo.isAI));
+    const minutes = Math.floor(roundTimeLeft / 60);
+    const seconds = roundTimeLeft % 60;
+    const isTimeRunningOut = roundTimeLeft <= 10;
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 py-24 px-4">
@@ -120,6 +139,10 @@ export default function Round2({ currentChips, onComplete }: Round2Props) {
               <span className="text-2xl font-bold">
                 Video {currentVideoIndex + 1} / {round2Videos.length}
               </span>
+            </div>
+            <div className={`text-2xl font-bold ${isTimeRunningOut ? 'text-red-400 animate-pulse' : 'text-cyan-400'}`}>
+              {minutes}:{seconds.toString().padStart(2, '0')}
+              {isTimeRunningOut && <div className="text-sm text-red-300">Time running out!</div>}
             </div>
           </div>
 

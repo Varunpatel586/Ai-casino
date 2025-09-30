@@ -1,0 +1,313 @@
+/* ===== BONUS ROUNDS STYLES ===== */
+.bonus-rounds-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #eab308 50%, #0f172a 100%);
+  padding: 1rem;
+}
+
+.bonus-menu {
+  max-width: 64rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.bonus-title {
+  font-size: 4rem;
+  font-weight: 900;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.bonus-subtitle {
+  font-size: 1.5rem;
+  color: #eab308;
+  margin-bottom: 3rem;
+}
+
+.bonus-games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.bonus-game-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.bonus-game-card:hover {
+  transform: translateY(-0.25rem);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.bonus-game-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.bonus-game-icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem;
+}
+
+.bonus-game-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.bonus-game-description {
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.bonus-game-cost {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.bonus-game-cost-text {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.bonus-game-cost-free {
+  color: #10b981;
+}
+
+.bonus-game-cost-paid {
+  color: #eab308;
+}
+
+.bonus-status {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.bonus-status-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.bonus-status-chips {
+  color: #eab308;
+  font-weight: 700;
+}
+
+.bonus-status-earnings {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.bonus-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.bonus-play-btn {
+  background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 1.125rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.bonus-play-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(124, 58, 237, 0.6);
+}
+
+.bonus-finish-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 1.125rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.bonus-finish-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+}
+
+.bonus-games-menu {
+  max-width: 64rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.bonus-games-title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: white;
+  margin-bottom: 1rem;
+}
+
+.bonus-games-subtitle {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 2rem;
+}
+
+.bonus-games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.bonus-game-option {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.bonus-game-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-0.125rem);
+}
+
+.bonus-game-option-icon {
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.bonus-game-option-title {
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+.bonus-game-option-description {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+}
+
+.bonus-game-option-cost {
+  font-weight: 700;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.bonus-back-btn {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.bonus-back-btn:hover {
+  background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+}
+
+.bonus-results {
+  max-width: 32rem;
+  margin: 0 auto;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 1rem;
+  padding: 2rem;
+}
+
+.bonus-results-title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: white;
+  margin-bottom: 1.5rem;
+}
+
+.bonus-results-amount {
+  font-size: 4rem;
+  font-weight: 900;
+  margin-bottom: 1rem;
+}
+
+.bonus-results-amount.positive {
+  color: #10b981;
+}
+
+.bonus-results-amount.negative {
+  color: #ef4444;
+}
+
+.bonus-results-amount.zero {
+  color: #6b7280;
+}
+
+.bonus-results-description {
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 2rem;
+}
+
+.bonus-finish-game-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 3rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.bonus-finish-game-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 40px rgba(16, 185, 129, 0.6);
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .bonus-games-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bonus-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .bonus-results-amount {
+    font-size: 3rem;
+  }
+}

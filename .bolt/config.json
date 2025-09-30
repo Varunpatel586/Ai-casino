@@ -1,3 +1,6 @@
 {
-  "template": "bolt-vite-react-ts"
+  "template": "bolt-vite-react-ts",
+  "HF_TOKEN": "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",
+  "VITE_SUPABASE_URL": "https://zspcmfvkezyohtfgovew.supabase.co",
+  "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcGNtZnZrZXp5b2h0ZmdvdmV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNTA3NzEsImV4cCI6MjA3NDgyNjc3MX0.r9uco2jgr6zNBJHlzG7QecYttHMvYY9_IMs6iIWrOqo"
 }

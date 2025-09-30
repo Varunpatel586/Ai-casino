@@ -5,14 +5,19 @@ interface BettingPanelProps {
   currentChips: number;
   onBet: (amount: BetAmount) => void;
   disabled?: boolean;
+  minBet?: number;
+  maxBet?: number;
 }
 
-export default function BettingPanel({ currentChips, onBet, disabled }: BettingPanelProps) {
+export default function BettingPanel({ currentChips, onBet, disabled, minBet = 10, maxBet = 100 }: BettingPanelProps) {
   const bets: { amount: BetAmount; label: string; color: string }[] = [
-    { amount: 10, label: '$10', color: 'from-green-500 to-green-600' },
-    { amount: 30, label: '$30', color: 'from-blue-500 to-blue-600' },
+    { amount: minBet, label: `$${minBet}`, color: 'from-green-500 to-green-600' },
+    { amount: Math.min(maxBet, minBet * 3), label: `$${Math.min(maxBet, minBet * 3)}`, color: 'from-blue-500 to-blue-600' },
     { amount: 'ALL_IN', label: 'ALL IN', color: 'from-red-500 to-red-600' },
-  ];
+  ].filter(bet => 
+    bet.amount === 'ALL_IN' || 
+    (typeof bet.amount === 'number' && bet.amount <= maxBet && bet.amount >= minBet)
+  ) as { amount: BetAmount; label: string; color: string }[];
 
   return (
     <div className="bg-white/5 backdrop-blur-md border border-white/20 rounded-2xl p-6">
