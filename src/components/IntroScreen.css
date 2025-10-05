@@ -55,7 +55,7 @@
 
 .intro-subtitle {
   margin-bottom: 3rem;
-  space-y: 1rem;
+  /* Removed unknown property 'space-y' : 1rem;*/
 }
 
 .intro-description {

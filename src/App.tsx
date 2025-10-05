@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { GameScreen, Player, LeaderboardEntry } from './types';
 import IntroScreen from './components/IntroScreen';
 import RulesScreen from './components/RulesScreen';
@@ -9,6 +10,8 @@ import Round2 from './components/Round2';
 import Round3 from './components/Round3';
 import BonusRounds from './components/BonusRounds';
 import Leaderboard from './components/Leaderboard';
+import HostChatInterface from './host/HostChatInterface';
+import { network_manager } from './services/network';
 
 function App() {
   const [screen, setScreen] = useState<GameScreen>('intro');
@@ -35,6 +38,8 @@ function App() {
 
   const handleUsernameSubmit = (username: string) => {
     setPlayer({ ...player, username });
+    // Ensure username is sent to server for chat
+    network_manager.set_username?.(username);
     setScreen('round1');
   };
 
@@ -47,8 +52,21 @@ function App() {
       ...player,
       chips: player.chips + earnings,
       round1Score: earnings,
-      currentRound: 2,
+      currentRound: 1.5, // Going to bonus round
     });
+    setScreen('bonus');
+  };
+
+  const handleBonus1Complete = (earnings: number) => {
+    const finalChips = player.chips + earnings;
+    const updatedPlayer = {
+      ...player,
+      chips: finalChips,
+      bonusEarnings: player.bonusEarnings + earnings,
+      currentRound: 2,
+    };
+
+    setPlayer(updatedPlayer);
     setScreen('round2');
   };
 
@@ -61,14 +79,27 @@ function App() {
       ...player,
       chips: player.chips + earnings,
       round2Score: earnings,
-      currentRound: 3,
+      currentRound: 2.5, // Going to bonus round
     });
+    setScreen('bonus');
+  };
+
+  const handleBonus2Complete = (earnings: number) => {
+    const finalChips = player.chips + earnings;
+    const updatedPlayer = {
+      ...player,
+      chips: finalChips,
+      bonusEarnings: player.bonusEarnings + earnings,
+      currentRound: 3,
+    };
+
+    setPlayer(updatedPlayer);
     setScreen('round3');
   };
 
   const handleRound3Complete = (score: number, bet: number) => {
     const correctCount = score;
-    const wrongCount = 5 - correctCount;
+    const wrongCount = 3 - correctCount; // Round 3 has 3 subrounds
     const earnings = correctCount * bet - wrongCount * bet;
 
     setPlayer({
@@ -85,7 +116,7 @@ function App() {
     const updatedPlayer = {
       ...player,
       chips: finalChips,
-      bonusEarnings: earnings,
+      bonusEarnings: player.bonusEarnings + earnings,
     };
 
     setPlayer(updatedPlayer);
@@ -117,33 +148,56 @@ function App() {
 
   const showChipDisplay = ['round1', 'round2', 'round3', 'bonus'].includes(screen);
 
-  return (
-    <>
-      {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
+  // Render the game screen based on the current screen state
+  const renderGameScreen = () => {
+    switch (screen) {
+      case 'intro':
+        return <IntroScreen onStart={handleStartGame} />;
+      case 'rules':
+        return <RulesScreen onContinue={handleContinueFromRules} />;
+      case 'username':
+        return <UsernameScreen onSubmit={handleUsernameSubmit} />;
+      case 'round1':
+        return <Round1 currentChips={player.chips} onComplete={handleRound1Complete} />;
+      case 'round2':
+        return <Round2 currentChips={player.chips} onComplete={handleRound2Complete} />;
+      case 'round3':
+        return <Round3 currentChips={player.chips} onComplete={handleRound3Complete} username={player.username} />;
+      case 'bonus':
+        // Check if this is bonus after round 1, round 2, or round 3
+        if (player.currentRound === 1.5) {
+          return <BonusRounds currentChips={player.chips} onComplete={handleBonus1Complete} />;
+        } else if (player.currentRound === 2.5) {
+          return <BonusRounds currentChips={player.chips} onComplete={handleBonus2Complete} />;
+        } else {
+          return <BonusRounds currentChips={player.chips} onComplete={handleBonusComplete} />;
+        }
+      case 'leaderboard':
+        return (
+          <Leaderboard
+            entries={leaderboardEntries}
+            currentPlayer={{ username: player.username, chips: player.chips }}
+            onPlayAgain={handlePlayAgain}
+          />
+        );
+      default:
+        return <IntroScreen onStart={handleStartGame} />;
+    }
+  };
 
-      {screen === 'intro' && <IntroScreen onStart={handleStartGame} />}
-      {screen === 'rules' && <RulesScreen onContinue={handleContinueFromRules} />}
-      {screen === 'username' && <UsernameScreen onSubmit={handleUsernameSubmit} />}
-      {screen === 'round1' && (
-        <Round1 currentChips={player.chips} onComplete={handleRound1Complete} />
-      )}
-      {screen === 'round2' && (
-        <Round2 currentChips={player.chips} onComplete={handleRound2Complete} />
-      )}
-      {screen === 'round3' && (
-        <Round3 currentChips={player.chips} onComplete={handleRound3Complete} />
-      )}
-      {screen === 'bonus' && (
-        <BonusRounds currentChips={player.chips} onComplete={handleBonusComplete} />
-      )}
-      {screen === 'leaderboard' && (
-        <Leaderboard
-          entries={leaderboardEntries}
-          currentPlayer={{ username: player.username, chips: player.chips }}
-          onPlayAgain={handlePlayAgain}
-        />
-      )}
-    </>
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-gray-900 text-white">
+      {/* Main game routes */}
+      <Routes>
+        <Route path="/" element={
+          <>
+            {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
+            {renderGameScreen()}
+          </>
+        } />
+        <Route path="/host" element={<HostChatInterface />} />
+      </Routes>
+    </div>
   );
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Video, CheckCircle, XCircle } from 'lucide-react';
 import { round2Videos } from '../gameData';
 import { BetAmount } from '../types';
@@ -10,29 +10,39 @@ interface Round2Props {
 }
 
 export default function Round2({ currentChips, onComplete }: Round2Props) {
+  // State declarations at the top
   const [phase, setPhase] = useState<'intro' | 'betting' | 'playing' | 'results'>('intro');
   const [currentBet, setCurrentBet] = useState<number>(0);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
-  const [roundTimeLeft, setRoundTimeLeft] = useState(60); // 1 minute for entire round
+  const [roundTimeLeft, setRoundTimeLeft] = useState(60);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Timer for the entire round
+  // Timer effect
   useEffect(() => {
     if (phase === 'playing' && roundTimeLeft > 0) {
       const timer = setInterval(() => {
-        setRoundTimeLeft((prev) => {
-          if (prev <= 1) {
-            // Time's up - end the round
-            setPhase('results');
-            return 0;
-          }
-          return prev - 1;
-        });
+        setRoundTimeLeft((prev) => (prev <= 1 ? 0 : prev - 1));
       }, 1000);
+      
+      if (roundTimeLeft === 0) {
+        setPhase('results');
+      }
+      
       return () => clearInterval(timer);
     }
   }, [phase, roundTimeLeft]);
+  
+  // Video cleanup effect
+  useEffect(() => {
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.pause();
+      }
+    };
+  }, []);
 
   const handleBet = (amount: BetAmount) => {
     const bet = amount === 'ALL_IN' ? currentChips : amount;
@@ -42,13 +52,23 @@ export default function Round2({ currentChips, onComplete }: Round2Props) {
   };
 
   const handleAnswer = (answer: 'real' | 'ai') => {
-    setAnswers([...answers, answer]);
+    const nextAnswers = [...answers, answer];
+    setAnswers(nextAnswers);
     setShowResult(true);
+    setIsPlaying(false);
+    
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+
+    const nextVideoIndex = currentVideoIndex + 1;
+    const hasMoreVideos = nextVideoIndex < round2Videos.length;
 
     setTimeout(() => {
       setShowResult(false);
-      if (currentVideoIndex < round2Videos.length - 1) {
-        setCurrentVideoIndex(currentVideoIndex + 1);
+      if (hasMoreVideos) {
+        setCurrentVideoIndex(nextVideoIndex);
+        // The video will auto-play from the video element's autoplay prop
       } else {
         setPhase('results');
       }
@@ -116,6 +136,12 @@ export default function Round2({ currentChips, onComplete }: Round2Props) {
         <div className="max-w-2xl w-full">
           <h2 className="text-4xl font-black text-white text-center mb-8">Place Your Bet</h2>
           <BettingPanel currentChips={currentChips} onBet={handleBet} />
+          <button
+            onClick={() => setPhase('results')}
+            className="mt-8 w-full py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold rounded-lg hover:scale-105 transition-all duration-200"
+          >
+            Skip Dev (Demo/Test)
+          </button>
         </div>
       </div>
     );
@@ -148,15 +174,26 @@ export default function Round2({ currentChips, onComplete }: Round2Props) {
 
           <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
             <div className="aspect-video bg-black/50 rounded-xl overflow-hidden mb-6 flex items-center justify-center">
-              <img
-                src={currentVideo.thumbnail}
-                alt={currentVideo.title}
-                className="w-full h-full object-cover"
+              <video
+                ref={videoRef}
+                src={`/Videos/${currentVideo.isAI ? 'AI' : 'REAL'} ${currentVideoIndex + 1}.mp4`}
+                className="w-full h-full object-contain"
+                playsInline
+                autoPlay
+                muted
+                loop={false}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => setIsPlaying(false)}
               />
             </div>
 
-            <h3 className="text-2xl font-bold text-white text-center mb-2">{currentVideo.title}</h3>
-            <p className="text-white/60 text-center">Watch carefully and decide...</p>
+            <h3 className="text-2xl font-bold text-white text-center mb-2">
+              {currentVideo.title}
+            </h3>
+            <p className="text-white/60 text-center">
+              {isPlaying ? 'Video is playing...' : 'Click the video to play'}
+            </p>
           </div>
 
           {showResult ? (
@@ -247,16 +284,18 @@ export default function Round2({ currentChips, onComplete }: Round2Props) {
                     <span className="text-white">{video.title}</span>
                     <div className="flex items-center gap-3">
                       <span className={`font-bold ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
-                        You: {userAnswer.toUpperCase()}
+                        You: {userAnswer ? userAnswer.toUpperCase() : 'SKIPPED'}
                       </span>
                       <span className="text-white/60">
                         Actually: {video.isAI ? 'AI' : 'REAL'}
                       </span>
-                      {isCorrect ? (
-                        <CheckCircle className="text-green-400" size={20} />
-                      ) : (
-                        <XCircle className="text-red-400" size={20} />
-                      )}
+                      {userAnswer ? (
+                        isCorrect ? (
+                          <CheckCircle className="text-green-400" size={20} />
+                        ) : (
+                          <XCircle className="text-red-400" size={20} />
+                        )
+                      ) : null}
                     </div>
                   </div>
                 );
