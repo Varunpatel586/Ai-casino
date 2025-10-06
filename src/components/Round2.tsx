@@ -188,9 +188,6 @@ export default function Round2({ currentChips, onComplete }: Round2Props) {
               />
             </div>
 
-            <h3 className="text-2xl font-bold text-white text-center mb-2">
-              {currentVideo.title}
-            </h3>
             <p className="text-white/60 text-center">
               {isPlaying ? 'Video is playing...' : 'Click the video to play'}
             </p>
