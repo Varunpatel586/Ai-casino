@@ -23,7 +23,7 @@ An interactive casino-style game featuring AI image generation challenges. Test 
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
+   git clone <https://github.com/Varunpatel586/Ai-casino/>
    cd ai-casino
    ```
 
