@@ -44,14 +44,21 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
       console.log('Connection status:', connected, message);
       setIsConnected(connected);
       setConnectionError(connected ? '' : message);
-      
+
       if (connected && actualMode === 'human') {
         setPhase('playing');
+      } else if (!connected && actualMode === 'human') {
+        // Connection failed, fall back to AI mode
+        console.log('Connection failed, falling back to AI mode');
+        setActualMode('ai');
+        reset_conversation();
+        setPhase('playing');
+        setConnectionError('');
       }
     };
 
     network_manager.connection_callback = handleConnectionChange;
-    
+
     return () => {
       network_manager.connection_callback = null;
     };
@@ -101,43 +108,39 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
       setPhase('playing');
     }
   }, []);
-
   //If Human is selected
   const selectHumanChat = useCallback(async () => {
     setActualMode('human');
     setConnectionError('');
     setIsLoading(true);
-  
+
     try {
       // Automatically connect to the WebSocket server on port 8080
       const hostAddress = 'ws://localhost:8080';
       console.log('🤖 Auto-connecting to WebSocket server:', hostAddress);
-      
+
       network_manager.set_username?.(username || '');
       await network_manager.connect_to_host(hostAddress);
-      
+
       // Send player registration message
       network_manager.send_chat_message(JSON.stringify({
         type: 'register-player',
         username: username
       }));
-      
+
       console.log('✅ Successfully connected to WebSocket server');
-      
+
     } catch (error: unknown) {
       console.error('Connection error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       setConnectionError(`Failed to connect to server: ${errorMessage}. Make sure the WebSocket server is running with "npm run host".`);
-      
-      // Fall back to AI mode
-      console.log('🔄 Falling back to AI mode due to connection failure');
-      setActualMode('ai');
-      reset_conversation();
-      setPhase('playing');
+
+      // Fall back to AI mode (this will be handled by the connection callback)
+      console.log('🔄 Human connection failed, connection callback will handle fallback to AI mode');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [username]);
 
   // Handle player's guess (AI or Human)
   const handleAnswer = useCallback(async (playerGuess: 'ai' | 'human') => {

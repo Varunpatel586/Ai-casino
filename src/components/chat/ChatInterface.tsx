@@ -46,39 +46,64 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const aiGreetingSent = useRef(false);
+
+  // Generate unique message ID
+  const generateMessageId = () => {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  };
 
   // Initialize chat based on mode
   useEffect(() => {
+    // Reset greeting flag when mode changes
+    aiGreetingSent.current = false;
+
+    // Clean up previous mode setup
+    network_manager.message_callback = null;
+    network_manager.connection_callback = null;
+
     if (mode === 'ai') {
-      // Start with an AI greeting
-      setTimeout(() => {
-        addMessage({
-          text: "Hi there! I'm your chat partner. Let's have a conversation!",
-          sender: 'ai',
-          timestamp: new Date()
-        });
-      }, 1000);
+      // Start with an AI greeting (only once per mode switch)
+      if (!aiGreetingSent.current) {
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            id: generateMessageId(),
+            text: "Hi there! I'm your chat partner. Let's have a conversation!",
+            sender: 'ai',
+            timestamp: new Date()
+          }]);
+          aiGreetingSent.current = true;
+        }, 1000);
+      }
     } else {
       console.log('Setting up human chat mode');
-      
+
       // Set up connection callback
       network_manager.connection_callback = ((connected: boolean, message: string) => {
         console.log(`Connection status: ${connected ? 'Connected' : 'Disconnected'} - ${message}`);
-        
+
         if (connected) {
           console.log('Successfully connected to host');
-          addMessage({
-            text: 'Connected to host!',
-            sender: 'system',
+          setMessages(prev => [...prev, {
+            id: generateMessageId(),
+            text: 'Connected to chat partner! Say hello!',
+            sender: 'human',
             timestamp: new Date()
-          });
+          }]);
+        } else {
+          setMessages(prev => [...prev, {
+            id: generateMessageId(),
+            text: `Connection lost: ${message}`,
+            sender: 'human',
+            timestamp: new Date()
+          }]);
         }
       });
-      
+
       // Set up message callback
       network_manager.message_callback = (msg) => {
-        console.log('Received message from host:', msg); // Debug log
-        
+        console.log('Received message from host:', msg);
+
         // Handle different message formats
         let parsedMsg: NetworkMessage | {
           type: string;
@@ -87,14 +112,11 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
           senderName: string;
           timestamp: number | Date;
         };
-        
+
         if (typeof msg === 'string') {
           try {
             parsedMsg = JSON.parse(msg) as NetworkMessage;
-            console.log('Parsed JSON message:', parsedMsg); // Debug parsed message
-            console.log('Message content:', parsedMsg.content); // Debug the content specifically
           } catch (e) {
-            console.log('Failed to parse message as JSON:', msg, e); // Debug parsing failure
             // If it's plain text, treat it as a chat message
             parsedMsg = {
               type: 'chat',
@@ -107,69 +129,49 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
         } else {
           parsedMsg = msg;
         }
-        
+
         if (parsedMsg.type === 'chat') {
           let displayText = '';
-          
-          // Handle case where content is a JSON string that needs to be parsed again
+
           if (typeof parsedMsg.content === 'string' && parsedMsg.content.trim().startsWith('{')) {
             try {
               const nestedMessage = JSON.parse(parsedMsg.content);
               displayText = nestedMessage.content || parsedMsg.content;
             } catch (e) {
-              // If nested parsing fails, use the content as is
               displayText = parsedMsg.content;
             }
           } else {
             displayText = typeof parsedMsg.content === 'string' ? parsedMsg.content : JSON.stringify(parsedMsg.content || msg);
           }
-          
-          const newMessage: Message = {
-            id: Date.now().toString() + Math.random(),
+
+          setMessages(prev => [...prev, {
+            id: generateMessageId(),
             text: displayText,
             sender: parsedMsg.senderId === 'host' ? 'host' : 'human',
             timestamp: parsedMsg.timestamp ? new Date(parsedMsg.timestamp) : new Date()
-          };
-          setMessages(prev => [...prev, newMessage]);
+          }]);
         }
       };
-      
+
       // Connect to the host
-      const hostUrl = window.location.hostname; // Connect to the same host
+      const hostUrl = window.location.hostname;
       console.log(`Connecting to host at: ${hostUrl}`);
-      
+
       network_manager.connect_to_host(hostUrl).catch((error: Error) => {
         console.error('Failed to connect to host:', error);
-        addMessage({
+        setMessages(prev => [...prev, {
+          id: generateMessageId(),
           text: `Failed to connect to host: ${error.message}`,
           sender: 'system',
           timestamp: new Date()
-        });
+        }]);
       });
-
-      network_manager.connection_callback = (connected, message) => {
-        if (connected) {
-          addMessage({
-            text: 'Connected to chat partner! Say hello!',
-            sender: 'human',
-            timestamp: new Date()
-          });
-        } else {
-          addMessage({
-            text: `Connection lost: ${message}`,
-            sender: 'human',
-            timestamp: new Date()
-          });
-        }
-      };
     }
 
     // Clean up
     return () => {
-      if (mode === 'human') {
-        network_manager.message_callback = null;
-        network_manager.connection_callback = null;
-      }
+      network_manager.message_callback = null;
+      network_manager.connection_callback = null;
     };
   }, [mode]);
 
@@ -192,10 +194,6 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const addMessage = (message: Omit<Message, 'id'>) => {
-    setMessages(prev => [...prev, { ...message, id: Date.now().toString() }]);
-  };
-
   const handleSend = async () => {
     if (!input.trim()) return;
     if (disableInput) return;
@@ -203,12 +201,12 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
 
     // Add user message
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: generateMessageId(),
       text: input,
       sender: 'you',
       timestamp: new Date()
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     if (onSendMessage) onSendMessage();
@@ -218,19 +216,26 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
       setIsTyping(true);
       try {
         const aiResponse = await get_ai_response(input);
-        
+
         // Simulate typing delay
         setTimeout(() => {
-          addMessage({
+          setMessages(prev => [...prev, {
+            id: generateMessageId(),
             text: aiResponse,
             sender: 'ai',
             timestamp: new Date()
-          });
+          }]);
           setIsTyping(false);
         }, 1000 + Math.random() * 2000); // 1-3 second delay
       } catch (error) {
         console.error('Error getting AI response:', error);
         setIsTyping(false);
+        setMessages(prev => [...prev, {
+          id: generateMessageId(),
+          text: 'Sorry, I couldn\'t understand that. Please try again.',
+          sender: 'ai',
+          timestamp: new Date()
+        }]);
       }
     } else {
       // Send to human chat
@@ -251,7 +256,7 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
       <div className="bg-slate-800 p-4 border-b border-slate-700">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold text-white">
-            {mode === 'ai' ? 'AI Chat' : 'Human Chat'}
+            Chat Partner
           </h2>
           <div className="text-sm text-slate-400">
             Time left: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
@@ -277,23 +282,14 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
               className={`max-w-[80%] rounded-lg p-3 ${
                 message.sender === 'you'
                   ? 'bg-blue-600 text-white rounded-br-none'
-                  : message.sender === 'ai'
-                  ? 'bg-slate-700 text-white rounded-bl-none'
-                  : message.sender === 'host'
-                  ? 'bg-green-600 text-white rounded-bl-none'
                   : 'bg-slate-700 text-white rounded-bl-none'
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
-                {message.sender === 'ai' ? (
-                  <Bot size={16} />
-                ) : message.sender === 'host' ? (
-                  <User size={16} />
-                ) : null}
                 <span className="font-semibold">
                   {message.sender === 'you' 
                     ? 'You' 
-                    : 'Chat partner'}
+                    : 'Chat Partner'}
                 </span>
                 <span className="text-xs opacity-70 ml-2">
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -321,7 +317,7 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Message ${mode === 'ai' ? 'the AI' : 'your chat partner'}...`}
+            placeholder="Message your chat partner..."
             className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={timeLeft <= 0 || disableInput}
           />
@@ -340,13 +336,13 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
               onClick={() => onComplete('ai')}
               className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
             >
-              It's an AI
+              AI
             </button>
             <button
               onClick={() => onComplete('human')}
               className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
             >
-              It's a Human
+              Human
             </button>
           </div>
         )}

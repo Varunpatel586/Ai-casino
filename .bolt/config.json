@@ -2,7 +2,9 @@
   "template": "bolt-vite-react-ts",
   "HF_TOKENS": [
     "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",
-    "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"
+    "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",
+    "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",
+    "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"
   ],
   "VITE_SUPABASE_URL": "https://zspcmfvkezyohtfgovew.supabase.co",
   "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcGNtZnZrZXp5b2h0ZmdvdmV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNTA3NzEsImV4cCI6MjA3NDgyNjc3MX0.r9uco2jgr6zNBJHlzG7QecYttHMvYY9_IMs6iIWrOqo"

@@ -58,7 +58,9 @@ function App() {
   };
 
   const handleBonus1Complete = (earnings: number) => {
+    console.log('App: handleBonus1Complete called with earnings:', earnings);
     const finalChips = player.chips + earnings;
+    console.log('App: Updating player chips from', player.chips, 'to', finalChips);
     const updatedPlayer = {
       ...player,
       chips: finalChips,
@@ -146,6 +148,10 @@ function App() {
     setScreen('intro');
   };
 
+  const handleChipUpdate = (chips: number) => {
+    setPlayer(prev => ({ ...prev, chips }));
+  };
+
   const showChipDisplay = ['round1', 'round2', 'round3', 'bonus'].includes(screen);
 
   // Render the game screen based on the current screen state
@@ -166,11 +172,11 @@ function App() {
       case 'bonus':
         // Check if this is bonus after round 1, round 2, or round 3
         if (player.currentRound === 1.5) {
-          return <BonusRounds currentChips={player.chips} onComplete={handleBonus1Complete} />;
+          return <BonusRounds currentChips={player.chips} onComplete={handleBonus1Complete} onChipUpdate={handleChipUpdate} currentRound={1.5} />;
         } else if (player.currentRound === 2.5) {
-          return <BonusRounds currentChips={player.chips} onComplete={handleBonus2Complete} />;
+          return <BonusRounds currentChips={player.chips} onComplete={handleBonus2Complete} onChipUpdate={handleChipUpdate} currentRound={2.5} />;
         } else {
-          return <BonusRounds currentChips={player.chips} onComplete={handleBonusComplete} />;
+          return <BonusRounds currentChips={player.chips} onComplete={handleBonusComplete} onChipUpdate={handleChipUpdate} currentRound={3.5} />;
         }
       case 'leaderboard':
         return (
