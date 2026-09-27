@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    background-color: #08090D;
+    color: #F8FAFC;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Syne', sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  .font-mono, .tabular-nums {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
 /* Suppress Puter Limit/Auth popups to allow silent fallbacks */
 iframe[src*="puter.com"], 
 iframe[src*="puter.site"],
@@ -12,120 +30,37 @@ div[id^="puter-"] {
   z-index: -9999 !important;
 }
 
-/* Bonus Games Styles */
-.mini-game-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a 0%, #eab308 50%, #0f172a 100%);
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+/* Subtle table felt texture & lighting */
+.casino-table-bg {
+  background-color: #08090D;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(245, 158, 11, 0.07), transparent),
+    radial-gradient(ellipse 60% 40% at 50% 110%, rgba(16, 185, 129, 0.04), transparent);
 }
 
-.mini-game-container.active {
-  display: flex;
+.casino-panel {
+  background-color: #12151E;
+  border: 1px solid #232A3B;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
 }
 
-.mini-game-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  max-width: 800px;
-  margin-bottom: 2rem;
+.casino-card-subtle {
+  background-color: #171C28;
+  border: 1px solid #283248;
 }
 
-.mini-game-header h3 {
-  color: white;
-  font-size: 2rem;
-  font-weight: bold;
+/* Custom scrollbars for chat and tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-
-.betting-options {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
+::-webkit-scrollbar-track {
+  background: #0E1118;
 }
-
-.bet-option {
-  padding: 1rem 2rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.5rem;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s ease;
+::-webkit-scrollbar-thumb {
+  background: #283248;
+  border-radius: 3px;
 }
-
-.bet-option:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.bet-option.selected {
-  background: #eab308;
-  color: #0f172a;
-  border-color: #eab308;
-}
-
-.wheel-section {
-  width: 100%;
-  max-width: 600px;
-}
-
-.wheel-reference {
-  background: rgba(0, 0, 0, 0.8);
-}
-
-.color-indicator {
-  display: inline-block;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.pattern-input {
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0.5rem 1rem;
-  border-radius: 0.25rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-/* Enhanced wheel animations */
-@keyframes wheel-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(234, 179, 8, 0.6);
-  }
-}
-
-.wheel-container {
-  animation: wheel-glow 3s ease-in-out infinite;
-}
-
-@keyframes segment-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-.wheel-segment {
-  animation: segment-pulse 2s ease-in-out infinite;
-}
-
-.wheel-segment:nth-child(even) {
-  animation-delay: 0.5s;
+::-webkit-scrollbar-thumb:hover {
+  background: #3B4866;
 }

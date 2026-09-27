@@ -6,21 +6,41 @@ import RulesScreen from './components/RulesScreen';
 import UsernameScreen from './components/UsernameScreen';
 import ChipDisplay from './components/ChipDisplay';
 import Round1 from './components/Round1';
-import Round2 from './components/Round2';
+import MultiplayerRound1 from './components/MultiplayerRound1';
 import Round3 from './components/Round3';
 import BonusRounds from './components/BonusRounds';
 import Leaderboard from './components/Leaderboard';
+import HostRound1Controller from './host/HostRound1Controller';
 import HostChatInterface from './host/HostChatInterface';
+import UnifiedHostView from './host/UnifiedHostView';
 import OperatorSetup from './components/OperatorSetup';
 import { network_manager } from './services/network';
 
 const API_URL = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:8080`;
 
+const getSessionPlayerId = (presetUsername?: string | null) => {
+  if (typeof window !== 'undefined' && window.sessionStorage) {
+    const key = presetUsername ? `ai_casino_player_id_${presetUsername}` : 'ai_casino_player_id';
+    let id = sessionStorage.getItem(key);
+    if (!id) {
+      id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      sessionStorage.setItem(key, id);
+    }
+    return id;
+  }
+  return `client-${Date.now()}`;
+};
+
 function App() {
+  const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const initialUsername = queryParams?.get('username') || '';
+  const initialRoom = (queryParams?.get('room') || 'table_01').toLowerCase().replace(/\s+/g, '-');
+
   const [screen, setScreen] = useState<GameScreen>('intro');
+  const [roomId, setRoomId] = useState<string>(initialRoom);
   const [player, setPlayer] = useState<Player>({
-    id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    username: '',
+    id: getSessionPlayerId(initialUsername || undefined),
+    username: initialUsername,
     chips: 50,
     round1Score: 0,
     round2Score: 0,
@@ -31,12 +51,51 @@ function App() {
   });
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
 
+  // Starting Lobby -> Player Name Insertion & Room Setup
   const handleStartGame = () => {
+    setScreen('username');
+  };
+
+  // Player Name Insertion & Room Setup -> General Game Rules
+  const handleUsernameSubmit = async (username: string, roomCode?: string) => {
+    const selectedRoom = (roomCode || roomId || 'table_01').toLowerCase().replace(/\s+/g, '-');
+    setRoomId(selectedRoom);
+
+    try {
+      // Connect / register player
+      const res = await fetch(`${API_URL}/api/player/${username}`);
+      const data = await res.json();
+      
+      if (data.success && data.player) {
+        const loadedPlayer = {
+          ...player,
+          username,
+          chips: 50, // Standard $50 tournament buy-in
+          currentRound: 1,
+          round1Score: 0,
+          round2Score: 0,
+          round3Score: 0,
+          bonusEarnings: 0,
+        };
+        setPlayer(loadedPlayer);
+        network_manager.set_username?.(username);
+      } else {
+        setPlayer({ ...player, username, chips: 50, currentRound: 1 });
+        network_manager.set_username?.(username);
+      }
+    } catch (error) {
+      console.error('Failed to connect to database. Falling back to local state:', error);
+      setPlayer({ ...player, username, chips: 50, currentRound: 1 });
+      network_manager.set_username?.(username);
+    }
+
+    // Advance to General Game Rules / Instructions
     setScreen('rules');
   };
 
+  // General Game Rules -> Round 1 Multiplayer
   const handleContinueFromRules = () => {
-    setScreen('username');
+    setScreen('round1');
   };
 
   const saveProgressToDB = async (playerState: Player) => {
@@ -56,48 +115,6 @@ function App() {
       });
     } catch (error) {
       console.error('Failed to save progress to database:', error);
-    }
-  };
-
-  const handleUsernameSubmit = async (username: string) => {
-    try {
-      // Fetch existing player state or create new player in DB
-      const res = await fetch(`${API_URL}/api/player/${username}`);
-      const data = await res.json();
-      
-      if (data.success && data.player) {
-        const p = data.player;
-        const loadedPlayer = {
-          ...player,
-          username,
-          chips: p.chips ?? 50,
-          currentRound: p.current_round ?? 1,
-          round1Score: p.round1_score ?? 0,
-          round2Score: p.round2_score ?? 0,
-          round3Score: p.round3_score ?? 0,
-          bonusEarnings: p.bonus_earnings ?? 0,
-        };
-        setPlayer(loadedPlayer);
-        network_manager.set_username?.(username);
-        
-        // Jump to the correct screen based on saved round
-        if (loadedPlayer.currentRound === 1) setScreen('round1');
-        else if (loadedPlayer.currentRound === 1.5) setScreen('bonus');
-        else if (loadedPlayer.currentRound === 2) setScreen('round2');
-        else if (loadedPlayer.currentRound === 2.5) setScreen('bonus');
-        else if (loadedPlayer.currentRound === 3) setScreen('round3');
-        else if (loadedPlayer.currentRound === 4) setScreen('bonus');
-        else setScreen('round1');
-      } else {
-        setPlayer({ ...player, username, chips: 50 });
-        network_manager.set_username?.(username);
-        setScreen('round1');
-      }
-    } catch (error) {
-      console.error('Failed to connect to database. Falling back to local state:', error);
-      setPlayer({ ...player, username, chips: 50 });
-      network_manager.set_username?.(username);
-      setScreen('round1');
     }
   };
 
@@ -239,14 +256,14 @@ function App() {
     switch (screen) {
       case 'intro':
         return <IntroScreen onStart={handleStartGame} />;
+      case 'username':
+        return <UsernameScreen onSubmit={handleUsernameSubmit} defaultRoom={roomId.toUpperCase()} />;
       case 'rules':
         return <RulesScreen onContinue={handleContinueFromRules} />;
-      case 'username':
-        return <UsernameScreen onSubmit={handleUsernameSubmit} />;
       case 'round1':
-        return <Round1 currentChips={player.chips} onComplete={handleRound1Complete} />;
+        return <MultiplayerRound1 player={player} roomId={roomId} onComplete={handleRound1Complete} />;
       case 'round2':
-        return <Round2 currentChips={player.chips} onComplete={handleRound2Complete} />;
+        return <Round1 currentChips={player.chips} onComplete={handleRound2Complete} />;
       case 'round3':
         return <Round3 currentChips={player.chips} onComplete={handleRound3Complete} username={player.username} />;
       case 'bonus':
@@ -272,7 +289,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-gray-900 text-white">
+    <div className="min-h-screen bg-[#08090D] text-slate-100 font-sans selection:bg-amber-500 selection:text-black antialiased">
       {/* Main game routes */}
       <Routes>
         <Route path="/" element={
@@ -281,8 +298,37 @@ function App() {
             {renderGameScreen()}
           </>
         } />
-        <Route path="/host" element={<HostChatInterface />} />
+        <Route path="/player" element={
+          <>
+            {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
+            {renderGameScreen()}
+          </>
+        } />
+        <Route path="/contestant" element={
+          <>
+            {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
+            {renderGameScreen()}
+          </>
+        } />
+        <Route path="/play" element={
+          <>
+            {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
+            {renderGameScreen()}
+          </>
+        } />
+        <Route path="/host" element={<UnifiedHostView />} />
+        <Route path="/host/round1" element={<UnifiedHostView initialTab="round1" />} />
+        <Route path="/host/round3" element={<UnifiedHostView initialTab="round3" />} />
+        <Route path="/host/chat" element={<HostChatInterface />} />
+        <Route path="/turing-host" element={<HostChatInterface />} />
+        <Route path="/round1-host" element={<HostRound1Controller />} />
         <Route path="/operator-setup" element={<OperatorSetup />} />
+        <Route path="*" element={
+          <>
+            {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
+            {renderGameScreen()}
+          </>
+        } />
       </Routes>
     </div>
   );

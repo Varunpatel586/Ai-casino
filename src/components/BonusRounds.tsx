@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Zap } from 'lucide-react';
+import { Sparkles, Layers, Binary, Dices, Bomb, Target, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { NeuralWheel, DataPatternGame, CardGame, DiceGame, MinesGame, NumberGuessGame } from './bonus';
 
 interface BonusRoundsProps {
@@ -26,7 +26,6 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
   const handleWheelBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-
     markGameAsPlayed('wheel');
   };
 
@@ -61,47 +60,102 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
   };
 
   if (screen === 'menu') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-yellow-900 to-slate-900 flex items-center justify-center px-4">
-        <div className="max-w-3xl w-full text-center">
-          <h1 className="text-6xl font-black text-white mb-4">BONUS ROUNDS</h1>
-          <p className="text-2xl text-yellow-400 mb-12">Risk it for the biscuit!</p>
+    const stageLabel = currentRound === 1.5 
+      ? 'STAGE I INTERMISSION' 
+      : currentRound === 2.5 
+        ? 'STAGE II INTERMISSION' 
+        : 'FINAL VAULT LOUNGE';
 
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
+    return (
+      <div className="min-h-screen casino-table-bg flex items-center justify-center px-4 pt-24 pb-12">
+        <div className="max-w-3xl w-full text-center">
+          {/* Header Plaque */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
+            <span>{stageLabel}</span>
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl font-display font-black text-white uppercase tracking-tight mb-2">
+            Side Action Tables
+          </h1>
+          <p className="text-slate-400 text-sm sm:text-base font-sans max-w-lg mx-auto mb-10">
+            Amplify your tournament chip bankroll before proceeding. Each side table can be played once per intermission.
+          </p>
+
+          <div className="grid md:grid-cols-2 gap-5 mb-10 text-left">
             {/* Round 1: Neural Wheel and Card Game */}
             {currentRound === 1.5 && (
               <>
                 <button
                   onClick={() => setScreen('wheel')}
                   disabled={playedGames.has('wheel')}
-                  className={`bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 rounded-2xl p-8 hover:scale-105 transition-all duration-300 group ${
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
                     playedGames.has('wheel')
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:scale-105'
+                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                      : 'bg-[#12151E] border-[#283248] hover:border-amber-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
                   }`}
                 >
-                  <Sparkles className="text-yellow-400 mx-auto mb-4 group-hover:scale-110 transition-transform" size={48} />
-                  <h3 className="text-2xl font-bold text-white mb-2">Neural Wheel</h3>
-                  <p className="text-white/60 mb-4">Spin for instant rewards</p>
-                  <div className="bg-black/30 rounded-lg p-3">
-                    <p className="text-yellow-400 font-bold text-xl">FREE TO PLAY</p>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Sparkles size={24} />
+                    </div>
+                    {playedGames.has('wheel') ? (
+                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
+                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+                        FREE SPIN
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                    Neural Roulette
+                  </h3>
+                  <p className="text-slate-400 text-xs font-sans mb-4">
+                    Calibrate the probabilistic wheel for an immediate chip injection without risking your stack.
+                  </p>
+                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
+                    <span className="text-slate-500">Risk: None</span>
+                    <span className="text-amber-400 font-bold flex items-center gap-1">
+                      ENTER TABLE <ChevronRight size={14} />
+                    </span>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setScreen('cardgame')}
                   disabled={playedGames.has('cardgame')}
-                  className={`bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border-2 border-cyan-500/50 rounded-2xl p-8 hover:scale-105 transition-all duration-300 group ${
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
                     playedGames.has('cardgame')
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:scale-105'
+                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                      : 'bg-[#12151E] border-[#283248] hover:border-blue-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
                   }`}
                 >
-                  <Zap className="text-cyan-400 mx-auto mb-4 group-hover:scale-110 transition-transform" size={48} />
-                  <h3 className="text-2xl font-bold text-white mb-2">Card Game</h3>
-                  <p className="text-white/60 mb-4">Beat the dealer</p>
-                  <div className="bg-black/30 rounded-lg p-3">
-                    <p className="text-cyan-400 font-bold text-xl">PLAY NOW</p>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-blue-500/30 text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Layers size={24} />
+                    </div>
+                    {playedGames.has('cardgame') ? (
+                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
+                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-mono text-blue-400 bg-blue-950/50 border border-blue-500/30 px-2.5 py-1 rounded-full">
+                        2X PAYOUT
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                    High-Card Duel
+                  </h3>
+                  <p className="text-slate-400 text-xs font-sans mb-4">
+                    Wager on Spades vs Hearts against the house deck. Double your wager on correct prediction.
+                  </p>
+                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
+                    <span className="text-slate-500">Payout: 2.0x</span>
+                    <span className="text-blue-400 font-bold flex items-center gap-1">
+                      ENTER TABLE <ChevronRight size={14} />
+                    </span>
                   </div>
                 </button>
               </>
@@ -113,34 +167,74 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                 <button
                   onClick={() => setScreen('datadash')}
                   disabled={playedGames.has('datadash')}
-                  className={`bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border-2 border-cyan-500/50 rounded-2xl p-8 hover:scale-105 transition-all duration-300 group ${
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
                     playedGames.has('datadash')
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:scale-105'
+                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                      : 'bg-[#12151E] border-[#283248] hover:border-emerald-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
                   }`}
                 >
-                  <Zap className="text-cyan-400 mx-auto mb-4 group-hover:scale-110 transition-transform" size={48} />
-                  <h3 className="text-2xl font-bold text-white mb-2">Data Dash</h3>
-                  <p className="text-white/60 mb-4">Solve the pattern</p>
-                  <div className="bg-black/30 rounded-lg p-3">
-                    <p className="text-cyan-400 font-bold text-xl">FREE TO PLAY</p>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Binary size={24} />
+                    </div>
+                    {playedGames.has('datadash') ? (
+                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
+                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+                        FREE ENTRY
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                    Binary Decryption
+                  </h3>
+                  <p className="text-slate-400 text-xs font-sans mb-4">
+                    Deduce the missing bit in algorithmic sequences to collect bounty chips with zero risk.
+                  </p>
+                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
+                    <span className="text-slate-500">Reward: +10 Chips</span>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      ENTER TABLE <ChevronRight size={14} />
+                    </span>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setScreen('dicegame')}
                   disabled={playedGames.has('dicegame')}
-                  className={`bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-purple-500/50 rounded-2xl p-8 hover:scale-105 transition-all duration-300 group ${
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
                     playedGames.has('dicegame')
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:scale-105'
+                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                      : 'bg-[#12151E] border-[#283248] hover:border-purple-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
                   }`}
                 >
-                  <Zap className="text-purple-400 mx-auto mb-4 group-hover:scale-110 transition-transform" size={48} />
-                  <h3 className="text-2xl font-bold text-white mb-2">Dice Game</h3>
-                  <p className="text-white/60 mb-4">Roll for rewards</p>
-                  <div className="bg-black/30 rounded-lg p-3">
-                    <p className="text-purple-400 font-bold text-xl">PLAY NOW</p>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-purple-500/30 text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Dices size={24} />
+                    </div>
+                    {playedGames.has('dicegame') ? (
+                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
+                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-mono text-purple-400 bg-purple-950/50 border border-purple-500/30 px-2.5 py-1 rounded-full">
+                        3X PAYOUT
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                    Dice Sum Wager
+                  </h3>
+                  <p className="text-slate-400 text-xs font-sans mb-4">
+                    Predict the exact total sum of two precision casino dice (2-12). High variance, 3x payout.
+                  </p>
+                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
+                    <span className="text-slate-500">Payout: 3.0x</span>
+                    <span className="text-purple-400 font-bold flex items-center gap-1">
+                      ENTER TABLE <ChevronRight size={14} />
+                    </span>
                   </div>
                 </button>
               </>
@@ -152,46 +246,91 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                 <button
                   onClick={() => setScreen('minesgame')}
                   disabled={playedGames.has('minesgame')}
-                  className={`bg-gradient-to-br from-red-500/20 to-orange-500/20 border-2 border-red-500/50 rounded-2xl p-8 hover:scale-105 transition-all duration-300 group ${
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
                     playedGames.has('minesgame')
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:scale-105'
+                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                      : 'bg-[#12151E] border-[#283248] hover:border-rose-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
                   }`}
                 >
-                  <Zap className="text-red-400 mx-auto mb-4 group-hover:scale-110 transition-transform" size={48} />
-                  <h3 className="text-2xl font-bold text-white mb-2">Mines Game</h3>
-                  <p className="text-white/60 mb-4">Avoid the mines</p>
-                  <div className="bg-black/30 rounded-lg p-3">
-                    <p className="text-red-400 font-bold text-xl">PLAY NOW</p>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-rose-500/30 text-rose-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Bomb size={24} />
+                    </div>
+                    {playedGames.has('minesgame') ? (
+                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
+                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-mono text-rose-400 bg-rose-950/50 border border-rose-500/30 px-2.5 py-1 rounded-full">
+                        HIGH STAKES
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                    Vault Grid Mines
+                  </h3>
+                  <p className="text-slate-400 text-xs font-sans mb-4">
+                    Uncover diamonds on a 5x5 matrix while avoiding hidden explosives. Cash out anytime.
+                  </p>
+                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
+                    <span className="text-slate-500">Type: Cash-Out Matrix</span>
+                    <span className="text-rose-400 font-bold flex items-center gap-1">
+                      ENTER TABLE <ChevronRight size={14} />
+                    </span>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setScreen('numberguess')}
                   disabled={playedGames.has('numberguess')}
-                  className={`bg-gradient-to-br from-green-500/20 to-teal-500/20 border-2 border-green-500/50 rounded-2xl p-8 hover:scale-105 transition-all duration-300 group ${
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
                     playedGames.has('numberguess')
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:scale-105'
+                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                      : 'bg-[#12151E] border-[#283248] hover:border-emerald-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
                   }`}
                 >
-                  <Zap className="text-green-400 mx-auto mb-4 group-hover:scale-110 transition-transform" size={48} />
-                  <h3 className="text-2xl font-bold text-white mb-2">Number Guess</h3>
-                  <p className="text-white/60 mb-4">Guess the number</p>
-                  <div className="bg-black/30 rounded-lg p-3">
-                    <p className="text-green-400 font-bold text-xl">PLAY NOW</p>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Target size={24} />
+                    </div>
+                    {playedGames.has('numberguess') ? (
+                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
+                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+                        2X PAYOUT
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                    Cipher Pin Code
+                  </h3>
+                  <p className="text-slate-400 text-xs font-sans mb-4">
+                    Crack the secret 1-10 pin code within 5 precision attempts to double your chips.
+                  </p>
+                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
+                    <span className="text-slate-500">Payout: 2.0x</span>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      ENTER TABLE <ChevronRight size={14} />
+                    </span>
                   </div>
                 </button>
               </>
             )}
           </div>
 
-          <button
-            onClick={() => onComplete(0)}
-            className="px-12 py-5 text-2xl font-bold text-white bg-gradient-to-r from-green-500 to-emerald-500 rounded-full hover:scale-110 transition-all duration-300 hover:shadow-[0_0_40px_RGBA(0,255,0,0.6)]"
-          >
-            SKIP TO RESULTS
-          </button>
+          <div className="flex flex-col items-center">
+            <button
+              onClick={() => onComplete(0)}
+              className="py-4 px-10 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
+            >
+              Continue To Next Stage
+            </button>
+            <span className="text-xs font-mono text-slate-500 mt-2">
+              Side games are optional. You can proceed directly to the tournament.
+            </span>
+          </div>
         </div>
       </div>
     );

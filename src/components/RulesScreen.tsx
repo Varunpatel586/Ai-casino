@@ -1,4 +1,4 @@
-import { DollarSign, Target, Trophy, Zap } from 'lucide-react';
+import { Coins, Target, Calculator, Gift, Eye, Video, MessageSquare, ArrowRight, Shield } from 'lucide-react';
 
 interface RulesScreenProps {
   onContinue: () => void;
@@ -6,97 +6,181 @@ interface RulesScreenProps {
 
 export default function RulesScreen({ onContinue }: RulesScreenProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 py-12 px-4 overflow-auto">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-6xl font-black text-center mb-4 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-500">
-          GAME RULES
-        </h1>
-        <p className="text-center text-cyan-300 text-xl mb-12">Master the rules. Beat the AI.</p>
+    <div className="min-h-screen casino-table-bg py-12 px-4 sm:px-6 overflow-auto">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
+            <Shield size={13} />
+            <span>Official Tournament Protocol</span>
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-display font-black text-white tracking-tight uppercase">
+            TABLE RULES &amp; PAYOUTS
+          </h1>
+          <p className="text-slate-400 text-base max-w-xl mx-auto mt-2">
+            Read the protocol before taking your seat. High stakes reward perception, logic, and nerve.
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:border-yellow-500/50 transition-all">
-            <div className="flex items-center gap-3 mb-4">
-              <DollarSign className="text-yellow-400" size={32} />
-              <h3 className="text-2xl font-bold text-white">Starting Chips</h3>
+        {/* 4 Core Pillars Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          <div className="bg-[#12151E] border border-[#232938] rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <Coins size={18} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white tracking-wide">Starting Bankroll</h3>
+                <span className="text-xs font-mono text-slate-500 uppercase">Standard Buy-In</span>
+              </div>
             </div>
-            <p className="text-white/70 text-lg">
-              Every player begins with <span className="text-yellow-400 font-bold">$50</span> in virtual chips
+            <p className="text-slate-300 text-sm leading-relaxed">
+              Every contestant enters with exactly <span className="text-amber-400 font-mono font-bold">$50</span> in virtual casino chips.
             </p>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:border-cyan-500/50 transition-all">
-            <div className="flex items-center gap-3 mb-4">
-              <Target className="text-cyan-400" size={32} />
-              <h3 className="text-2xl font-bold text-white">Betting System</h3>
+          <div className="bg-[#12151E] border border-[#232938] rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <Target size={18} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white tracking-wide">Wagering Structure</h3>
+                <span className="text-xs font-mono text-slate-500 uppercase">Table Limits</span>
+              </div>
             </div>
-            <p className="text-white/70 text-lg">
-              Place bets: <span className="text-cyan-400 font-bold">$10, $30, or ALL IN</span>
+            <p className="text-slate-300 text-sm leading-relaxed">
+              Choose your bet per round: <span className="text-blue-400 font-mono font-bold">$10</span>, <span className="text-blue-400 font-mono font-bold">$30</span>, or <span className="text-rose-400 font-mono font-bold">ALL IN</span> with your entire wallet.
             </p>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:border-green-500/50 transition-all">
-            <div className="flex items-center gap-3 mb-4">
-              <Trophy className="text-green-400" size={32} />
-              <h3 className="text-2xl font-bold text-white">Scoring</h3>
+          <div className="bg-[#12151E] border border-[#232938] rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <Calculator size={18} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white tracking-wide">Scoring Formula</h3>
+                <span className="text-xs font-mono text-slate-500 uppercase">Net Settled Math</span>
+              </div>
             </div>
-            <p className="text-white/70 text-lg">
-              Correct guess = <span className="text-green-400 font-bold">Bet × Score</span><br />
-              Wrong guess = <span className="text-red-400 font-bold">Lose your bet</span>
+            <p className="text-slate-300 text-sm leading-relaxed">
+              Correct picks win <span className="text-emerald-400 font-mono font-bold">+1x Bet</span>. Inaccurate answers deduct <span className="text-rose-400 font-mono font-bold">-1x Bet</span>.
             </p>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 hover:border-pink-500/50 transition-all">
-            <div className="flex items-center gap-3 mb-4">
-              <Zap className="text-pink-400" size={32} />
-              <h3 className="text-2xl font-bold text-white">Bonus Rounds</h3>
+          <div className="bg-[#12151E] border border-[#232938] rounded-xl p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+                <Gift size={18} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white tracking-wide">High-Roller Vault</h3>
+                <span className="text-xs font-mono text-slate-500 uppercase">Intermission Lounge</span>
+              </div>
             </div>
-            <p className="text-white/70 text-lg">
-              Optional challenges to <span className="text-pink-400 font-bold">multiply winnings</span>
+            <p className="text-slate-300 text-sm leading-relaxed">
+              Between rounds, enter the Vault to play Neural Wheel, Card Flip, Dice, or Mines to multiply chips.
             </p>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border border-purple-500/30 rounded-2xl p-8 mb-8">
-          <h2 className="text-3xl font-bold text-white mb-6 text-center">The Three Rounds</h2>
+        {/* The Three Rounds Table Briefing */}
+        <div className="bg-[#12151E] border border-[#232938] rounded-xl p-6 mb-8 shadow-sm">
+          <h2 className="text-xs uppercase font-mono font-bold tracking-widest text-amber-400 mb-4">
+            Tournament Schedule
+          </h2>
 
-          <div className="space-y-6">
-            <div className="bg-black/30 rounded-xl p-6 border-l-4 border-yellow-500">
-              <h3 className="text-2xl font-bold text-yellow-400 mb-2">Round 1: The Prompt Gambit</h3>
-              <p className="text-white/80 text-lg mb-2">Create perfect AI prompts to match target images</p>
-              <p className="text-white/60">Duration: 10 minutes</p>
+          <div className="space-y-3">
+            <div className="bg-[#181D2A] border border-[#283248] rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-mono font-bold text-xs">
+                  01
+                </div>
+                <div>
+                  <h4 className="text-white font-bold text-base flex items-center gap-2">
+                    <Video size={16} className="text-blue-400" />
+                    Round 1: The Reality Bet
+                  </h4>
+                  <p className="text-xs text-slate-400">Analyze 5 video clips and identify whether they are Real Life or AI.</p>
+                </div>
+              </div>
+              <span className="text-xs font-mono text-slate-400 bg-[#12151E] px-2.5 py-1 rounded border border-[#232938]">
+                5 Videos • 60s
+              </span>
             </div>
 
-            <div className="bg-black/30 rounded-xl p-6 border-l-4 border-cyan-500">
-              <h3 className="text-2xl font-bold text-cyan-400 mb-2">Round 2: The Reality Bet</h3>
-              <p className="text-white/80 text-lg mb-2">Identify which videos are real vs AI-generated</p>
-              <p className="text-white/60">Duration: 8 minutes</p>
+            <div className="bg-[#181D2A] border border-[#283248] rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-mono font-bold text-xs">
+                  02
+                </div>
+                <div>
+                  <h4 className="text-white font-bold text-base flex items-center gap-2">
+                    <Eye size={16} className="text-amber-400" />
+                    Round 2: The Prompt Gambit
+                  </h4>
+                  <p className="text-xs text-slate-400">Compose text prompts to reverse-engineer 5 AI images.</p>
+                </div>
+              </div>
+              <span className="text-xs font-mono text-slate-400 bg-[#12151E] px-2.5 py-1 rounded border border-[#232938]">
+                5 Challenges • 60s
+              </span>
             </div>
 
-            <div className="bg-black/30 rounded-xl p-6 border-l-4 border-pink-500">
-              <h3 className="text-2xl font-bold text-pink-400 mb-2">Round 3: The Turing Table</h3>
-              <p className="text-white/80 text-lg mb-2">Determine if responses are from humans or AI</p>
-              <p className="text-white/60">Duration: 8 minutes</p>
+            <div className="bg-[#181D2A] border border-[#283248] rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 font-mono font-bold text-xs">
+                  03
+                </div>
+                <div>
+                  <h4 className="text-white font-bold text-base flex items-center gap-2">
+                    <MessageSquare size={16} className="text-rose-400" />
+                    Round 3: The Turing Table
+                  </h4>
+                  <p className="text-xs text-slate-400">Blind chat session against either a Live Human Host or Gemini Flash AI.</p>
+                </div>
+              </div>
+              <span className="text-xs font-mono text-slate-400 bg-[#12151E] px-2.5 py-1 rounded border border-[#232938]">
+                3 Subrounds • 3 msgs
+              </span>
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-yellow-900/30 to-red-900/30 border border-yellow-500/30 rounded-xl p-6 mb-8">
-          <h3 className="text-xl font-bold text-yellow-400 mb-3">💡 Scoring Example</h3>
-          <div className="text-white/80 space-y-2">
-            <p>• You bet <span className="text-yellow-400 font-bold">$10</span></p>
-            <p>• You score <span className="text-green-400 font-bold">4/5</span> correct</p>
-            <p>• Reward = 4 × $10 = <span className="text-green-400 font-bold">$40</span></p>
-            <p>• Wrong answers = 1 × $10 = <span className="text-red-400 font-bold">-$10</span></p>
-            <p className="text-xl font-bold text-cyan-400 pt-2">Final = $40 - $10 = $30 earned!</p>
+        {/* Scoring Example Card */}
+        <div className="bg-[#10131B] border border-amber-500/20 rounded-xl p-5 mb-10">
+          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-amber-400 mb-2">
+            <span>Pay Table Settlement Example</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-center text-xs font-mono">
+            <div className="bg-[#161B26] p-3 rounded-lg border border-[#232A3B]">
+              <span className="text-slate-500 block">Wager</span>
+              <span className="text-white font-bold text-sm">$10</span>
+            </div>
+            <div className="bg-[#161B26] p-3 rounded-lg border border-[#232A3B]">
+              <span className="text-slate-500 block">Correct (4)</span>
+              <span className="text-emerald-400 font-bold text-sm">+$40</span>
+            </div>
+            <div className="bg-[#161B26] p-3 rounded-lg border border-[#232A3B]">
+              <span className="text-slate-500 block">Wrong (1)</span>
+              <span className="text-rose-400 font-bold text-sm">-$10</span>
+            </div>
+            <div className="bg-[#182030] p-3 rounded-lg border border-amber-500/30">
+              <span className="text-amber-400 block font-bold">Net Payout</span>
+              <span className="text-amber-300 font-black text-base">+$30</span>
+            </div>
           </div>
         </div>
 
+        {/* Action Button */}
         <div className="text-center">
           <button
             onClick={onContinue}
-            className="px-12 py-5 text-2xl font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full hover:scale-110 transition-all duration-300 hover:shadow-[0_0_40px_rgba(0,255,255,0.6)]"
+            className="inline-flex items-center justify-center gap-3 px-10 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-lg uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
           >
-            I'M READY TO PLAY
+            <span>I UNDERSTAND — ENTER LIVE TABLE</span>
+            <ArrowRight size={20} />
           </button>
         </div>
       </div>

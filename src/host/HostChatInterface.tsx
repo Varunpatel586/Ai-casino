@@ -181,56 +181,119 @@ export default function HostChatInterface() {
   const connectedPlayers = players.filter(p => p.connected);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-[#08090D] text-white p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-4">🏠 Turing Test Host</h1>
-        
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">
-            Connected Players: {connectedPlayers.length}
-          </h2>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {connectedPlayers.map(player => (
-              <span 
-                key={player.id}
-                className="bg-green-800 px-2 py-1 rounded text-sm"
-              >
-                {player.name}
-              </span>
-            ))}
+        {/* Console Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-[#12151E] border border-[#232938] rounded-2xl mb-6 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center">
+              <span className="text-lg">⌨️</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-display font-black text-white uppercase tracking-wider">
+                  Operator Comms Console
+                </h1>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 font-bold">
+                  HOST READY
+                </span>
+              </div>
+              <p className="text-xs font-mono text-slate-400">
+                Round 3 Blind Interrogation Channel
+              </p>
+            </div>
+          </div>
+
+          <div className="text-left sm:text-right">
+            <span className="text-[10px] font-mono uppercase text-slate-400 block">
+              Active Contestants
+            </span>
+            <span className="text-sm font-mono font-bold text-amber-400">
+              {connectedPlayers.length} Connected
+            </span>
           </div>
         </div>
 
+        {/* Connected Players Roster Bar */}
+        <div className="mb-6 p-4 bg-[#12151E] border border-[#232938] rounded-2xl">
+          <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block mb-2.5">
+            Registered Player Terminals
+          </span>
+          {connectedPlayers.length === 0 ? (
+            <p className="text-xs font-mono text-slate-500 italic">
+              No players currently connected. Waiting for players to enter Round 3...
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {connectedPlayers.map(player => (
+                <button
+                  key={player.id}
+                  onClick={() => setSelectedPlayerId(player.id)}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono transition-all cursor-pointer ${
+                    selectedPlayerId === player.id
+                      ? 'bg-amber-950/50 border-amber-500/60 text-amber-300 ring-2 ring-amber-500/20'
+                      : 'bg-[#181D2A] border-[#283248] hover:border-slate-500 text-slate-300'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="font-bold">{player.name}</span>
+                  <span className="text-[10px] text-slate-400 font-mono">({player.id.substring(0, 6)})</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-        {/* Chat Messages */}
-        <div className="bg-gray-800 rounded-lg p-4 h-96 overflow-y-auto mb-4">
+        {/* Chat Feed */}
+        <div className="bg-[#0E1118] border border-[#232938] rounded-2xl p-4 sm:p-5 h-[420px] overflow-y-auto mb-4 shadow-inner space-y-3">
           {messages.map((msg) => {
-            const { displayName, badge, bgColor } = getMessageDisplayInfo(msg);
-            
+            const { displayName, badge } = getMessageDisplayInfo(msg);
+
+            if (msg.sender === 'system') {
+              return (
+                <div key={msg.id} className="text-center my-2">
+                  <span className="inline-block px-3 py-1 rounded-full bg-[#181D2A] border border-[#232938] text-slate-400 text-[11px] font-mono">
+                    {msg.text}
+                  </span>
+                </div>
+              );
+            }
+
+            const isHost = msg.sender === 'host';
+
             return (
-              <div key={msg.id} className={`mb-3 ${msg.sender === 'host' ? 'text-right' : 'text-left'}`}>
-                <div 
-                  className={`inline-block rounded-lg p-3 max-w-md ${bgColor} ${msg.sender === 'player' ? 'cursor-pointer hover:opacity-90' : ''}`}
+              <div key={msg.id} className={`flex ${isHost ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[85%] sm:max-w-md p-3.5 rounded-2xl shadow-md border ${
+                    isHost
+                      ? 'bg-[#181D2A] border-amber-500/30 text-white rounded-tr-sm'
+                      : 'bg-[#12151E] border-[#283248] text-slate-200 rounded-tl-sm cursor-pointer hover:border-blue-400/50 transition-colors'
+                  }`}
                   onClick={() => {
                     if (msg.sender === 'player' && msg.playerId) {
                       setSelectedPlayerId(msg.playerId);
-                      // Focus input could be added here
                     }
                   }}
                   title={msg.sender === 'player' ? 'Click to reply privately' : ''}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="text-sm font-medium">{displayName}</div>
-                    {badge && (
-                      <span className="text-xs bg-black bg-opacity-30 px-1 rounded">
-                        {badge}
+                  <div className="flex items-center justify-between gap-3 mb-1.5 pb-1 border-b border-white/5">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[10px] font-mono font-black uppercase tracking-wider ${isHost ? 'text-amber-400' : 'text-blue-400'}`}>
+                        {displayName}
                       </span>
-                    )}
-                    <div className="text-xs opacity-70">
-                      {msg.timestamp.toLocaleTimeString()}
+                      {badge && (
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-black/40 border border-white/10 text-slate-300">
+                          {badge}
+                        </span>
+                      )}
                     </div>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </span>
                   </div>
-                  <div className="text-left">{msg.text}</div>
+                  <p className="text-xs sm:text-sm font-sans leading-relaxed break-words">
+                    {msg.text}
+                  </p>
                 </div>
               </div>
             );
@@ -238,45 +301,49 @@ export default function HostChatInterface() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Message Input + Player Selection */}
-        <div className="flex gap-2 items-center">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder={
-              selectedPlayerId === 'all' 
-                ? "Type a message to all players..."
-                : `Private message to ${players.find(p => p.id === selectedPlayerId)?.name || selectedPlayerId}...`
-            }
-            className="flex-1 bg-gray-700 text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <select
-            value={selectedPlayerId}
-            onChange={(e) => setSelectedPlayerId(e.target.value)}
-            className="bg-gray-800 border-2 border-blue-500 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base min-w-[220px]"
-            style={{ maxWidth: 280 }}
-          >
-            <option value="all">All Players (Broadcast)</option>
-            {connectedPlayers.map(player => (
-              <option key={player.id} value={player.id}>
-                {player.name || player.id} ({player.id})
-              </option>
-            ))}
-          </select>
-          <button 
-            onClick={sendMessage}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded transition-colors"
-          >
-            Send
-          </button>
-        </div>
-        <div className="text-xs text-blue-300 mt-2">
-          {selectedPlayerId === 'all' 
-            ? 'Message will be sent to all connected players'
-            : `Private message to ${players.find(p => p.id === selectedPlayerId)?.name || selectedPlayerId}`
-          }
+        {/* Message Input & Channel Target */}
+        <div className="p-4 bg-[#12151E] border border-[#232938] rounded-2xl shadow-xl">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <select
+              value={selectedPlayerId}
+              onChange={(e) => setSelectedPlayerId(e.target.value)}
+              className="bg-[#181D2A] border border-[#283248] text-amber-400 font-mono text-xs px-3 py-2.5 rounded-xl focus:outline-none focus:border-amber-500"
+            >
+              <option value="all">BROADCAST (All Contestants)</option>
+              {connectedPlayers.map(player => (
+                <option key={player.id} value={player.id}>
+                  PRIVATE → {player.name || player.id}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+              placeholder={
+                selectedPlayerId === 'all'
+                  ? "Broadcast message to all connected players..."
+                  : `Private reply to ${players.find(p => p.id === selectedPlayerId)?.name || selectedPlayerId}...`
+              }
+              className="flex-1 bg-[#181D2A] border border-[#283248] rounded-xl px-4 py-2.5 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-amber-500"
+            />
+
+            <button
+              onClick={sendMessage}
+              className="py-2.5 px-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-xs uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all cursor-pointer"
+            >
+              Transmit
+            </button>
+          </div>
+
+          <div className="text-[11px] font-mono text-slate-400 mt-2.5 flex items-center justify-between">
+            <span>
+              Target: <strong className="text-amber-400">{selectedPlayerId === 'all' ? 'All Connected Contestants' : players.find(p => p.id === selectedPlayerId)?.name || selectedPlayerId}</strong>
+            </span>
+            <span className="text-slate-400">Press Enter to transmit</span>
+          </div>
         </div>
       </div>
     </div>

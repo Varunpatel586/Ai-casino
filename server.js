@@ -1,9 +1,11 @@
 import express from 'express';
 import { WebSocketServer } from 'ws';
+import { Server as SocketIOServer } from 'socket.io';
 import { createClient } from '@supabase/supabase-js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
+import MultiplayerManager from './server/multiplayerManager.js';
 
 // Load environment variables
 dotenv.config();
@@ -236,7 +238,29 @@ app.post('/api/generate-huggingface', async (req, res) => {
 
 // --- WEBSOCKET SERVER ---
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+
+// --- SOCKET.IO MULTIPLAYER SERVER (ROUND 1) ---
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+});
+const multiplayerManager = new MultiplayerManager(io);
+
+const wss = new WebSocketServer({ noServer: true });
+
+// Route HTTP upgrade requests: let Socket.IO handle /socket.io, and wss handle /ws or default
+server.on('upgrade', (request, socket, head) => {
+  const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
+  if (pathname.startsWith('/socket.io')) {
+    // Socket.io handles this automatically
+    return;
+  }
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit('connection', ws, request);
+  });
+});
 
 let host = null;
 const players = new Map(); // clientId -> { ws: WebSocket, username: string }

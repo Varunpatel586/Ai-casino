@@ -109,135 +109,134 @@ const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, current
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-yellow-900 to-slate-900 flex items-center justify-center px-4">
-      <div className="max-w-2xl w-full text-center">
-        <h2 className="text-5xl font-black text-white mb-8">Neural Wheel</h2>
+    <div className="min-h-screen casino-table-bg flex items-center justify-center px-4 pt-24 pb-12">
+      <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl">
+        {/* Header */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
+          <span>Free Side Action</span>
+        </div>
 
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
-          {/* Instructions */}
-          <div className="bg-yellow-900/30 border border-yellow-400/30 rounded-xl p-6 mb-8">
-            <h3 className="text-2xl font-bold text-white mb-3">How to Play:</h3>
-            <div className="text-yellow-200 space-y-2 text-left">
-              <p>1. Spin the wheel to win instant rewards</p>
-              <p>2. Different segments give different chip amounts</p>
-              <p>3. Jackpot gives the biggest reward!</p>
-              <p>4. You can only play this once per bonus round</p>
-            </div>
+        <h2 className="text-2xl sm:text-4xl font-display font-black text-white uppercase tracking-tight mb-2">
+          Neural Roulette
+        </h2>
+        <p className="text-slate-400 text-xs sm:text-sm font-sans mb-6">
+          Zero-risk house spin. Land on points or the Jackpot to credit your tournament bankroll.
+        </p>
+
+        {/* Wheel Assembly */}
+        <div className="relative w-72 h-72 sm:w-80 sm:h-80 mx-auto mb-6 p-2 rounded-full bg-[#0D0F16] border-4 border-[#283248] shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center justify-center">
+          {/* Wheel Pointer */}
+          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-30 drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
+            <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-amber-400"></div>
           </div>
 
-          {/* Simple wheel with segments */}
-          <div className="relative w-80 h-80 mx-auto mb-8 bg-gray-800 rounded-full border-4 border-gray-600 flex items-center justify-center">
-            {wheelSegments.length > 0 ? (
-              <svg
-                ref={wheelRef}
-                className="w-full h-full"
-                viewBox="0 0 400 400"
-                style={{
-                  transformOrigin: 'center',
-                  transition: isSpinning ? 'transform 4s cubic-bezier(0.2, 0.8, 0.3, 1)' : 'none'
-                }}
-              >
-                {wheelSegments.map((segment, index) => {
-                  const angle = (360 / wheelSegments.length) * index;
-                  const nextAngle = (360 / wheelSegments.length) * (index + 1);
+          {wheelSegments.length > 0 ? (
+            <svg
+              ref={wheelRef}
+              className="w-full h-full rounded-full"
+              viewBox="0 0 400 400"
+              style={{
+                transformOrigin: 'center',
+                transition: isSpinning ? 'transform 4s cubic-bezier(0.2, 0.8, 0.3, 1)' : 'none'
+              }}
+            >
+              {wheelSegments.map((segment, index) => {
+                const angle = (360 / wheelSegments.length) * index;
+                const nextAngle = (360 / wheelSegments.length) * (index + 1);
 
-                  // Convert angles to radians for calculations
-                  const startAngleRad = (angle * Math.PI) / 180;
-                  const endAngleRad = (nextAngle * Math.PI) / 180;
+                // Convert angles to radians for calculations
+                const startAngleRad = (angle * Math.PI) / 180;
+                const endAngleRad = (nextAngle * Math.PI) / 180;
 
-                  // Calculate path coordinates
-                  const outerRadius = 150;
-                  const x1 = 200 + outerRadius * Math.cos(startAngleRad);
-                  const y1 = 200 + outerRadius * Math.sin(startAngleRad);
-                  const x2 = 200 + outerRadius * Math.cos(endAngleRad);
-                  const y2 = 200 + outerRadius * Math.sin(endAngleRad);
+                // Calculate path coordinates
+                const outerRadius = 185;
+                const x1 = 200 + outerRadius * Math.cos(startAngleRad);
+                const y1 = 200 + outerRadius * Math.sin(startAngleRad);
+                const x2 = 200 + outerRadius * Math.cos(endAngleRad);
+                const y2 = 200 + outerRadius * Math.sin(endAngleRad);
 
-                  return (
-                    <g key={index}>
-                      {/* Segment background */}
-                      <path
-                        d={`M 200 200 L ${x1} ${y1} A ${outerRadius} ${outerRadius} 0 0 1 ${x2} ${y2} Z`}
-                        fill={segment.color}
-                        stroke="#333"
-                        strokeWidth="2"
-                      />
+                return (
+                  <g key={index}>
+                    {/* Segment background */}
+                    <path
+                      d={`M 200 200 L ${x1} ${y1} A ${outerRadius} ${outerRadius} 0 0 1 ${x2} ${y2} Z`}
+                      fill={segment.color}
+                      stroke="#12151E"
+                      strokeWidth="3"
+                    />
 
-                      {/* Text label */}
-                      <text
-                        x={200 + 100 * Math.cos((angle + (360 / wheelSegments.length) / 2) * Math.PI / 180)}
-                        y={200 + 100 * Math.sin((angle + (360 / wheelSegments.length) / 2) * Math.PI / 180)}
-                        fill="white"
-                        fontSize="16"
-                        fontWeight="bold"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                      >
-                        {segment.displayText}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
-            ) : (
-              <div className="text-white text-center">
-                <div className="text-2xl mb-4">Loading Wheel...</div>
-                <div className="text-sm opacity-75">Segments: {wheelSegments.length}</div>
-              </div>
-            )}
-
-            {/* Pointer */}
-            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-2 z-10">
-              <div className="w-0 h-0 border-l-4 border-r-4 border-b-8 border-l-transparent border-r-transparent border-b-yellow-400 drop-shadow-lg"></div>
-            </div>
-
-            {/* Center circle */}
-            <div className="absolute inset-0 flex items-center justify-center z-10">
-              <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full w-32 h-32 flex items-center justify-center shadow-lg">
-                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                  <span className="text-yellow-600 font-black text-sm">SPIN</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Spin animation overlay */}
-            {isSpinning && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full z-20">
-                <div className="text-white text-xl font-bold animate-pulse">Spinning...</div>
-              </div>
-            )}
-          </div>
-
-          {wheelResult && (
-            <div className="bg-black/50 rounded-xl p-6 mb-6">
-              <p className="text-3xl font-bold mb-2" style={{ color: wheelResult.color }}>
-                {wheelResult.result}
-              </p>
-              <p className="text-white/60 text-lg">
-                {wheelResult.multiplier > 0
-                  ? `You won ${wheelResult.multiplier} chips!`
-                  : 'Better luck next time!'}
-              </p>
+                    {/* Text label */}
+                    <text
+                      x={200 + 120 * Math.cos((angle + (360 / wheelSegments.length) / 2) * Math.PI / 180)}
+                      y={200 + 120 * Math.sin((angle + (360 / wheelSegments.length) / 2) * Math.PI / 180)}
+                      fill="#FFFFFF"
+                      fontSize="17"
+                      fontWeight="900"
+                      fontFamily="JetBrains Mono, monospace"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      stroke="#000000"
+                      strokeWidth="0.5"
+                    >
+                      {segment.displayText}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          ) : (
+            <div className="text-white text-center">
+              <div className="text-sm font-mono opacity-75">Loading wheel...</div>
             </div>
           )}
 
-          <div className="flex gap-4 justify-center">
-            {!isSpinning && !wheelResult && (
-              <button
-                onClick={handleSpin}
-                disabled={hasSpun}
-                className={`px-12 py-5 text-2xl font-bold text-white bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full hover:scale-110 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                SPIN WHEEL
-              </button>
-            )}
-
-            <button
-              onClick={onBack}
-              className="px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-gray-500 to-gray-600 rounded-full hover:scale-110 transition-all duration-300"
-            >
-              BACK TO MENU
-            </button>
+          {/* Center Brass Hub */}
+          <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-b from-amber-400 via-amber-600 to-amber-700 border-2 border-amber-300 shadow-xl flex items-center justify-center">
+              <div className="w-14 h-14 rounded-full bg-[#12151E] border border-amber-500/40 flex items-center justify-center">
+                <span className="text-[11px] font-mono font-black text-amber-400 tracking-wider">
+                  {isSpinning ? '...' : 'TURING'}
+                </span>
+              </div>
+            </div>
           </div>
+        </div>
+
+        {/* Spin Result Display */}
+        {wheelResult && (
+          <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4 mb-6 animate-in fade-in zoom-in-95 duration-200">
+            <span className="text-[10px] font-mono uppercase text-slate-400 tracking-widest block mb-1">
+              Wheel Settlement
+            </span>
+            <p className="text-2xl font-display font-black text-white mb-1">
+              {wheelResult.result}
+            </p>
+            <p className="text-sm font-mono font-bold" style={{ color: wheelResult.multiplier > 0 ? '#10B981' : '#F43F5E' }}>
+              {wheelResult.multiplier > 0
+                ? `+${wheelResult.multiplier} Chips Credited`
+                : 'No chips credited. Better luck on the main floor.'}
+            </p>
+          </div>
+        )}
+
+        {/* Action Controls */}
+        <div className="flex items-center justify-center gap-3">
+          {!isSpinning && !wheelResult && (
+            <button
+              onClick={handleSpin}
+              disabled={hasSpun}
+              className="py-3 px-8 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-sm uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Spin Wheel
+            </button>
+          )}
+
+          <button
+            onClick={onBack}
+            className="py-3 px-6 bg-[#181D2A] hover:bg-[#202738] border border-[#283248] hover:border-slate-500 text-slate-300 font-mono text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+          >
+            Back To Tables
+          </button>
         </div>
       </div>
     </div>

@@ -77,134 +77,171 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 flex items-center justify-center px-4">
-      <div className="max-w-2xl w-full text-center">
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
-          <h2 className="text-5xl font-black text-white mb-4">Dice Roll</h2>
-          <p className="text-xl text-indigo-300 mb-8">Guess the sum of two dice!</p>
+    <div className="min-h-screen casino-table-bg flex items-center justify-center px-4 pt-24 pb-12">
+      <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl">
+        {/* Header */}
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-purple-500/30 text-purple-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
+          <span>Side Action // 3.0x Payout</span>
+        </div>
 
-          {/* Instructions */}
-          <div className="bg-indigo-900/30 border border-indigo-400/30 rounded-xl p-6 mb-8">
-            <h3 className="text-2xl font-bold text-white mb-3">How to Play:</h3>
-            <div className="text-indigo-200 space-y-2 text-left">
-              <p>1. Select your bet amount ($10, $20, or $30)</p>
-              <p>2. Guess what the sum of two dice will be (2-12)</p>
-              <p>3. Watch the dice roll and see if you're right!</p>
-              <p>4. Correct guess wins 3x your bet!</p>
+        <h2 className="text-2xl sm:text-4xl font-display font-black text-white uppercase tracking-tight mb-2">
+          Precision Dice Sum
+        </h2>
+        <p className="text-slate-400 text-xs sm:text-sm font-sans mb-6">
+          Predict the combined sum of two casino dice (2 to 12). Correct prediction yields a high-variance 3x return.
+        </p>
+
+        {/* Wager Selection */}
+        {!hasDeductedBet && (
+          <div className="mb-6 p-4 bg-[#181D2A] border border-[#283248] rounded-xl">
+            <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block mb-3">
+              Step 1: Choose Wager Amount
+            </span>
+            <div className="flex justify-center gap-3">
+              {[10, 20, 30].map((amt) => {
+                const canAfford = currentChips >= amt;
+                const isSelected = selectedBet === amt;
+                return (
+                  <button
+                    key={amt}
+                    onClick={() => canAfford && handleBetSelect(amt)}
+                    disabled={!canAfford}
+                    className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center transition-all cursor-pointer ${
+                      isSelected
+                        ? 'ring-4 ring-amber-400 scale-105 shadow-chip'
+                        : 'border-2 border-dashed border-[#2E384D] hover:border-amber-400/60'
+                    } ${
+                      amt === 10
+                        ? 'bg-emerald-950/80 text-emerald-300'
+                        : amt === 20
+                          ? 'bg-blue-950/80 text-blue-300'
+                          : 'bg-purple-950/80 text-purple-300'
+                    } ${!canAfford ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
+                  >
+                    <span className="text-[10px] font-mono uppercase text-slate-400">CHIP</span>
+                    <span className="text-lg font-mono font-black">${amt}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {currentChips < 10 && (
+              <p className="text-xs font-mono text-rose-400 mt-2">Insufficient chips to place this wager.</p>
+            )}
+          </div>
+        )}
+
+        {/* Active Bet Notice */}
+        {hasDeductedBet && !showResult && (
+          <div className="mb-4 inline-flex items-center gap-2 bg-[#181D2A] border border-purple-500/30 px-3 py-1.5 rounded-full text-xs font-mono text-purple-400">
+            <span>Wager Locked: <strong>${selectedBet}</strong> (Potential Payout: <strong>${selectedBet ? selectedBet * 3 : 0}</strong>)</span>
+          </div>
+        )}
+
+        {/* Target Sum Selector */}
+        {hasDeductedBet && !showResult && (
+          <div className="mb-6 p-4 bg-[#181D2A] border border-[#283248] rounded-xl">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
+                Step 2: Select Predicted Sum
+              </span>
+              <span className="text-xs font-mono text-amber-400 font-bold">
+                Target: {userGuess ? userGuess : 'None'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-6 sm:grid-cols-11 gap-1.5">
+              {Array.from({ length: 11 }, (_, i) => i + 2).map((sumVal) => (
+                <button
+                  key={sumVal}
+                  onClick={() => setUserGuess(sumVal.toString())}
+                  disabled={rolling}
+                  className={`py-2 text-sm font-mono font-black rounded-lg transition-all cursor-pointer ${
+                    userGuess === sumVal.toString()
+                      ? 'bg-purple-600 text-white shadow-md ring-2 ring-purple-400 scale-105'
+                      : 'bg-[#12151E] hover:bg-[#202738] text-slate-300 border border-[#232938]'
+                  }`}
+                >
+                  {sumVal}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Physical 3D Dice Stage */}
+        <div className="mb-6 p-6 bg-[#0E1118] border border-[#232938] rounded-2xl">
+          <div className="flex justify-center items-center gap-6 mb-2">
+            {/* Dice 1 */}
+            <div className={`w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-mono font-black select-none shadow-xl transition-transform ${
+              rolling ? 'animate-bounce scale-105' : ''
+            } ${
+              showResult
+                ? 'bg-white text-slate-900 border-2 border-slate-300 ring-2 ring-white/50'
+                : 'bg-gradient-to-b from-[#1E2536] to-[#121622] text-amber-400 border-2 border-[#2E3B55]'
+            }`}>
+              {dice1}
+            </div>
+
+            <div className="text-xl font-mono font-bold text-slate-600">+</div>
+
+            {/* Dice 2 */}
+            <div className={`w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-mono font-black select-none shadow-xl transition-transform ${
+              rolling ? 'animate-bounce scale-105' : ''
+            } ${
+              showResult
+                ? 'bg-white text-slate-900 border-2 border-slate-300 ring-2 ring-white/50'
+                : 'bg-gradient-to-b from-[#1E2536] to-[#121622] text-amber-400 border-2 border-[#2E3B55]'
+            }`} style={{ animationDelay: '0.1s' }}>
+              {dice2}
             </div>
           </div>
 
-          {/* Betting Options */}
-          {!hasDeductedBet && (
-            <div className="mb-8">
-              <h3 className="text-2xl font-bold text-white mb-4">Select Your Bet</h3>
-              <div className="flex gap-4 justify-center">
-                <button
-                  className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                    selectedBet === 10
-                      ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                      : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                  } ${currentChips < 10 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => currentChips >= 10 && handleBetSelect(10)}
-                  disabled={currentChips < 10}
-                >
-                  $10
-                </button>
-                <button
-                  className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                    selectedBet === 20
-                      ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                      : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                  } ${currentChips < 20 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => currentChips >= 20 && handleBetSelect(20)}
-                  disabled={currentChips < 20}
-                >
-                  $20
-                </button>
-                <button
-                  className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                    selectedBet === 30
-                      ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                      : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                  } ${currentChips < 30 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => currentChips >= 30 && handleBetSelect(30)}
-                  disabled={currentChips < 30}
-                >
-                  $30
-                </button>
-              </div>
+          {showResult && (
+            <div className="mt-3 text-sm font-mono text-slate-400">
+              Final Sum: <span className="text-white font-bold">{parseInt(dice1.toString()) + parseInt(dice2.toString())}</span>
             </div>
           )}
+        </div>
 
-          {/* Game Area */}
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold text-white mb-6">Guess the Sum (2-12)</h3>
-
-            {hasDeductedBet && (
-              <div className="my-8 text-center">
-                <label htmlFor="diceSumInput" className="block text-xl mb-2 text-white">
-                  Your Guess:
-                </label>
-                <input
-                  type="number"
-                  id="diceSumInput"
-                  className="w-24 text-2xl p-2 text-center rounded border-2 border-indigo-400 focus:border-indigo-300 focus:outline-none bg-white/10 text-white"
-                  min="2"
-                  max="12"
-                  value={userGuess}
-                  onChange={(e) => setUserGuess(e.target.value)}
-                  disabled={rolling}
-                  placeholder="?"
-                />
-              </div>
-            )}
-
-            <div className="flex justify-center items-center my-8">
-              <div className={`dice ${rolling ? 'dice-rolling' : ''} mx-4 ${showResult ? 'bg-white text-black' : 'bg-gray-800 text-white'}`}>
-                {dice1}
-              </div>
-              <div className={`dice ${rolling ? 'dice-rolling' : ''} mx-4 ${showResult ? 'bg-white text-black' : 'bg-gray-800 text-white'}`}>
-                {dice2}
-              </div>
-            </div>
-
-            {/* Result Display */}
-            {showResult && (
-              <div className={`text-3xl font-bold mb-6 p-6 rounded-xl ${
-                isWin
-                  ? 'bg-green-900/50 border-2 border-green-400 text-green-300'
-                  : 'bg-red-900/50 border-2 border-red-400 text-red-300'
-              }`}>
-                {isWin ? '🎉 You Won! 🎉' : '😔 You Lost! 😔'}
-                <div className="text-xl mt-2">
-                  {isWin
-                    ? `You won $${selectedBet ? selectedBet * 3 : 0} chips!`
-                    : `Sum was ${parseInt(dice1.toString()) + parseInt(dice2.toString())}`}
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-4 justify-center">
-              {hasDeductedBet && !showResult && (
-                <button
-                  onClick={handleRoll}
-                  disabled={rolling || !userGuess}
-                  className="px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full hover:scale-110 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {rolling ? 'ROLLING...' : 'ROLL DICE'}
-                </button>
-              )}
-
-
-              <button
-                onClick={onBack}
-                className="px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-slate-500 to-slate-600 rounded-full hover:scale-110 transition-all duration-300"
-              >
-                BACK TO MENU
-              </button>
-            </div>
+        {/* Result Settlement Display */}
+        {showResult && (
+          <div className={`p-4 rounded-xl border mb-6 animate-in fade-in zoom-in-95 duration-200 ${
+            isWin
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+              : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+          }`}>
+            <span className="text-[10px] font-mono uppercase tracking-widest block mb-0.5">
+              Settlement Verdict
+            </span>
+            <p className="text-xl font-display font-black uppercase mb-1">
+              {isWin ? 'Direct Hit — Sum Predicted!' : 'Missed Prediction'}
+            </p>
+            <p className="text-xs font-mono">
+              {isWin
+                ? `+${selectedBet ? selectedBet * 3 : 0} Chips Awarded (3x Multiplier)`
+                : `Total sum was ${parseInt(dice1.toString()) + parseInt(dice2.toString())}. Target was ${userGuess}.`}
+            </p>
           </div>
+        )}
+
+        {/* Action Controls */}
+        <div className="flex items-center justify-center gap-3">
+          {hasDeductedBet && !showResult && (
+            <button
+              onClick={handleRoll}
+              disabled={rolling || !userGuess}
+              className="py-3 px-8 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-display font-black text-sm uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {rolling ? 'Rolling Dice...' : 'Roll Dice'}
+            </button>
+          )}
+
+          <button
+            onClick={onBack}
+            className="py-3 px-6 bg-[#181D2A] hover:bg-[#202738] border border-[#283248] hover:border-slate-500 text-slate-300 font-mono text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+          >
+            Back To Tables
+          </button>
         </div>
       </div>
     </div>

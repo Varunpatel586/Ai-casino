@@ -205,47 +205,54 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Intro Screen
   if (phase === 'intro') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-pink-900 to-slate-900 flex items-center justify-center px-4">
-        <div className="max-w-3xl text-center">
-          <div className="mb-8">
-            <MessageCircle className="text-pink-400 mx-auto mb-4" size={64} />
-            <h1 className="text-6xl font-black text-white mb-4">ROUND 3</h1>
-            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-500">
-              The Turing Test
-            </h2>
+      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
+        <div className="max-w-2xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 sm:p-10 shadow-2xl text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-4">
+            <MessageCircle size={14} />
+            <span>Event III • The Ultimate Turing Test</span>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
-            <p className="text-xl text-white/80 mb-4">
-              You will chat with an unknown partner. After the chat, you must guess: 
-              were you talking to an AI or a real human?
-            </p>
-            <p className="text-lg text-pink-400 font-semibold">
-              The mode is randomly selected and hidden from you!
-            </p>
-          </div>
+          <h1 className="text-4xl sm:text-5xl font-display font-black text-white tracking-tight uppercase mb-3">
+            The Turing Table
+          </h1>
 
-          <div className="grid grid-cols-3 gap-4 mb-8 text-white">
-            <div className="bg-white/5 rounded-xl p-4">
-              <div className="text-3xl font-bold text-pink-400">{TOTAL_SUBROUNDS}</div>
-              <div className="text-sm">Rounds</div>
+          <p className="text-slate-300 text-base leading-relaxed mb-8 max-w-lg mx-auto">
+            You will enter a blind, private terminal with an unknown counterpart. It is either an autonomous AI model or a real human operator. You have 3 messages to interrogate them and deduce their true nature.
+          </p>
+
+          <div className="grid grid-cols-3 gap-3 mb-8 text-left">
+            <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4">
+              <span className="text-[11px] font-mono uppercase text-slate-500 block">Subrounds</span>
+              <span className="text-2xl font-mono font-black text-white">{TOTAL_SUBROUNDS} Total</span>
             </div>
-            <div className="bg-white/5 rounded-xl p-4">
-              <div className="text-3xl font-bold text-purple-400">2</div>
-              <div className="text-sm">Minutes Each</div>
+            <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4">
+              <span className="text-[11px] font-mono uppercase text-slate-500 block">Time Limit</span>
+              <span className="text-2xl font-mono font-black text-amber-400">2 Min / Rd</span>
             </div>
-            <div className="bg-white/5 rounded-xl p-4">
-              <div className="text-3xl font-bold text-cyan-400">1</div>
-              <div className="text-sm">Guess Per Round</div>
+            <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4">
+              <span className="text-[11px] font-mono uppercase text-slate-500 block">Message Cap</span>
+              <span className="text-2xl font-mono font-black text-blue-400">{MESSAGES_PER_SUBROUND} msgs</span>
             </div>
           </div>
 
           <button
             onClick={() => setPhase('betting')}
-            className="px-12 py-5 text-2xl font-bold text-white bg-gradient-to-r from-pink-500 to-purple-500 rounded-full hover:scale-110 transition-all duration-300 hover:shadow-[0_0_40px_rgba(255,0,255,0.6)]"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-lg uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
           >
-            CONTINUE
+            <span>PLACE WAGER &amp; START</span>
           </button>
+
+          {/* Development skip button for testing transitions */}
+          <div className="mt-4">
+            <button
+              onClick={() => {
+                handleFinishRound();
+              }}
+              className="text-xs font-mono text-slate-500 hover:text-slate-300 underline underline-offset-4 transition-colors cursor-pointer"
+            >
+              Skip Round (Dev Test)
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -254,9 +261,8 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Betting Screen
   if (phase === 'betting') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-pink-900 to-slate-900 flex items-center justify-center px-4 pt-24">
+      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
         <div className="max-w-2xl w-full">
-          <h2 className="text-4xl font-black text-white text-center mb-8">Place Your Bet</h2>
           <BettingPanel currentChips={currentChips} onBet={handleBet} />
         </div>
       </div>
@@ -266,13 +272,22 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Mode Selection Screen (random selection in progress)
   if (phase === 'mode-select') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-pink-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-pink-500 mx-auto mb-4"></div>
-          <h2 className="text-2xl text-white">Finding your chat partner...</h2>
-          <p className="text-pink-300 mt-2">Randomly selecting AI or Human</p>
+      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
+        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 text-center shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-[#181D2A] border border-amber-500/30 flex items-center justify-center mx-auto mb-6">
+            <MessageCircle className="text-amber-400 animate-pulse" size={32} />
+          </div>
+          <h2 className="text-2xl font-display font-black text-white uppercase tracking-tight mb-2">
+            Establishing Secure Line
+          </h2>
+          <p className="text-slate-400 text-sm font-mono mb-4">
+            Subround {currentRound + 1} of {TOTAL_SUBROUNDS} • Pairing with blind counterpart...
+          </p>
+          <div className="w-full bg-[#181D2A] rounded-full h-1.5 overflow-hidden">
+            <div className="bg-amber-400 h-full w-2/3 animate-pulse rounded-full" />
+          </div>
           {connectionError && (
-            <div className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded text-red-400 text-sm max-w-md">
+            <div className="mt-4 p-3 bg-rose-950/40 border border-rose-500/40 rounded-lg text-rose-400 text-xs font-mono">
               {connectionError}
             </div>
           )}
@@ -284,18 +299,22 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Human Chat Connection Screen (when connecting to host)
   if (phase === 'playing' && actualMode === 'human' && !isConnected) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-pink-900 to-slate-900 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-slate-800/50 backdrop-blur-md rounded-2xl p-8 border border-pink-900/50">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto mb-4"></div>
-            <h2 className="text-2xl font-bold text-white mb-2">Connecting to chat partner...</h2>
-            <p className="text-slate-300">Setting up secure connection</p>
-            {connectionError && (
-              <div className="mt-4 p-3 bg-red-900/20 border border-red-500/30 rounded text-red-400 text-sm">
-                {connectionError}
-              </div>
-            )}
+      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
+        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 text-center shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-[#181D2A] border border-blue-500/30 flex items-center justify-center mx-auto mb-6">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400 border-t-transparent" />
           </div>
+          <h2 className="text-2xl font-display font-black text-white uppercase tracking-tight mb-2">
+            Pairing With Remote Host
+          </h2>
+          <p className="text-slate-400 text-sm font-mono mb-2">
+            Synchronizing encrypted WebSocket channel...
+          </p>
+          {connectionError && (
+            <div className="mt-4 p-3 bg-rose-950/40 border border-rose-500/40 rounded-lg text-rose-400 text-xs font-mono">
+              {connectionError}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -324,61 +343,101 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
     }
   };
 
-  // Chat Interface Screen - with 3-message limit and guess UI
+  // Chat Interface Screen - with 3-message limit and verdict modal
   if (phase === 'playing' && actualMode) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-pink-900 to-slate-900 flex flex-col">
-        <div className="bg-slate-800/50 backdrop-blur-md border-b border-pink-900/50 p-4">
-          <div className="max-w-6xl mx-auto flex justify-between items-center">
-            <div className="flex items-center">
+      <div className="min-h-screen casino-table-bg flex flex-col pt-16">
+        {/* Subround HUD Banner */}
+        <div className="bg-[#12151E] border-b border-[#232938] px-4 sm:px-8 py-3">
+          <div className="max-w-5xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-3">
               <button 
                 onClick={() => {
-                  if (confirm('Are you sure you want to leave this chat? Your progress will be lost.')) {
+                  if (confirm('Are you sure you want to abandon this interrogation? Your progress will be lost.')) {
                     network_manager.disconnect();
                     setPhase('mode-select');
                     setActualMode(null);
                   }
                 }}
-                className="text-pink-400 hover:text-white mr-4 transition-colors"
+                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-[#181D2A]"
+                title="Abandon Subround"
               >
-                <ArrowLeft size={24} />
+                <ArrowLeft size={20} />
               </button>
-              <h2 className="text-xl font-bold text-white">
-                Subround {currentRound + 1} of {TOTAL_SUBROUNDS} - Turing Test
-              </h2>
+              <div>
+                <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
+                  Interrogation Session
+                </span>
+                <h3 className="text-sm sm:text-base font-bold text-white">
+                  Subround {currentRound + 1} of {TOTAL_SUBROUNDS}
+                </h3>
+              </div>
             </div>
-            <div className="text-sm text-slate-300">
-              You can send {MESSAGES_PER_SUBROUND - messagesSent} message(s) this subround
+
+            <div className="flex items-center gap-3">
+              <div className="px-3 py-1 rounded-lg bg-[#181D2A] border border-[#2E374D] text-xs font-mono text-slate-300">
+                Messages: <span className="text-amber-400 font-bold">{MESSAGES_PER_SUBROUND - messagesSent}</span> left
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <ChatInterface 
-            mode={actualMode}
-            onComplete={() => {}} // disable auto-complete
-            timeLimit={120}
-            onTimeUp={handleTimeUp}
-            isConnected={actualMode === 'ai' ? true : isConnected}
-            messageLimit={MESSAGES_PER_SUBROUND}
-            messagesSent={messagesSent}
-            onSendMessage={() => {
-              setMessagesSent(m => m + 1);
-              if (messagesSent + 1 >= MESSAGES_PER_SUBROUND) setShowGuess(true);
-            }}
-            disableInput={messagesSent >= MESSAGES_PER_SUBROUND}
-          />
+
+        {/* Chat Component Container */}
+        <div className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 overflow-hidden flex flex-col">
+          <div className="flex-1 bg-[#12151E] border border-[#232938] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+            <ChatInterface 
+              mode={actualMode}
+              onComplete={() => {}} // disable auto-complete
+              timeLimit={120}
+              onTimeUp={handleTimeUp}
+              isConnected={actualMode === 'ai' ? true : isConnected}
+              messageLimit={MESSAGES_PER_SUBROUND}
+              messagesSent={messagesSent}
+              onSendMessage={() => {
+                const nextSent = messagesSent + 1;
+                setMessagesSent(nextSent);
+                if (nextSent >= MESSAGES_PER_SUBROUND) {
+                  setTimeout(() => {
+                    setShowGuess(true);
+                  }, 2000);
+                }
+              }}
+              disableInput={messagesSent >= MESSAGES_PER_SUBROUND}
+            />
+          </div>
+
+          {/* High-Stakes Verdict Modal */}
           {showGuess && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
-              <div className="bg-white rounded-xl p-8 text-center">
-                <h2 className="text-2xl font-bold mb-4">Who was your chat partner?</h2>
-                <button
-                  className="px-6 py-3 bg-pink-500 text-white rounded-lg font-bold text-xl mr-4"
-                  onClick={() => handleSubroundGuess('ai')}
-                >AI</button>
-                <button
-                  className="px-6 py-3 bg-purple-500 text-white rounded-lg font-bold text-xl"
-                  onClick={() => handleSubroundGuess('human')}
-                >Human</button>
+            <div className="fixed inset-0 flex items-center justify-center bg-[#08090D]/90 backdrop-blur-md z-50 p-4">
+              <div className="bg-[#12151E] border-2 border-amber-500/40 rounded-2xl p-6 sm:p-8 max-w-lg w-full text-center shadow-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-4">
+                  <span>Interrogation Concluded</span>
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-tight mb-2">
+                  Identify Your Counterpart
+                </h2>
+                <p className="text-slate-400 text-sm font-mono mb-8">
+                  3 messages complete. Deliver your final classification to settle this subround.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button
+                    className="flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#182338] to-[#101726] hover:from-[#223250] hover:to-[#162035] border-2 border-blue-500/40 hover:border-blue-400 rounded-xl text-white shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all cursor-pointer"
+                    onClick={() => handleSubroundGuess('ai')}
+                  >
+                    <span className="text-2xl font-black font-display text-blue-400 mb-1">ARTIFICIAL</span>
+                    <span className="text-xs font-mono uppercase text-slate-400 tracking-wider">AI Model</span>
+                  </button>
+
+                  <button
+                    className="flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#2E1D10] to-[#1C120A] hover:from-[#3E2716] hover:to-[#26190E] border-2 border-amber-500/40 hover:border-amber-400 rounded-xl text-white shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all cursor-pointer"
+                    onClick={() => handleSubroundGuess('human')}
+                  >
+                    <span className="text-2xl font-black font-display text-amber-400 mb-1">HUMAN</span>
+                    <span className="text-xs font-mono uppercase text-slate-400 tracking-wider">Live Host</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -393,44 +452,50 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
     const winnings = Math.max(0, Math.floor(currentBet * (scorePercentage / 50)));
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-pink-900 to-slate-900 flex items-center justify-center px-4">
-        <div className="max-w-2xl w-full bg-slate-800/50 backdrop-blur-md rounded-2xl p-8 border border-pink-900/50">
-          <div className="text-center mb-8">
-            <h2 className="text-4xl font-black text-white mb-2">Round Complete!</h2>
-            <p className="text-pink-300 text-xl">Your Score: {scorePercentage}%</p>
+      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
+        <div className="max-w-2xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 sm:p-10 text-center shadow-2xl">
+          <div className="w-14 h-14 rounded-2xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-4">
+            <MessageCircle size={28} />
           </div>
 
-          <div className="bg-slate-900/50 rounded-xl p-6 mb-8">
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-slate-800/50 rounded-lg p-4 text-center">
-                <p className="text-4xl font-bold text-pink-400">{roundScore}</p>
-                <p className="text-slate-300">Correct Guesses</p>
+          <div className="text-xs font-mono uppercase tracking-widest text-slate-400 mb-1">
+            Round 3 Complete
+          </div>
+          <h2 className="text-3xl font-display font-black text-white uppercase tracking-tight mb-6">
+            Turing Trial Settled
+          </h2>
+
+          <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-5 mb-6">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-[#12151E] rounded-lg p-3 border border-[#232938]">
+                <span className="text-2xl font-mono font-black text-emerald-400">{roundScore}</span>
+                <span className="text-xs font-mono text-slate-400 block mt-0.5">Correct Guesses</span>
               </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 text-center">
-                <p className="text-4xl font-bold text-pink-400">
-                  {TOTAL_SUBROUNDS - roundScore}
-                </p>
-                <p className="text-slate-300">Incorrect Guesses</p>
+              <div className="bg-[#12151E] rounded-lg p-3 border border-[#232938]">
+                <span className="text-2xl font-mono font-black text-rose-400">{TOTAL_SUBROUNDS - roundScore}</span>
+                <span className="text-xs font-mono text-slate-400 block mt-0.5">Incorrect Guesses</span>
               </div>
             </div>
 
-            <div className="bg-slate-800/30 rounded-lg p-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-slate-300">Your Bet:</span>
-                <span className="font-mono text-lg">${currentBet}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-300">Winnings:</span>
-                <span className="font-mono text-xl font-bold text-pink-400">+${winnings}</span>
-              </div>
+            <div className="flex justify-between items-center pt-3 border-t border-[#232938] text-xs font-mono">
+              <span className="text-slate-400">Round Wager:</span>
+              <span className="text-white font-bold text-sm">${currentBet}</span>
+            </div>
+            <div className="flex justify-between items-center pt-2 text-xs font-mono">
+              <span className="text-slate-400">Total Turing Accuracy:</span>
+              <span className="text-amber-400 font-bold text-sm">{scorePercentage}%</span>
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t border-[#232938] text-xs font-mono">
+              <span className="text-slate-400">Settlement Payout:</span>
+              <span className="text-emerald-400 font-bold text-sm">+{winnings} Chips</span>
             </div>
           </div>
 
           <button
             onClick={handleFinishRound}
-            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold rounded-xl transition-all hover:shadow-lg hover:shadow-pink-500/20"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-4 px-10 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
           >
-            Continue to Next Round
+            <span>COLLECT WINNINGS &amp; ENTER VAULT</span>
           </button>
         </div>
       </div>

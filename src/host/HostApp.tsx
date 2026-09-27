@@ -243,7 +243,10 @@ export default function HostApp() {
       {/* LEFT SIDEBAR */}
       <div className="w-80 bg-slate-800 border-r border-slate-700 flex flex-col">
         <div className="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
-          <h2 className="font-bold text-lg text-purple-400">Players ({Object.keys(players).length})</h2>
+          <div>
+            <h2 className="font-bold text-lg text-purple-400">Players ({Object.keys(players).length})</h2>
+            <div className="text-xs text-slate-400">{connectionStatus} {isLoading && '(Loading...)'}</div>
+          </div>
           <div className="text-xs text-slate-400">
             {isConnected ? <span className="text-green-500">● Online</span> : <span className="text-red-500">● Offline</span>}
           </div>
