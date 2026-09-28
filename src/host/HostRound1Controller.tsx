@@ -299,16 +299,15 @@ export default function HostRound1Controller() {
 
         {/* 3D TABLE AS MAIN ENVIRONMENT WITH 6 PERIMETER SEATS (No Host Seat) */}
         <div className="relative w-full min-h-[580px] sm:min-h-[640px] md:min-h-[700px] rounded-3xl overflow-hidden border border-[#1E2535] bg-[#07090E] shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between p-4 sm:p-7">
-          {/* SKETCHFAB 3D TABLE BACKGROUND ENVIRONMENT */}
+          {/* STATIC HIGH-PERFORMANCE TABLE BACKGROUND */}
           <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
-            <iframe
-              title="Blackjack Table 3D Model"
-              allowFullScreen
-              allow="autoplay; fullscreen; xr-spatial-tracking"
-              src="https://sketchfab.com/models/8301904ea57e4b39925e0312ddddf117/embed?autostart=1&internal=1&tracking=0&ui_infos=0&ui_snapshots=0&ui_stop=0&ui_watermark=0&ui_hint=0&ui_theme=dark"
-              className="w-full h-full border-0 pointer-events-auto"
+            <img
+              src="/images/blackjack-table-bg.jpg"
+              alt="Casino Blackjack Table"
+              className="w-full h-full object-cover select-none pointer-events-none brightness-95 contrast-105"
             />
-            {/* Subtle table edge vignette */}
+            {/* Subtle table edge vignette & ambient shading */}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-[#07090E]/60 via-transparent to-[#07090E]/40" />
             <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(7,9,14,0.85)]" />
           </div>
 
