@@ -225,7 +225,117 @@ This document serves as the continuous project walkthrough and activity log. It 
   - Verified with `Get-NetTCPConnection` that port 8080 is 100% free with zero active listeners.
 - **Files Modified / Created:**
   - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
-- **Status:** ✅ Complete & Port 8080 Free.
+- **Status:** Complete.
+
+---
+
+### Entry 12: Terminal Error Diagnostics & Solution Guide
+- **Date & Time:** 2026-09-29 22:43 IST
+- **User Prompt:**
+  > *"why is the following error occuring in the terminal provide some solutions for the following ereroer"*
+- **Objective:**
+  - Detail root causes and actionable solutions for all messages/errors emitted in the terminal:
+    1. `Error: listen EADDRINUSE: address already in use :::8080` (Port conflict when another server process is already running).
+    2. `⚠️ SUPABASE_URL or SUPABASE_ANON_KEY is not set in .env!` (Fallback warning, non-fatal; local SQLite is active).
+    3. `[Multiplayer] Auto-resetting stale active/settled room on startup` (Self-healing database recovery routine).
+  - Verify current status of running processes (Port 8080 active on PID 21496; Port 5174 awaiting `npm run dev`).
+- **Files Modified / Created:**
+  - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
+- **Status:** Complete.
+
+---
+
+### Entry 13: Supabase .env Configuration Clarification
+- **Date & Time:** 2026-09-29 22:46 IST
+- **User Prompt:**
+  > *"SUPABASE_URL or SUPABASE_ANON_KEY is not set in .env! Database features will not work. do i have to add an .env file to this"*
+- **Objective:**
+  - Clarify whether a `.env` file containing Supabase credentials is mandatory to run the game.
+- **Actions Taken:**
+  - Analyzed [`server.js`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/server.js) and [`server/db.js`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/server/db.js).
+  - Confirmed that Supabase is purely optional for remote cloud database hosting.
+  - Documented that the local SQLite database (`casino_multiplayer.db`) and in-memory mock player storage handle all game features (multiplayer blackjack, betting, chips, scoring, WebSocket communication) with zero configuration.
+- **Files Modified / Created:**
+  - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
+- **Status:** Complete.
+
+---
+
+### Entry 14: Environment File Configuration for Deployment
+- **Date & Time:** 2026-09-29 23:03 IST
+- **User Prompt:**
+  > *"we need to deploy this project online to vercel so here is the .env file please add this file without any changes or errors..."*
+- **Objective:**
+  - Create the [`.env`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.env) configuration file with exact user-supplied API keys and endpoints for online deployment.
+- **Actions Taken:**
+  - Verified [`.gitignore`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.gitignore) securely ignores `.env` from git commits.
+  - Created [`.env`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.env) containing all specified Groq, Gemini, Supabase, HuggingFace, and Render backend/websocket endpoints without alterations.
+  - Executed `npm run build` to confirm production bundling succeeds with the new configuration (passed cleanly in 5.50s).
+- **Files Modified / Created:**
+  - Created: [`.env`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.env)
+  - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
+- **Status:** Complete.
+
+---
+
+### Entry 15: Analysis & Solutions for Concurrent npm run server Collision
+- **Date & Time:** 2026-09-29 23:10 IST
+- **User Prompt:**
+  > *"now check why this error is occuring in terminal for npm run server provide some solutions to resolve this error"*
+- **Objective:**
+  - Identify the exact root cause of `EADDRINUSE: address already in use :::8080`.
+  - Provide immediate commands to swap from the old server instance to the new `.env`-enabled server instance.
+  - Provide architectural solutions to prevent port collisions in future sessions.
+- **Actions Taken:**
+  - Inspected TCP listeners and process tree: Identified PID 21496 (`node server.js`) running continuously since 22:39 (30+ minutes).
+  - Confirmed the user's second command connected to Supabase successfully before hitting the collision with the older instance.
+  - Documented stop command (`Stop-Process -Id 21496 -Force`) and automated port management options.
+- **Files Modified / Created:**
+  - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
+- **Status:** Complete.
+
+---
+
+### Entry 16: PID Transition Diagnosis & Live Supabase Verification
+- **Date & Time:** 2026-09-29 23:20 IST
+- **User Prompt:**
+  > *"check why can he not find the process why cannot we stop the old server"*
+- **Objective:**
+  - Diagnose why `Stop-Process -Id 21496` failed with "Cannot find process" and why `EADDRINUSE` still occurred on subsequent runs.
+- **Actions Taken:**
+  - Executed `netstat -ano | findstr :8080` and inspected Win32_Process objects:
+    - PID 21496 had already terminated.
+    - A new server instance (PID 49636) was successfully launched at 23:16:02 with `.env` active.
+    - Subsequent `npm run server` calls attempted to bind port 8080 concurrently with the active PID 49636.
+  - Verified live endpoint `http://localhost:8080/api/leaderboard`:
+    - Returned live Supabase cloud leaderboard (`gametest2`, `Jinay`, `pranav`, etc.).
+  - Formulated clean process termination patterns (`npx kill-port 8080`) and verified that the backend is already fully operational.
+- **Files Modified / Created:**
+  - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
+- **Status:** Complete.
+
+---
+
+### Entry 17: Comprehensive README Overhaul for New Game Architecture & GitHub Push
+- **Date & Time:** 2026-09-29 23:32 IST
+- **User Prompt:**
+  > *"push these new changes in my github repo and also include a readme file according to new game"*
+- **Objective:**
+  - Rewrite [`README.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/README.md) to comprehensively document the complete game system:
+    - 6-Player Real-Time Multiplayer Video Showdown (Round 1) with synchronized challenge feeds, chip betting ($10, $25, $50, ALL IN), seat pods (`S1` to `S6`), and host controls.
+    - Side-Action Intermission Casino Tables across Stage I, II, and III (Neural Wheel, Cyber Blackjack, Quantum Dice, Data Pattern Dash, Cyber Minefield, and Vault Decryption).
+    - Reverse Prompt Engineering Duel (Round 2) with 6-tier AI image generation fallback waterfall.
+    - The Turing Test (Round 3) with 70/30 AI-to-Human split featuring Gemini 1.5 Flash, Groq Llama 3 backup, and live WebSocket human host console.
+    - Dual Database Architecture (Cloud Supabase persistence with local SQLite auto-healing failover).
+    - Unified Host Command Center (`/host`) covering table operations and Turing test operator queue.
+    - Full setup, environment configuration, and Vercel/Render deployment workflows.
+  - Verify that sensitive files (`.env`, `*.db`, `*.db-shm`, `*.db-wal`) remain strictly ignored by `.gitignore`.
+  - Stage, commit, and push all repository changes to GitHub (`origin/main`).
+- **Files Modified / Created:**
+  - Updated: [`README.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/README.md)
+  - Updated: [`IMPLEMENTATION.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/IMPLEMENTATION.md)
+  - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
+- **Status:** ✅ Complete & Ready for Push.
 
 ---
 
@@ -235,6 +345,7 @@ This document serves as the continuous project walkthrough and activity log. It 
 | [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md) | Living walkthrough and change log |
 | [`IMPLEMENTATION.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/IMPLEMENTATION.md) | Implementation plans & pre-execution approval gate |
 | [`.agents/rules/walkthrough.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.agents/rules/walkthrough.md) | Enforced agent workflow rules |
+| [`.env`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.env) | Environment variables for APIs, Supabase, and Render backend |
 | [`README.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/README.md) | Project architecture and deployment guide |
 | [`server.js`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/server.js) | Full backend server (Express + Socket.io + WebSocket + AI Proxies) |
 | [`src/host/startHost.js`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/host/startHost.js) | Standalone Turing Test Round 3 WebSocket host |
@@ -245,9 +356,10 @@ This document serves as the continuous project walkthrough and activity log. It 
 ---
 
 ## 🚀 Next Steps
-- Port 8080 is completely free.
-- Run `npm run server` directly in your terminal now.
-- As always, any new feature or code modification requests will be drafted in [`IMPLEMENTATION.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/IMPLEMENTATION.md) for approval before execution.
+- Verify push to GitHub `origin/main`.
+- Frontend dev server: `npm run dev`.
+- Backend server: currently active on port 8080 (PID 49636).
+
 
 
 
