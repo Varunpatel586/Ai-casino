@@ -214,34 +214,13 @@ The Host Command Center provides full operational control over live events:
    npm install
    ```
 
-3. **Configure Environment Variables:**
-   Create a `.env` file in the root directory:
-   ```env
-   # Backend & WebSocket Server
-   PORT=8080
-   VITE_BACKEND_URL=http://localhost:8080
-   VITE_WS_URL=ws://localhost:8080
-
-   # AI LLM APIs
-   VITE_GEMINI_API_KEY=your_gemini_api_key_here
-   GEMINI_API_KEY=your_gemini_api_key_here
-   GROQ_API_KEY=your_groq_api_key_here
-
-   # Cloud Database (Optional - defaults to local SQLite if omitted)
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_ANON_KEY=your_supabase_anon_key_here
-
-   # Image Generation APIs
-   HUGGINGFACE_API_KEY=your_huggingface_api_key_here
-   ```
-
-4. **Run the Development Servers:**
+3. **Run the Development Servers:**
 
    **Terminal 1 — Backend Server:**
    ```bash
    npm run server
    ```
-   *Runs Express, Socket.io, and database sync on port 8080.*
+   *Runs Express, Socket.io, and local database sync on port 8080.*
 
    **Terminal 2 — Frontend Client:**
    ```bash
@@ -249,7 +228,7 @@ The Host Command Center provides full operational control over live events:
    ```
    *Runs the Vite development server (typically on `http://localhost:5173` or `5174`).*
 
-5. **Access the Applications:**
+4. **Access the Applications:**
    - **Contestant Interface:** `http://localhost:5173/`
    - **Host Controller:** `http://localhost:5173/host`
 

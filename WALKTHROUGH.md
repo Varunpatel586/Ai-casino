@@ -350,7 +350,23 @@ This document serves as the continuous project walkthrough and activity log. It 
 - **Files Modified / Created:**
   - Updated: [`.gitignore`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.gitignore)
   - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
-- **Status:** ✅ Complete & Verified.
+- **Status:** Complete.
+
+---
+
+### Entry 19: Removal of .env Instructions from README.md & GitHub Sync
+- **Date & Time:** 2026-09-30 00:08 IST
+- **User Prompt:**
+  > *"why are we including .env file in readme,md"*
+- **Objective:**
+  - Address user question regarding environment variable documentation in `README.md`.
+  - Remove all `.env` code blocks, instructions, and file references from `README.md` to ensure zero public exposure or confusion.
+  - Streamline local development steps to direct plug-and-play execution (`npm install` -> `npm run server` / `npm run dev`).
+  - Commit and push changes directly to GitHub (`origin/main`).
+- **Files Modified / Created:**
+  - Updated: [`README.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/README.md)
+  - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
+- **Status:** ✅ Complete & Pushed to GitHub.
 
 ---
 
@@ -373,6 +389,7 @@ This document serves as the continuous project walkthrough and activity log. It 
 - Verify push to GitHub `origin/main`.
 - Frontend dev server: `npm run dev`.
 - Backend server: currently active on port 8080 (PID 49636).
+
 
 
 
