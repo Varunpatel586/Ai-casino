@@ -261,19 +261,14 @@ This document serves as the continuous project walkthrough and activity log. It 
 
 ---
 
-### Entry 14: Environment File Configuration for Deployment
+### Entry 14: Local Environment Configuration
 - **Date & Time:** 2026-09-29 23:03 IST
-- **User Prompt:**
-  > *"we need to deploy this project online to vercel so here is the .env file please add this file without any changes or errors..."*
 - **Objective:**
-  - Create the [`.env`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.env) configuration file with exact user-supplied API keys and endpoints for online deployment.
+  - Configure local environment settings for APIs, database, and backend endpoints.
 - **Actions Taken:**
-  - Verified [`.gitignore`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.gitignore) securely ignores `.env` from git commits.
-  - Created [`.env`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.env) containing all specified Groq, Gemini, Supabase, HuggingFace, and Render backend/websocket endpoints without alterations.
-  - Executed `npm run build` to confirm production bundling succeeds with the new configuration (passed cleanly in 5.50s).
-- **Files Modified / Created:**
-  - Created: [`.env`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.env)
-  - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
+  - Verified `.gitignore` securely ignores all environment configuration files from git commits.
+  - Set up local environment variables for Groq, Gemini, Supabase, HuggingFace, and Render backend endpoints.
+  - Executed `npm run build` to confirm production bundling succeeds (passed cleanly in 5.50s).
 - **Status:** Complete.
 
 ---
@@ -329,13 +324,33 @@ This document serves as the continuous project walkthrough and activity log. It 
     - Dual Database Architecture (Cloud Supabase persistence with local SQLite auto-healing failover).
     - Unified Host Command Center (`/host`) covering table operations and Turing test operator queue.
     - Full setup, environment configuration, and Vercel/Render deployment workflows.
-  - Verify that sensitive files (`.env`, `*.db`, `*.db-shm`, `*.db-wal`) remain strictly ignored by `.gitignore`.
+  - Verify that sensitive files remain strictly ignored by `.gitignore`.
   - Stage, commit, and push all repository changes to GitHub (`origin/main`).
 - **Files Modified / Created:**
   - Updated: [`README.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/README.md)
   - Updated: [`IMPLEMENTATION.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/IMPLEMENTATION.md)
   - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
-- **Status:** ✅ Complete & Ready for Push.
+- **Status:** Complete.
+
+---
+
+### Entry 18: Verification of .env Exclusion & Gitignore Hardening
+- **Date & Time:** 2026-09-29 23:55 IST
+- **User Prompt:**
+  > *"remove the .env file from the github repo it is not for showing everyone"*
+- **Objective:**
+  - Confirm that `.env` is NOT tracked in git history or present on GitHub (`origin/main`).
+  - Strengthen `.gitignore` to prevent any variant of environment or secret files from ever being tracked.
+  - Sanitize all documentation to ensure no references, links, or traces of `.env` appear in public docs.
+- **Actions Taken:**
+  - Executed `git ls-files .env` and `git ls-tree -r origin/main`: Verified that `.env` has never been committed or pushed to GitHub.
+  - Executed `git check-ignore -v .env`: Verified rule `.gitignore:23:.env` actively protects the file.
+  - Strengthened [`.gitignore`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.gitignore) with wildcards (`.env`, `.env.*`, `.env.local`, `*.env`).
+  - Removed all file links and references to `.env` from [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md).
+- **Files Modified / Created:**
+  - Updated: [`.gitignore`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.gitignore)
+  - Updated: [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md)
+- **Status:** ✅ Complete & Verified.
 
 ---
 
@@ -345,7 +360,6 @@ This document serves as the continuous project walkthrough and activity log. It 
 | [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md) | Living walkthrough and change log |
 | [`IMPLEMENTATION.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/IMPLEMENTATION.md) | Implementation plans & pre-execution approval gate |
 | [`.agents/rules/walkthrough.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.agents/rules/walkthrough.md) | Enforced agent workflow rules |
-| [`.env`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/.env) | Environment variables for APIs, Supabase, and Render backend |
 | [`README.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/README.md) | Project architecture and deployment guide |
 | [`server.js`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/server.js) | Full backend server (Express + Socket.io + WebSocket + AI Proxies) |
 | [`src/host/startHost.js`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/host/startHost.js) | Standalone Turing Test Round 3 WebSocket host |
@@ -359,6 +373,7 @@ This document serves as the continuous project walkthrough and activity log. It 
 - Verify push to GitHub `origin/main`.
 - Frontend dev server: `npm run dev`.
 - Backend server: currently active on port 8080 (PID 49636).
+
 
 
 
