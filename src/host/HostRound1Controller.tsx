@@ -73,9 +73,11 @@ export default function HostRound1Controller() {
 
   // Connect socket as Host
   useEffect(() => {
+    console.log('[HostRound1] Connecting as host to room:', roomId, 'hostId:', hostId);
     const socket = multiplayerSocket.connect();
 
     socket.on('table_state', (state: TableState) => {
+      console.log('[HostRound1] table_state received: status=', state.status, 'feed=', state.currentFeedIndex, 'players=', state.players.length);
       setTableState(state);
       setCountdown(state.roundTimer);
     });
@@ -85,6 +87,7 @@ export default function HostRound1Controller() {
     });
 
     socket.on('wager_phase_started', (data?: { duration?: number }) => {
+      console.log('[HostRound1] wager_phase_started - duration:', data?.duration);
       setFeedReveal(null);
       if (data?.duration) {
         setCountdown(data.duration);
@@ -92,6 +95,7 @@ export default function HostRound1Controller() {
     });
 
     socket.on('feed_started', (data?: { duration?: number }) => {
+      console.log('[HostRound1] feed_started - duration:', data?.duration);
       setFeedReveal(null);
       if (data?.duration) {
         setCountdown(data.duration);
@@ -104,21 +108,44 @@ export default function HostRound1Controller() {
     });
 
     socket.on('feed_revealed', (data: FeedRevealedData) => {
+      console.log('[HostRound1] feed_revealed - isAI:', data.isAI, 'results:', data.playerResults.length);
       setFeedReveal(data);
     });
 
     socket.on('error_message', ({ message }) => {
+      console.warn('[HostRound1] error_message:', message);
       setErrorMessage(message);
       setTimeout(() => setErrorMessage(null), 4000);
     });
 
-    // Register this client as Host
-    multiplayerSocket.joinAsHost(roomId, hostId);
+    socket.on('connect', () => {
+      console.log('[HostRound1] Socket connected, joining as host...');
+      multiplayerSocket.joinAsHost(roomId, hostId);
+    });
 
+    socket.on('disconnect', (reason) => {
+      console.warn('[HostRound1] Socket disconnected:', reason);
+    });
+
+    // Register this client as Host (in case already connected)
+    if (socket.connected) {
+      multiplayerSocket.joinAsHost(roomId, hostId);
+    }
+
+    // FIX BUG-012: Remove all listeners on cleanup to prevent accumulation
     return () => {
-      // socket disconnect managed globally
+      console.log('[HostRound1] Cleaning up socket listeners');
+      socket.off('table_state');
+      socket.off('timer_tick');
+      socket.off('wager_phase_started');
+      socket.off('feed_started');
+      socket.off('feed_revealed');
+      socket.off('error_message');
+      socket.off('connect');
+      socket.off('disconnect');
     };
   }, [roomId, hostId]);
+
 
   // Sync video on feed change
   useEffect(() => {

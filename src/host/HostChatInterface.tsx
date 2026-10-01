@@ -44,9 +44,13 @@ export default function HostChatInterface() {
     }
 
     network_manager.message_callback = (msg: any) => {
+      console.log('[HostChat] Received message:', msg.type, msg);
+
       if (msg.type === 'host-registered') {
         addSystemMessage('You are now the host! Players can connect to chat.');
+
       } else if (msg.type === 'player-joined') {
+        // FIX BUG-004: was duplicated, now handled exactly once
         setPlayers(prev => {
           const existingPlayer = prev.find(p => p.id === msg.clientId);
           if (existingPlayer) return prev;
@@ -56,18 +60,24 @@ export default function HostChatInterface() {
             connected: true
           }];
         });
-        addSystemMessage(`🎮 Player ${msg.username || msg.clientId} joined the chat`);
+        addSystemMessage(`Player ${msg.username || msg.clientId} joined the chat`);
+
       } else if (msg.type === 'player-left') {
-        setPlayers(prev => prev.map(p => 
+        // FIX BUG-004: was duplicated, now handled exactly once
+        setPlayers(prev => prev.map(p =>
           p.id === msg.clientId ? { ...p, connected: false } : p
         ));
-        addSystemMessage(`🚪 Player ${msg.username || msg.clientId} left the chat`);
+        addSystemMessage(`Player ${msg.username || msg.clientId} left the chat`);
+
       } else if (msg.type === 'player-list') {
+        // FIX BUG-004: was duplicated, now handled exactly once
+        console.log('[HostChat] Received player-list:', msg.players);
         setPlayers(msg.players.map((player: any) => ({
           id: player.id,
           name: player.username,
           connected: player.connected
         })));
+
       } else if (msg.type === 'chat') {
         const newMessage: ChatMessage = {
           id: Date.now().toString() + Math.random(),
@@ -79,28 +89,16 @@ export default function HostChatInterface() {
           targetPlayerId: msg.isPrivate ? (msg.senderId === 'host' ? msg.targetPlayerId : 'host') : undefined
         };
         setMessages(prev => [...prev, newMessage]);
-      } else if (msg.type === 'player-joined') {
-        setPlayers(prev => {
-          const existingPlayer = prev.find(p => p.id === msg.clientId);
-          if (existingPlayer) return prev;
-          
-          return [...prev, {
-            id: msg.clientId,
-            name: msg.username,
-            connected: true
-          }];
-        });
-      } else if (msg.type === 'player-left') {
-        setPlayers(prev => prev.map(p => 
-          p.id === msg.clientId ? { ...p, connected: false } : p
-        ));
-      } else if (msg.type === 'player-list') {
-        // Initialize player list when host connects
-        setPlayers(msg.players.map((player: any) => ({
-          id: player.id,
-          name: player.username,
-          connected: player.connected
-        })));
+
+      } else if (msg.type === 'connected') {
+        console.log('[HostChat] Server connection confirmed, clientId:', msg.clientId);
+        addSystemMessage('Connected to AI Casino server.');
+
+      } else if (msg.type === 'host-available') {
+        console.log('[HostChat] Host-available event received');
+
+      } else {
+        console.log('[HostChat] Unhandled message type:', msg.type);
       }
     };
 
@@ -127,20 +125,13 @@ export default function HostChatInterface() {
     setMessages(prev => [...prev, hostMessage]);
     
     if (selectedPlayerId === 'all') {
-      // Create standardized message format
-      const messageData = {
-        type: 'chat',
-        content: input,
-        senderId: 'host',
-        senderName: 'Host',
-        timestamp: new Date().toISOString(),
-        isPrivate: false
-      };
-      
-      // Send broadcast
-      network_manager.send_chat_message(JSON.stringify(messageData));
+      // FIX BUG-005: send_chat_message already wraps in NetworkMessage internally.
+      // Pass raw string content ONLY, not a JSON.stringify'd object.
+      console.log('[HostChat] Broadcasting to all players:', input);
+      network_manager.send_chat_message(input);
     } else {
       // Send private message to specific player
+      console.log('[HostChat] Sending private message to', selectedPlayerId, ':', input);
       network_manager.send_private_message_to_player(selectedPlayerId, input);
     }
     
@@ -322,7 +313,7 @@ export default function HostChatInterface() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
               placeholder={
                 selectedPlayerId === 'all'
                   ? "Broadcast message to all connected players..."

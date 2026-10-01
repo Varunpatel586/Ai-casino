@@ -26,6 +26,7 @@ class NetworkManager {
   private connectionUrl: string | null = null;
   private localId: string = '';
   private isHost: boolean = false;
+  private username: string = ''; // FIX BUG-008: declare before methods that use it
   private messageCallback: MessageCallback | null = null;
   private connectionCallback: ConnectionCallback | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
@@ -91,12 +92,14 @@ class NetworkManager {
         this.ws = new WebSocket(this.connectionUrl);
         
         this.ws.onopen = () => {
-          console.log('[Network] WebSocket connected successfully');
+          console.log('[Network] WebSocket connected successfully to:', this.connectionUrl);
+          console.log('[Network] isHost:', this.isHost, '| username:', this.username || '(none)');
           this.reconnectAttempts = 0;
           this.isReconnecting = false;
           
           // If this is a player (not host), send player-join message with username
           if (!this.isHost && this.ws?.readyState === WebSocket.OPEN) {
+            console.log('[Network] Sending player-join as:', this.username || '(unnamed)');
             this.ws.send(JSON.stringify({
               type: 'player-join',
               clientId: this.localId,
@@ -196,11 +199,12 @@ class NetworkManager {
     }, delay);
   }
 
-  private username: string = '';
-
+  // FIX BUG-008: username was originally declared here (after methods using it)
+  // Moved to top of class fields above. This method remains unchanged.
   // Set the username for the player
   public set_username(username: string) {
     this.username = username;
+    console.log('[Network] Username set to:', username);
   }
 
   // Connect to a host (for players)

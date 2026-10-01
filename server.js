@@ -1,5 +1,5 @@
 import express from 'express';
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws'; // FIX BUG-002: WebSocket must be imported for WebSocket.OPEN constant
 import { Server as SocketIOServer } from 'socket.io';
 import { createClient } from '@supabase/supabase-js';
 import cors from 'cors';
@@ -9,6 +9,9 @@ import MultiplayerManager from './server/multiplayerManager.js';
 
 // Load environment variables
 dotenv.config();
+
+console.log('[Server] Starting AI Casino backend...');
+console.log(`[Server] Node version: ${process.version}`);
 
 const app = express();
 app.use(cors());
@@ -266,11 +269,14 @@ server.on('upgrade', (request, socket, head) => {
 let host = null;
 const players = new Map(); // clientId -> { ws: WebSocket, username: string }
 
-wss.on('connection', (ws) => {
-  console.log('New WebSocket connection established');
+wss.on('connection', (ws, req) => {
+  const clientIp = req.socket.remoteAddress;
+  console.log(`[WS] New connection from ${clientIp}`);
   
   const clientId = `client-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
   ws.clientId = clientId;
+  
+  console.log(`[WS] Assigned clientId: ${clientId} | Total connections: ${wss.clients.size}`);
   
   ws.send(JSON.stringify({
     type: 'connected',
@@ -281,6 +287,8 @@ wss.on('connection', (ws) => {
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
+      
+      console.log(`[WS] Message type='${data.type}' from clientId=${ws.clientId} isHost=${ws.isHost || false}`);
       
       switch (data.type) {
         case 'register-host':
@@ -298,32 +306,34 @@ wss.on('connection', (ws) => {
           
           host = ws;
           ws.isHost = true;
-          console.log(`Host registered: ${ws.clientId}`);
+          console.log(`[WS] Host registered: clientId=${ws.clientId} | Players currently connected: ${players.size}`);
             
             broadcastToPlayers({ type: 'host-available', timestamp: Date.now() });
+            console.log(`[WS] Broadcasted host-available to ${players.size} player(s)`);
             
-            if (players.size > 0) {
-              host.send(JSON.stringify({
-                type: 'player-list',
-                players: Array.from(players.entries()).map(([id, player]) => ({
-                  id,
-                  username: player.username,
-                  connected: true
-                })),
-                timestamp: Date.now()
-              }));
-            }
+            const playerList = Array.from(players.entries()).map(([id, player]) => ({
+              id,
+              username: player.username,
+              connected: true
+            }));
+            host.send(JSON.stringify({
+              type: 'player-list',
+              players: playerList,
+              timestamp: Date.now()
+            }));
+            console.log(`[WS] Sent existing player-list (${playerList.length} players) to new host`);
           break;
           
         case 'player-join':
           if (ws.isHost) break;
           
           if (!players.has(ws.clientId)) {
+            const joiningUsername = data.username || `Player ${ws.clientId.substring(0, 6)}`;
             players.set(ws.clientId, {
               ws: ws,
-              username: data.username || `Player ${ws.clientId.substring(0, 6)}`
+              username: joiningUsername
             });
-            console.log(`Player joined: ${ws.clientId} (${data.username || 'Unknown'})`);
+            console.log(`[WS] Player joined: clientId=${ws.clientId} username='${joiningUsername}' | Host connected: ${!!host}`);
             
             if (host && host.readyState === WebSocket.OPEN) {
               host.send(JSON.stringify({
@@ -417,14 +427,15 @@ wss.on('connection', (ws) => {
     }
   });
   
-  ws.on('close', () => {
+  ws.on('close', (code, reason) => {
+    console.log(`[WS] Connection closed: clientId=${ws.clientId} code=${code} reason='${reason?.toString() || 'none'}'`);
     if (ws === host) {
-      console.log('Host disconnected');
+      console.log('[WS] Host disconnected - notifying all players');
       host = null;
       broadcastToPlayers({ type: 'host-disconnected', timestamp: Date.now() });
     } else if (players.has(ws.clientId)) {
       const player = players.get(ws.clientId);
-      console.log(`Player disconnected: ${ws.clientId} (${player.username})`);
+      console.log(`[WS] Player disconnected: clientId=${ws.clientId} username='${player.username}' | Remaining players: ${players.size - 1}`);
       players.delete(ws.clientId);
       
       if (host && host.readyState === WebSocket.OPEN) {
@@ -434,7 +445,10 @@ wss.on('connection', (ws) => {
           username: player.username,
           timestamp: Date.now()
         }));
+        console.log(`[WS] Notified host of player-left: ${ws.clientId}`);
       }
+    } else {
+      console.log(`[WS] Unknown client disconnected: ${ws.clientId}`);
     }
   });
   
@@ -466,7 +480,7 @@ function broadcast(message, excludeWs = null) {
   });
 }
 
-const PORT = 8080;
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`\n======================================================`);
   console.log(`🎲 AI Casino Server Running on port ${PORT}`);

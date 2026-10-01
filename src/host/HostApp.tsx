@@ -32,19 +32,27 @@ export default function HostApp() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const localIdRef = useRef<string>('');
+  const hasRegisteredRef = useRef<boolean>(false); // FIX BUG-010: prevent double register-host on reconnect
 
   useEffect(() => {
     if (!hasJoined) return;
     
     localIdRef.current = network_manager.get_local_id() || `host-${Date.now()}`;
+    hasRegisteredRef.current = false; // reset on new join
+    
+    console.log('[HostApp] Initializing host connection. localId:', localIdRef.current);
     
     const handleConnection = (connected: boolean, message: string) => {
+      console.log(`[HostApp] Connection status changed: connected=${connected} message='${message}'`);
       setIsConnected(connected);
       setConnectionStatus(connected ? 'Connected to server!' : message || 'Connecting...');
       
-      if (connected) {
+      if (connected && !hasRegisteredRef.current) {
+        // FIX BUG-010: Only register host ONCE, not on every reconnect
+        hasRegisteredRef.current = true;
         const ws = (network_manager as any).ws;
         if (ws && ws.readyState === WebSocket.OPEN) {
+          console.log('[HostApp] Registering as host with name:', operatorName);
           ws.send(JSON.stringify({
             type: 'register-host',
             clientId: localIdRef.current,
@@ -52,10 +60,13 @@ export default function HostApp() {
             timestamp: Date.now()
           }));
         }
+      } else if (connected && hasRegisteredRef.current) {
+        console.log('[HostApp] Reconnected - skipping re-register (already registered)');
       }
     };
 
     const handleMessage = (msg: any) => {
+      console.log('[HostApp] Received message:', msg.type, msg);
       switch (msg.type) {
         case 'player-list':
           setPlayers(prev => {
@@ -342,7 +353,7 @@ export default function HostApp() {
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyPress={e => e.key === 'Enter' && sendMessage()}
+                onKeyDown={e => e.key === 'Enter' && sendMessage()}
                 placeholder={isClaimedByMe ? "Type your message..." : "You must claim this player to chat"}
                 disabled={!isClaimedByMe}
                 className="flex-1 bg-slate-700 border border-slate-600 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
