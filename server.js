@@ -13,6 +13,7 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
 
 // Connect to Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -467,5 +468,12 @@ function broadcast(message, excludeWs = null) {
 
 const PORT = 8080;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} (HTTP + WebSockets)`);
+  console.log(`\n======================================================`);
+  console.log(`🎲 AI Casino Server Running on port ${PORT}`);
+  console.log(`📡 WebSocket & Socket.io Ready for Multi-Game Flow`);
+  console.log(`------------------------------------------------------`);
+  console.log(`🎮 Player Client:   http://localhost:5174/ (or 5173)`);
+  console.log(`👑 Host Command:    npm run host`);
+  console.log(`🔗 Host Direct URL: http://localhost:5174/host (or 5173)`);
+  console.log(`======================================================\n`);
 });

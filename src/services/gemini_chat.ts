@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getBackendUrl } from './apiConfig';
 
 const GROQ_KEYS = [
   import.meta.env.VITE_GROQ_API_KEY_1,
@@ -184,7 +185,7 @@ The user just said: '${message}'`;
     // Tier 3: Pollinations Backend
     try {
       console.log('Attempting Pollinations Backend...');
-      const baseUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:8080`;
+      const baseUrl = getBackendUrl();
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
       

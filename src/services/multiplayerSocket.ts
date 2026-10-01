@@ -10,6 +10,9 @@ export interface PlayerSeat {
   betStatus: 'not_bet' | 'placed' | 'locked';
   answerStatus: 'not_answered' | 'answered';
   connected: boolean;
+  lastDelta?: number;
+  lastMultiplier?: number;
+  lastIsCorrect?: boolean;
 }
 
 export interface SettlementResult {
@@ -24,14 +27,20 @@ export interface SettlementResult {
 
 export interface FeedRevealedData {
   feedIndex: number;
+  totalFeeds: number;
   isAI: boolean;
   classification: string;
   playerResults: Array<{
     playerId: string;
     seatNumber: number;
     username: string;
-    answer: string;
+    answer?: string;
     isCorrect: boolean;
+    timeTaken?: number;
+    multiplier?: number;
+    betAmount?: number;
+    netDelta?: number;
+    newChips?: number;
   }>;
 }
 
@@ -43,16 +52,19 @@ export interface TableState {
   currentFeedIndex: number;
   totalFeeds: number;
   roundTimer: number;
+  feedStartTime?: number;
   currentVideo: {
     id: number;
     title: string;
+    type?: 'image' | 'video';
+    mediaSrc?: string;
     videoSrc: string;
   };
   players: PlayerSeat[];
   settlements: SettlementResult[];
 }
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:8080`;
+import { getBackendUrl } from './apiConfig';
 
 class MultiplayerSocketService {
   private socket: Socket | null = null;
@@ -69,7 +81,8 @@ class MultiplayerSocketService {
 
   public connect(): Socket {
     if (!this.socket) {
-      this.socket = io(`${BACKEND_URL}/round1`, {
+      const serverUrl = getBackendUrl();
+      this.socket = io(`${serverUrl}/round1`, {
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 30,

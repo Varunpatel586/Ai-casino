@@ -15,8 +15,9 @@ import HostChatInterface from './host/HostChatInterface';
 import UnifiedHostView from './host/UnifiedHostView';
 import OperatorSetup from './components/OperatorSetup';
 import { network_manager } from './services/network';
+import { getBackendUrl } from './services/apiConfig';
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:8080`;
+const API_URL = getBackendUrl();
 
 const getSessionPlayerId = (presetUsername?: string | null) => {
   if (typeof window !== 'undefined' && window.sessionStorage) {
@@ -118,12 +119,19 @@ function App() {
     }
   };
 
-  const handleRound1Complete = (score: number, bet: number) => {
-    const correctCount = score;
-    const wrongCount = 5 - correctCount;
-    const earnings = correctCount * bet - wrongCount * bet;
+  const handleRound1Complete = (score: number, bet: number, totalFeeds = 15, finalChips?: number) => {
+    let newChips = player.chips;
+    let earnings = 0;
+    if (typeof finalChips === 'number') {
+      newChips = finalChips;
+      earnings = finalChips - player.chips;
+    } else {
+      const correctCount = score;
+      const wrongCount = Math.max(0, totalFeeds - correctCount);
+      earnings = correctCount * bet - wrongCount * bet;
+      newChips = Math.max(0, player.chips + earnings);
+    }
 
-    const newChips = player.chips + earnings;
     const updatedPlayer = {
       ...player,
       chips: newChips,

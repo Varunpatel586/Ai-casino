@@ -10,8 +10,10 @@ import {
   ArrowRight,
   RotateCcw,
   Sparkles,
-  ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Zap,
+  Crown,
+  Check
 } from 'lucide-react';
 import { 
   multiplayerSocket, 
@@ -20,10 +22,11 @@ import {
   FeedRevealedData 
 } from '../services/multiplayerSocket';
 import { Player, BetAmount } from '../types';
+import LiveLeaderboardSide from './LiveLeaderboardSide';
 
 interface MultiplayerRound1Props {
   player: Player;
-  onComplete: (score: number, bet: number) => void;
+  onComplete: (score: number, bet: number, totalFeeds?: number, finalChips?: number) => void;
   roomId?: string;
 }
 
@@ -37,11 +40,48 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   const [mySeatNumber, setMySeatNumber] = useState<number | null>(null);
   const [selectedBet, setSelectedBet] = useState<BetAmount | null>(null);
   const [myAnswer, setMyAnswer] = useState<'real' | 'ai' | null>(null);
+  const [lockedTimeTaken, setLockedTimeTaken] = useState<number | null>(null);
+  const [lockedMultiplier, setLockedMultiplier] = useState<number | null>(null);
   const [feedReveal, setFeedReveal] = useState<FeedRevealedData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState<number>(45); // Round 1 video/challenge timer: 45s
+  const [countdown, setCountdown] = useState<number>(30);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [winnersTimer, setWinnersTimer] = useState<number>(15); // 15s celebration before auto-proceed
+  const [showMobileLeaderboard, setShowMobileLeaderboard] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Preload all Round 1 images and video buffers into browser cache for instant zero-latency rendering
+  useEffect(() => {
+    const imagesToPreload = [
+      '/images/round1/img1.jpg',
+      '/images/round1/img2.jpg',
+      '/images/round1/img3.jpg',
+      '/images/round1/img4.jpg',
+      '/images/round1/img5.jpg',
+      '/images/round1/img6.jpg',
+      '/images/round1/img7.jpg',
+      '/images/round1/img8.jpg',
+      '/images/round1/img9.jpg',
+      '/images/round1/img10.jpg',
+    ];
+    imagesToPreload.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+
+    const videosToPreload = [
+      '/Videos/round1/vid1.mp4',
+      '/Videos/round1/vid2.mp4',
+      '/Videos/round1/vid3.mp4',
+      '/Videos/round1/vid4.mp4',
+      '/Videos/round1/vid5.mp4',
+    ];
+    videosToPreload.forEach((src) => {
+      const vid = document.createElement('video');
+      vid.src = src;
+      vid.preload = 'auto';
+    });
+  }, []);
 
   // Connect to multiplayer room
   useEffect(() => {
@@ -62,11 +102,28 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
       setCountdown(secondsLeft);
     });
 
-    socket.on('feed_started', () => {
+    socket.on('wager_phase_started', (data?: { duration?: number }) => {
       setMyAnswer(null);
       setFeedReveal(null);
+      setSelectedBet(null);
+      setLockedTimeTaken(null);
+      setLockedMultiplier(null);
+      if (data?.duration) {
+        setCountdown(data.duration);
+      }
+    });
+
+    socket.on('feed_started', (data?: { duration?: number }) => {
+      setMyAnswer(null);
+      setFeedReveal(null);
+      setLockedTimeTaken(null);
+      setLockedMultiplier(null);
+      if (data?.duration) {
+        setCountdown(data.duration);
+      }
       if (videoRef.current) {
         videoRef.current.currentTime = 0;
+        videoRef.current.load();
         videoRef.current.play().catch(() => {});
       }
     });
@@ -88,15 +145,71 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     };
   }, [roomId, player.id, player.username, player.chips]);
 
-  // Video playback sync
+  // Video playback sync on feed change
   useEffect(() => {
     if (tableState?.status === 'playing' && videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.load();
       videoRef.current.play().catch(() => {});
     }
   }, [tableState?.status, tableState?.currentFeedIndex]);
 
+  // Celebratory timer for winners showcase
+  useEffect(() => {
+    if (tableState?.status === 'settled') {
+      const interval = setInterval(() => {
+        setWinnersTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [tableState?.status]);
+
   const mySeat = tableState?.players.find((p) => p.playerId === player.id);
   const isMyBetPlaced = mySeat?.betStatus === 'placed' || mySeat?.betStatus === 'locked';
+  const myCurrentChips = mySeat ? mySeat.chips : player.chips;
+
+  // Compute challenge mode (Image 1-10 vs Video 11-15)
+  const currentFeedIndex = tableState?.currentFeedIndex ?? 0;
+  const isVideoRound = currentFeedIndex >= 10;
+  const totalFeeds = tableState?.totalFeeds || 15;
+  const challengeDuration = isVideoRound ? 45 : 30;
+
+  // Active Multiplier calculation based on elapsed time
+  // Images (30s): <=10s -> 3x, 10-20s -> 2x, >20s -> 1x
+  // Videos (45s): <=20s -> 3x, 20-30s -> 2x, >30s -> 1x
+  const elapsed = Math.max(0, challengeDuration - countdown);
+  let liveMultiplier = 1;
+  let nextThresholdSecs = 0;
+
+  if (isVideoRound) {
+    if (elapsed <= 20) {
+      liveMultiplier = 3;
+      nextThresholdSecs = 20 - elapsed;
+    } else if (elapsed <= 30) {
+      liveMultiplier = 2;
+      nextThresholdSecs = 30 - elapsed;
+    } else {
+      liveMultiplier = 1;
+      nextThresholdSecs = 0;
+    }
+  } else {
+    if (elapsed <= 10) {
+      liveMultiplier = 3;
+      nextThresholdSecs = 10 - elapsed;
+    } else if (elapsed <= 20) {
+      liveMultiplier = 2;
+      nextThresholdSecs = 20 - elapsed;
+    } else {
+      liveMultiplier = 1;
+      nextThresholdSecs = 0;
+    }
+  }
 
   const handleToggleReady = () => {
     if (!mySeat) return;
@@ -106,14 +219,16 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
   const handlePlaceBet = (amount: BetAmount) => {
     setSelectedBet(amount);
-    const numericBet = amount === 'ALL_IN' ? player.chips : amount;
+    const numericBet = amount === 'ALL_IN' ? myCurrentChips : amount;
     multiplayerSocket.placeBet(roomId, player.id, numericBet);
   };
 
   const handleSelectAnswer = (answer: 'real' | 'ai') => {
     if (myAnswer !== null || tableState?.status !== 'playing') return;
     setMyAnswer(answer);
-    multiplayerSocket.submitAnswer(roomId, player.id, tableState.currentFeedIndex, answer);
+    setLockedTimeTaken(elapsed);
+    setLockedMultiplier(liveMultiplier);
+    multiplayerSocket.submitAnswer(roomId, player.id, currentFeedIndex, answer);
   };
 
   const handleQuickStart = () => {
@@ -127,7 +242,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   const handleResetTable = () => {
     multiplayerSocket.resetTable(roomId);
     setTimeout(() => {
-      multiplayerSocket.joinTable(roomId, player.id, player.username, player.chips);
+      multiplayerSocket.joinTable(roomId, player.id, player.username, myCurrentChips);
     }, 250);
   };
 
@@ -136,7 +251,8 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     const mySettlement = tableState.settlements.find((s) => s.playerId === player.id);
     const score = mySettlement ? mySettlement.score : 0;
     const bet = mySettlement ? mySettlement.betAmount : (mySeat?.betAmount || 10);
-    onComplete(score, bet);
+    const finalChips = mySettlement ? mySettlement.finalChips : myCurrentChips;
+    onComplete(score, bet, totalFeeds, finalChips);
   };
 
   // Helper to get player in seat 1..6
@@ -147,7 +263,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   const readyCount = tableState?.players.filter((p) => p.isReady).length || 0;
   const totalOccupied = tableState?.players.length || 0;
 
-  // Compact Player Seat Pod (No large rectangular cards)
+  // Compact Player Seat Pod with Real-time Chip Balance & Delta Badge
   const renderSeatPod = (seatNum: number) => {
     const seatPlayer = getPlayerInSeat(seatNum);
     const isMe = seatPlayer?.playerId === player.id;
@@ -156,62 +272,106 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     return (
       <div 
         key={seatNum}
-        className={`relative z-20 flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-all duration-200 select-none shadow-md ${
+        className={`relative z-20 flex flex-col justify-between p-2.5 sm:p-3 rounded-2xl border transition-all duration-300 select-none shadow-xl ${
           isMe
-            ? 'bg-[#151C2C]/95 border-amber-400 ring-1 ring-amber-400/50 shadow-[0_0_20px_rgba(251,191,36,0.25)]'
+            ? 'bg-[#121826]/95 border-amber-400 ring-2 ring-amber-400/40 shadow-[0_0_25px_rgba(251,191,36,0.3)]'
             : seatPlayer
-            ? 'bg-[#0E121B]/90 border-[#263045]'
-            : 'bg-[#0A0D14]/80 border-dashed border-[#202738] opacity-75'
+            ? 'bg-[#0B0F19]/90 border-[#222B3D]'
+            : 'bg-[#07090F]/70 border-dashed border-[#1B2233] opacity-60'
         }`}
-        style={{ minWidth: '135px', maxWidth: '175px' }}
+        style={{ minWidth: '140px', maxWidth: '180px' }}
       >
-        {/* Seat Number Tag */}
-        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
-          isMe ? 'bg-amber-400 text-slate-950 font-black' : 'bg-[#181F2E] text-slate-400 border border-[#2B354D]'
-        }`}>
-          S{seatNum}
-        </span>
+        {/* Top Header: Seat Number & Status */}
+        <div className="flex items-center justify-between gap-1 mb-1.5">
+          <span className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md ${
+            isMe ? 'bg-amber-400 text-slate-950 shadow-sm' : 'bg-[#181F2E] text-slate-400 border border-[#2B354D]'
+          }`}>
+            S{seatNum}
+          </span>
 
-        {/* Player Moniker & Ready Status */}
-        <div className="flex-1 min-w-0">
           {seatPlayer ? (
-            <>
-              <div className="text-xs font-display font-black text-white truncate flex items-center gap-1">
-                <span className="truncate">{seatPlayer.username}</span>
-                {isMe && <span className="text-[9px] text-amber-400 font-mono">★</span>}
-              </div>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  isReady ? 'bg-emerald-400' : 'bg-amber-400 animate-pulse'
-                }`} />
-                <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${
-                  isReady ? 'text-emerald-400' : 'text-amber-400'
-                }`}>
-                  {isReady ? 'READY' : 'NOT READY'}
-                </span>
-              </div>
-            </>
-          ) : (
-            <div className="text-slate-500 font-mono text-[11px]">
-              {tableState?.status === 'waiting' && !mySeat ? (
-                <button
-                  onClick={() => handleSelectSeat(seatNum)}
-                  className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
-                >
-                  + Sit Here
-                </button>
-              ) : (
-                <span>Vacant</span>
-              )}
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${
+                seatPlayer.connected ? 'bg-emerald-400' : 'bg-rose-500'
+              }`} />
+              <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${
+                isReady ? 'text-emerald-400' : 'text-amber-400'
+              }`}>
+                {isReady ? 'READY' : 'WAIT'}
+              </span>
             </div>
+          ) : (
+            <span className="text-[9px] font-mono text-slate-500 uppercase">VACANT</span>
           )}
         </div>
 
-        {/* Online Indicator Dot */}
-        {seatPlayer && (
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-            seatPlayer.connected ? 'bg-emerald-400' : 'bg-rose-500'
-          }`} title={seatPlayer.connected ? 'Connected' : 'Disconnected'} />
+        {/* Moniker & Chips */}
+        {seatPlayer ? (
+          <div>
+            <div className="text-xs font-display font-black text-white truncate flex items-center gap-1">
+              <span className="truncate">{seatPlayer.username}</span>
+              {isMe && <span className="text-[10px] text-amber-400 font-mono">★</span>}
+              {seatPlayer.playerId.startsWith('bot-') && (
+                <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  BOT
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between mt-1 text-[11px] font-mono">
+              <div className="flex items-center gap-1">
+                <Coins size={11} className="text-amber-400" />
+                <span className="font-black text-amber-400">${seatPlayer.chips}</span>
+              </div>
+              {seatPlayer.betAmount > 0 && (
+                <span className="text-[10px] text-slate-400 font-bold">
+                  Bet: ${seatPlayer.betAmount}
+                </span>
+              )}
+            </div>
+
+            {/* Answer Status in Playing Phase */}
+            {tableState?.status === 'playing' && (
+              <div className="mt-1 pt-1 border-t border-[#1C2333] flex items-center justify-between text-[9px] font-mono">
+                <span className="text-slate-500 uppercase">CHOICE:</span>
+                {seatPlayer.answerStatus === 'answered' ? (
+                  <span className="text-emerald-400 font-black flex items-center gap-0.5">
+                    <Check size={9} />
+                    <span>LOCKED</span>
+                  </span>
+                ) : (
+                  <span className="text-amber-400 animate-pulse font-bold">THINKING</span>
+                )}
+              </div>
+            )}
+
+            {/* Live Delta Badge (Shown during reveal or if lastDelta exists) */}
+            {seatPlayer.lastDelta !== undefined && (
+              <div className={`mt-1 py-0.5 px-1.5 rounded text-[10px] font-mono font-black text-center animate-fade-in ${
+                seatPlayer.lastDelta >= 0
+                  ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                  : 'bg-rose-500/20 border border-rose-500/50 text-rose-300'
+              }`}>
+                {seatPlayer.lastDelta >= 0 ? `+$${seatPlayer.lastDelta}` : `-$${Math.abs(seatPlayer.lastDelta)}`}
+                {seatPlayer.lastMultiplier && seatPlayer.lastMultiplier > 1 && seatPlayer.lastDelta > 0 && (
+                  <span className="ml-1 text-amber-300">⚡{seatPlayer.lastMultiplier}x</span>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="py-2 text-center text-slate-500 font-mono text-[11px]">
+            {tableState?.status === 'waiting' && !mySeat ? (
+              <button
+                onClick={() => handleSelectSeat(seatNum)}
+                className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
+              >
+                + Take Seat
+              </button>
+            ) : (
+              <span>Empty</span>
+            )}
+          </div>
         )}
       </div>
     );
@@ -250,14 +410,33 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     );
   }
 
+  // Find local player result for current feed reveal
+  const myRevealResult = feedReveal?.playerResults.find((pr) => pr.playerId === player.id);
+
   return (
     <div className="min-h-screen casino-table-bg text-slate-100 p-3 sm:p-6 pt-20 pb-36">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-[1440px] mx-auto">
         {/* Top Notification Bar */}
         {errorMessage && (
           <div className="mb-4 bg-rose-500/20 border border-rose-500 text-rose-300 px-4 py-2.5 rounded-xl font-mono text-xs flex items-center gap-2 animate-bounce">
             <AlertCircle size={16} />
             <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Phase Transition Banner (Challenge 11 / Video phase starts) */}
+        {currentFeedIndex === 10 && tableState.status === 'betting' && (
+          <div className="mb-5 bg-gradient-to-r from-blue-900/60 via-purple-900/60 to-blue-900/60 border-2 border-cyan-400/60 p-4 rounded-2xl text-center shadow-[0_0_30px_rgba(6,182,212,0.3)] animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono text-xs font-black uppercase mb-1">
+              <Sparkles size={13} />
+              <span>STAGE II UNLOCKED: VIDEO SURVEILLANCE</span>
+            </div>
+            <h3 className="text-xl font-display font-black text-white uppercase tracking-tight">
+              📸 10 Image Challenges Completed! Next: 5 Surveillance Feeds
+            </h3>
+            <p className="text-cyan-200 text-xs font-mono mt-1">
+              Timer increased to <strong>45 seconds</strong>. Max speed bonus: <strong>3x Multiplier</strong> for answers under 20 seconds!
+            </p>
           </div>
         )}
 
@@ -270,7 +449,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-mono uppercase text-blue-400 tracking-widest font-bold">
-                  Event I • Real vs AI
+                  Round 1 • Real vs AI Intelligence
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
                   <Users size={10} />
@@ -280,24 +459,48 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                   {readyCount}/{totalOccupied} Ready
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight">
-                The Reality Bet (6-Player Table)
+              <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
+                <span>The Reality Bet</span>
+                {tableState.status === 'playing' && (
+                  <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border ${
+                    isVideoRound
+                      ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                      : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                  }`}>
+                    {isVideoRound ? '🎥 Video Challenge' : '📸 Image Challenge'}
+                  </span>
+                )}
               </h2>
             </div>
           </div>
 
-          {/* Table Room Controls / Status */}
+          {/* Table Room Controls / Multiplier HUD / Status */}
           <div className="flex items-center gap-3 flex-wrap">
-            <a
-              href={`/host?room=${roomId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-2 bg-[#181D2A] hover:bg-[#202738] border border-[#2D374D] text-amber-400 hover:text-amber-300 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5 transition-all"
-              title="Open the Host Controller in a new window"
+            {/* Speed Multiplier Badge during Playing Phase */}
+            {tableState.status === 'playing' && (
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono text-xs font-black uppercase border transition-all duration-300 ${
+                liveMultiplier === 3
+                  ? 'bg-amber-400/20 border-amber-400 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)] animate-pulse'
+                  : liveMultiplier === 2
+                  ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
+                  : 'bg-slate-800 border-slate-700 text-slate-400'
+              }`}>
+                <Zap size={14} className={liveMultiplier === 3 ? 'text-amber-400' : 'text-cyan-400'} />
+                <span>
+                  {liveMultiplier}x Speed Multiplier {liveMultiplier > 1 ? `(${nextThresholdSecs}s left)` : ''}
+                </span>
+              </div>
+            )}
+
+            {/* Mobile Standings Drawer Trigger Button */}
+            <button
+              onClick={() => setShowMobileLeaderboard(true)}
+              className="lg:hidden px-3 py-2 bg-[#181D2A] hover:bg-[#202738] border border-amber-400/40 text-amber-400 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              title="View Live Standings"
             >
-              <ExternalLink size={13} />
-              <span>Host Controller View</span>
-            </a>
+              <Trophy size={13} />
+              <span>Standings ({tableState.players.length})</span>
+            </button>
 
             {/* Countdown Clock */}
             <div className="flex items-center gap-2 px-3.5 py-2 bg-[#181D2A] border border-[#2D374D] rounded-xl font-mono text-sm">
@@ -310,8 +513,11 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
           </div>
         </div>
 
-        {/* 3D TABLE AS MAIN ENVIRONMENT WITH NATURAL PERIMETER SEATS */}
-        <div className="relative w-full min-h-[580px] sm:min-h-[640px] md:min-h-[700px] rounded-3xl overflow-hidden border border-[#1E2535] bg-[#07090E] shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between p-4 sm:p-7">
+        {/* MAIN WORKSPACE LAYOUT: 3D Table on Left, Live Leaderboard on Right */}
+        <div className="flex flex-col lg:flex-row gap-5 items-start">
+          {/* 3D TABLE AS MAIN ENVIRONMENT */}
+          <div className="flex-1 w-full min-w-0">
+            <div className="relative w-full min-h-[580px] sm:min-h-[640px] md:min-h-[700px] rounded-3xl overflow-hidden border border-[#1E2535] bg-[#07090E] shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between p-4 sm:p-7">
           {/* STATIC HIGH-PERFORMANCE TABLE BACKGROUND */}
           <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
             <img
@@ -335,10 +541,10 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
             {/* Left: Player 6 */}
             <div className="shrink-0">{renderSeatPod(6)}</div>
 
-            {/* CENTER TABLE STAGE: Naturally conceals 'WHITE BLACKJACK' */}
+            {/* CENTER TABLE STAGE: Conceals 'WHITE BLACKJACK' */}
             <div className="flex-1 max-w-xl mx-auto flex items-center justify-center pointer-events-auto">
               {tableState.status === 'waiting' ? (
-                /* LOBBY FELT CREST: Seamless felt emblem concealing 'WHITE BLACKJACK' text naturally */
+                /* LOBBY FELT CREST */
                 <div className="bg-[#0B1713]/92 backdrop-blur-sm border border-amber-500/40 rounded-3xl px-6 py-5 sm:px-8 sm:py-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(11,23,19,0.9)] max-w-md w-full animate-fade-in">
                   <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-3 shadow-inner">
                     <ShieldCheck size={24} />
@@ -389,63 +595,145 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                   </div>
                 </div>
               ) : tableState.status === 'betting' ? (
-                /* WAGER PHASE CONSOLE */
-                <div className="bg-[#0B1019]/95 backdrop-blur-md border border-amber-500/40 rounded-3xl p-6 text-center shadow-2xl max-w-md w-full">
+                /* PER-CHALLENGE WAGER PHASE CONSOLE */
+                <div className="bg-[#0B1019]/95 backdrop-blur-md border border-amber-500/50 rounded-3xl p-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.9)] max-w-md w-full animate-fade-in">
                   <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-2 animate-pulse">
                     <Coins size={24} />
                   </div>
-                  <div className="text-[11px] font-mono uppercase text-amber-400 font-bold mb-1">
-                    WAGER PLACEMENT PHASE
+                  <div className="text-[10px] font-mono uppercase text-amber-400 font-bold mb-1 tracking-wider">
+                    CHALLENGE {currentFeedIndex + 1} OF {totalFeeds} • {isVideoRound ? '🎥 VIDEO ROUND' : '📸 IMAGE ROUND'}
                   </div>
-                  <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight mb-2">
-                    Place Your Wager Below
+                  <h4 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
+                    {isMyBetPlaced ? `Wager Placed: $${mySeat?.betAmount}` : 'Select Wager for this Challenge'}
                   </h4>
-                  <div className="text-3xl font-mono font-black text-amber-400">
+                  <p className="text-slate-400 text-xs font-mono mb-4">
+                    {isVideoRound ? '45s Video • Guess in ≤20s for 3x, ≤30s for 2x' : '30s Image • Guess in ≤10s for 3x, ≤20s for 2x'}
+                  </p>
+
+                  <div className="text-3xl font-mono font-black text-amber-400 mb-4">
                     {countdown}s REMAINING
+                  </div>
+
+                  {/* Inline Quick Bet Selectors for Center Felt */}
+                  <div className="flex items-center justify-center gap-2">
+                    {([10, 30, 'ALL_IN'] as BetAmount[]).map((amount) => {
+                      const betVal = amount === 'ALL_IN' ? myCurrentChips : amount;
+                      const canAfford = myCurrentChips >= betVal;
+                      const isSelected = selectedBet === amount || mySeat?.betAmount === betVal;
+
+                      return (
+                        <button
+                          key={amount}
+                          onClick={() => handlePlaceBet(amount)}
+                          disabled={!canAfford || isMyBetPlaced}
+                          className={`px-4 py-2 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 cursor-pointer border ${
+                            isSelected
+                              ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
+                              : canAfford && !isMyBetPlaced
+                              ? 'bg-[#181D2A] text-slate-200 border-[#2E374D] hover:border-amber-400/60'
+                              : 'bg-[#10131B] text-slate-600 border-[#1C2230] opacity-40 cursor-not-allowed'
+                          }`}
+                        >
+                          {amount === 'ALL_IN' ? `ALL-IN ($${betVal})` : `$${amount}`}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (tableState.status === 'playing' || tableState.status === 'revealing') ? (
-                /* LIVE VIDEO SURVEILLANCE FEED (45S TIMER) */
+                /* LIVE MEDIA CHALLENGE FEED (IMAGES & VIDEOS) */
                 <div className="bg-[#0A0D15]/95 backdrop-blur-md border border-[#2B354D] rounded-3xl p-3 sm:p-4 shadow-2xl w-full">
                   <div className="flex justify-between items-center mb-2 px-1 text-xs font-mono">
                     <span className="text-slate-400 uppercase font-bold flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                      Feed {(tableState.currentFeedIndex ?? 0) + 1} of 5 • {tableState.currentVideo?.title}
+                      Feed {currentFeedIndex + 1} of {totalFeeds} • {isVideoRound ? '🎥 Surveillance Video' : '📸 Intelligence Image'}
                     </span>
                     <span className="text-amber-400 font-bold">
-                      {countdown}s
+                      {countdown}s left
                     </span>
                   </div>
 
                   <div className="aspect-video max-h-[340px] bg-black rounded-2xl overflow-hidden border border-[#242C3E] relative flex items-center justify-center shadow-inner mx-auto">
-                    <video
-                      ref={videoRef}
-                      src={tableState.currentVideo?.videoSrc}
-                      className="w-full h-full object-contain"
-                      playsInline
-                      autoPlay
-                      muted
-                      loop={false}
-                      onPlay={() => setIsPlayingVideo(true)}
-                      onPause={() => setIsPlayingVideo(false)}
-                      onEnded={() => setIsPlayingVideo(false)}
-                    />
+                    {tableState.currentVideo?.type === 'image' || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc || '') ? (
+                      <img
+                        key={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
+                        src={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
+                        alt={tableState.currentVideo?.title || 'Reality Feed'}
+                        className="w-full h-full object-contain select-none animate-fade-in transition-opacity duration-200"
+                        loading="eager"
+                        decoding="async"
+                      />
+                    ) : (
+                      <video
+                        key={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
+                        ref={videoRef}
+                        src={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
+                        className="w-full h-full object-contain"
+                        preload="auto"
+                        playsInline
+                        autoPlay
+                        muted
+                        loop={false}
+                        onPlay={() => setIsPlayingVideo(true)}
+                        onPause={() => setIsPlayingVideo(false)}
+                        onEnded={() => setIsPlayingVideo(false)}
+                      />
+                    )}
 
-                    {/* Reveal Overlay */}
-                    {feedReveal && (
-                      <div className="absolute inset-0 bg-[#090A0F]/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-2 border ${
-                          feedReveal.isAI 
-                            ? 'bg-rose-500/20 border-rose-500/50 text-rose-400' 
-                            : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                    {/* Speed Multiplier Watermark Badge */}
+                    {tableState.status === 'playing' && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <div className={`px-2.5 py-1 rounded-lg backdrop-blur-md font-mono text-[11px] font-black uppercase flex items-center gap-1 shadow-lg border ${
+                          liveMultiplier === 3
+                            ? 'bg-amber-500/30 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.5)]'
+                            : liveMultiplier === 2
+                            ? 'bg-cyan-500/30 border-cyan-400 text-cyan-300'
+                            : 'bg-black/60 border-slate-700 text-slate-400'
                         }`}>
-                          {feedReveal.isAI ? <Video size={24} /> : <CheckCircle2 size={24} />}
+                          <Zap size={12} className={liveMultiplier === 3 ? 'text-amber-400' : 'text-cyan-400'} />
+                          <span>{liveMultiplier}x MULTIPLIER</span>
                         </div>
-                        <span className="text-xs font-mono uppercase text-slate-400">Verified Reality Truth:</span>
+                      </div>
+                    )}
+
+                    {/* Lock-in Notification Badge */}
+                    {myAnswer && !feedReveal && (
+                      <div className="absolute bottom-3 left-3 z-10 bg-slate-950/80 backdrop-blur-md border border-emerald-500/60 text-emerald-300 px-3 py-1 rounded-lg font-mono text-xs flex items-center gap-1.5 shadow-lg">
+                        <CheckCircle2 size={13} className="text-emerald-400" />
+                        <span>Locked in: {myAnswer.toUpperCase()} (⚡{lockedMultiplier}x at {lockedTimeTaken?.toFixed(1)}s)</span>
+                      </div>
+                    )}
+
+                    {/* Instant Reveal Overlay (4.5s) */}
+                    {feedReveal && (
+                      <div className="absolute inset-0 bg-[#090A0F]/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-fade-in z-20">
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-2 border shadow-lg ${
+                          feedReveal.isAI 
+                            ? 'bg-rose-500/20 border-rose-500/60 text-rose-400' 
+                            : 'bg-emerald-500/20 border-emerald-500/60 text-emerald-400'
+                        }`}>
+                          {feedReveal.isAI ? <Video size={28} /> : <CheckCircle2 size={28} />}
+                        </div>
+                        <span className="text-[11px] font-mono uppercase text-slate-400 tracking-wider">Verified Reality Classification:</span>
                         <h4 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-wider my-1">
                           {feedReveal.classification}
                         </h4>
-                        <div className="mt-2 flex flex-wrap gap-1.5 justify-center max-w-sm">
+
+                        {/* Local Player Payout Banner */}
+                        {myRevealResult && (
+                          <div className={`mt-2 py-1 px-4 rounded-xl font-mono text-sm font-black border ${
+                            myRevealResult.isCorrect
+                              ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                              : 'bg-rose-500/20 border-rose-500 text-rose-300'
+                          }`}>
+                            {myRevealResult.isCorrect
+                              ? `🎉 CORRECT! +$${myRevealResult.netDelta} (⚡${myRevealResult.multiplier}x Multiplier Applied)`
+                              : `❌ INCORRECT (-$${Math.abs(myRevealResult.netDelta ?? (mySeat?.betAmount || 10))})`}
+                          </div>
+                        )}
+
+                        {/* Compact Table Seat Chip Ledger */}
+                        <div className="mt-3 flex flex-wrap gap-1.5 justify-center max-w-md">
                           {feedReveal.playerResults.map((pr) => (
                             <span 
                               key={pr.playerId}
@@ -455,19 +743,22 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                                   : 'bg-rose-500/10 border-rose-500/40 text-rose-400'
                               }`}
                             >
-                              S{pr.seatNumber}: {pr.answer.toUpperCase()} {pr.isCorrect ? '✓' : '✗'}
+                              S{pr.seatNumber}: {pr.isCorrect ? `+$${pr.netDelta} (⚡${pr.multiplier}x)` : `-$${Math.abs(pr.netDelta ?? 10)}`}
                             </span>
                           ))}
                         </div>
                       </div>
                     )}
                   </div>
+
                   <p className="text-slate-400 text-[11px] font-mono text-center mt-1.5">
-                    {isPlayingVideo ? '▶ Synchronized stream (45s challenge)' : 'Feed paused • Select classification below'}
+                    {isVideoRound 
+                      ? (isPlayingVideo ? '▶ Surveillance stream active (45s) • Guess under 20s for 3x speed multiplier' : '▶ Surveillance stream ready (45s) • Guess under 20s for 3x speed multiplier') 
+                      : '📸 Image challenge (30s) • Guess under 10s for 3x speed multiplier'}
                   </p>
                 </div>
               ) : (
-                /* ROUND 1 COMPLETED */
+                /* ROUND 1 COMPLETED LOBBY */
                 <div className="bg-[#0B1019]/95 backdrop-blur-md border border-amber-500/40 rounded-3xl p-6 text-center shadow-2xl max-w-md w-full">
                   <Trophy size={36} className="text-amber-400 mb-2 mx-auto" />
                   <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight mb-2">
@@ -493,72 +784,201 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
             <div>{renderSeatPod(4)}</div>
           </div>
         </div>
+      </div>
 
-        {/* SETTLEMENT MODAL (When round completes) */}
-        {tableState?.status === 'settled' && (
-          <div className="fixed inset-0 z-50 bg-[#090A0F]/90 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="max-w-2xl w-full bg-[#12151E] border border-[#2B354D] rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
-              <div className="w-16 h-16 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-4">
-                <Trophy size={32} />
+      {/* DEDICATED RIGHT-SIDE LIVE LEADERBOARD (Desktop) */}
+      <div className="hidden lg:block w-[300px] xl:w-[320px] shrink-0 sticky top-24">
+        <LiveLeaderboardSide
+          players={tableState.players}
+          currentFeedIndex={currentFeedIndex}
+          totalFeeds={totalFeeds}
+          status={tableState.status}
+          currentPlayerId={player.id}
+        />
+      </div>
+    </div>
+
+    {/* MOBILE STANDINGS DRAWER MODAL */}
+    {showMobileLeaderboard && (
+      <div className="fixed inset-0 z-50 bg-[#07090E]/90 backdrop-blur-md flex items-center justify-center p-4 lg:hidden animate-fade-in">
+        <div className="w-full max-w-sm">
+          <LiveLeaderboardSide
+            players={tableState.players}
+            currentFeedIndex={currentFeedIndex}
+            totalFeeds={totalFeeds}
+            status={tableState.status}
+            currentPlayerId={player.id}
+            isMobileDrawer
+            onClose={() => setShowMobileLeaderboard(false)}
+          />
+        </div>
+      </div>
+    )}
+
+    {/* GRAND END-OF-ROUND 1 WINNERS SHOWCASE & LIVE LEADERBOARD */}
+    {tableState?.status === 'settled' && (
+          <div className="fixed inset-0 z-50 bg-[#06080E]/95 backdrop-blur-lg flex items-center justify-center p-4 overflow-y-auto">
+            <div className="max-w-3xl w-full bg-[#0F1420] border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 shadow-[0_0_80px_rgba(251,191,36,0.35)] text-center my-8 animate-fade-in">
+              {/* Grand Trophy & Crown Header */}
+              <div className="relative inline-block mb-3">
+                <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400/20 to-amber-600/30 border border-amber-400/60 text-amber-400 flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(251,191,36,0.5)]">
+                  <Trophy size={34} />
+                </div>
+                <Crown size={20} className="text-amber-300 absolute -top-3 -right-2 animate-bounce" />
               </div>
 
-              <div className="text-xs font-mono uppercase tracking-widest text-slate-400 mb-1">
-                Round 1 Settlement Completed
+              <div className="text-xs font-mono uppercase tracking-widest text-amber-400 font-bold mb-1">
+                Event I Champions Decided
               </div>
-              <h3 className="text-3xl font-display font-black text-white uppercase tracking-tight mb-6">
-                Table Reality Ledger
+              <h3 className="text-3xl sm:text-4xl font-display font-black text-white uppercase tracking-tight mb-2">
+                Round 1 Winners Showcase
               </h3>
+              <p className="text-slate-400 text-xs font-mono max-w-lg mx-auto mb-6">
+                All 10 Image & 5 Surveillance Video challenges settled. Final scores & chip balances locked into the arena ledger.
+              </p>
 
-              {/* Table Scores */}
-              <div className="space-y-2 mb-6">
-                {tableState.settlements.map((s, idx) => {
-                  const isMe = s.playerId === player.id;
-                  const isPositive = s.netEarnings >= 0;
-
-                  return (
-                    <div 
-                      key={s.playerId}
-                      className={`flex items-center justify-between p-3.5 rounded-xl border text-xs font-mono ${
-                        isMe 
-                          ? 'bg-[#181E2E] border-amber-400/60 ring-1 ring-amber-400/30' 
-                          : 'bg-[#181D2A] border-[#252C3E]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-slate-400">#{idx + 1}</span>
-                        <div className="text-left">
-                          <div className="font-bold text-white flex items-center gap-1.5">
-                            <span>{s.username}</span>
-                            {isMe && <span className="text-[10px] text-amber-400 font-mono">(YOU)</span>}
-                          </div>
-                          <span className="text-[10px] text-slate-500">Seat {s.seatNumber} • Bet: ${s.betAmount}</span>
+              {/* PODIUM OF TOP 3 CONTESTANTS */}
+              {tableState.settlements && tableState.settlements.length > 0 && (
+                <div className="grid grid-cols-3 gap-3 sm:gap-4 max-w-xl mx-auto mb-8 items-end">
+                  {/* 2nd Place (Silver) */}
+                  {tableState.settlements[1] && (
+                    <div className="bg-[#121826] border border-slate-400/40 rounded-2xl p-3 sm:p-4 text-center order-1 h-[190px] flex flex-col justify-between shadow-lg">
+                      <div className="w-9 h-9 rounded-xl bg-slate-400/20 border border-slate-400/40 text-slate-300 flex items-center justify-center mx-auto font-mono font-black text-sm">
+                        🥈 2
+                      </div>
+                      <div>
+                        <div className="text-xs font-display font-black text-white truncate">
+                          {tableState.settlements[1].username}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400">
+                          {tableState.settlements[1].score}/{totalFeeds} Correct
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-4 text-right">
-                        <div>
-                          <div className="font-bold text-slate-300">{s.score} / 5 Correct</div>
-                          <div className={`font-black text-sm ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {isPositive ? `+$${s.netEarnings}` : `-$${Math.abs(s.netEarnings)}`}
-                          </div>
-                        </div>
-                        <div className="border-l border-[#2B354D] pl-4">
-                          <div className="text-[10px] text-slate-500 uppercase">Bankroll</div>
-                          <div className="font-black text-amber-400 text-sm">${s.finalChips}</div>
+                      <div className="pt-2 border-t border-[#1C2538]">
+                        <div className="text-base font-mono font-black text-amber-400">
+                          ${tableState.settlements[1].finalChips}
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                  )}
+
+                  {/* 1st Place (Gold Champion) */}
+                  {tableState.settlements[0] && (
+                    <div className="bg-gradient-to-b from-[#1C2638] to-[#121826] border-2 border-amber-400 rounded-2xl p-4 sm:p-5 text-center order-2 h-[225px] flex flex-col justify-between shadow-[0_0_25px_rgba(251,191,36,0.35)]">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-400/30 border border-amber-400 text-amber-300 flex items-center justify-center mx-auto font-mono font-black text-base shadow-sm">
+                        🥇 1
+                      </div>
+                      <div>
+                        <div className="text-xs font-mono uppercase text-amber-400 font-bold tracking-wider mb-0.5">
+                          CHAMPION
+                        </div>
+                        <div className="text-sm font-display font-black text-white truncate">
+                          {tableState.settlements[0].username}
+                        </div>
+                        <div className="text-[11px] font-mono text-slate-300">
+                          {tableState.settlements[0].score}/{totalFeeds} Correct
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-amber-500/40">
+                        <div className="text-lg font-mono font-black text-amber-400">
+                          ${tableState.settlements[0].finalChips}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3rd Place (Bronze) */}
+                  {tableState.settlements[2] && (
+                    <div className="bg-[#121826] border border-amber-700/40 rounded-2xl p-3 sm:p-4 text-center order-3 h-[175px] flex flex-col justify-between shadow-lg">
+                      <div className="w-9 h-9 rounded-xl bg-amber-700/20 border border-amber-700/40 text-amber-600 flex items-center justify-center mx-auto font-mono font-black text-sm">
+                        🥉 3
+                      </div>
+                      <div>
+                        <div className="text-xs font-display font-black text-white truncate">
+                          {tableState.settlements[2].username}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400">
+                          {tableState.settlements[2].score}/{totalFeeds} Correct
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-[#1C2538]">
+                        <div className="text-base font-mono font-black text-amber-400">
+                          ${tableState.settlements[2].finalChips}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* COMPLETE RANKED LEADERBOARD TABLE */}
+              <div className="bg-[#0B0F19] border border-[#20293D] rounded-2xl overflow-hidden mb-6 text-left">
+                <div className="px-4 py-2.5 bg-[#141A28] border-b border-[#20293D] flex items-center justify-between text-[11px] font-mono text-slate-400 uppercase font-bold">
+                  <span>Contestant Arena Standings</span>
+                  <span>{totalFeeds} Challenges Completed</span>
+                </div>
+                <div className="divide-y divide-[#182133]">
+                  {tableState.settlements.map((s, idx) => {
+                    const isMe = s.playerId === player.id;
+                    const isPositive = s.netEarnings >= 0;
+
+                    return (
+                      <div 
+                        key={s.playerId}
+                        className={`flex items-center justify-between p-3 text-xs font-mono transition-colors ${
+                          isMe 
+                            ? 'bg-[#182135] font-bold' 
+                            : 'hover:bg-[#101624]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`w-5 text-center font-bold ${
+                            idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-600' : 'text-slate-500'
+                          }`}>
+                            #{idx + 1}
+                          </span>
+                          <div>
+                            <div className="font-display font-black text-white flex items-center gap-1.5">
+                              <span>{s.username}</span>
+                              {isMe && <span className="text-[9px] text-amber-400 font-mono font-bold">(YOU)</span>}
+                            </div>
+                            <span className="text-[10px] text-slate-500">Seat {s.seatNumber}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 text-right">
+                          <div>
+                            <span className="text-slate-300">{s.score} / {totalFeeds}</span>
+                            <div className={`text-[10px] font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {isPositive ? `+$${s.netEarnings}` : `-$${Math.abs(s.netEarnings)}`}
+                            </div>
+                          </div>
+                          <div className="border-l border-[#20293D] pl-3 min-w-[70px]">
+                            <div className="text-[9px] text-slate-500 uppercase">Bankroll</div>
+                            <div className="font-black text-amber-400 text-sm">${s.finalChips}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              <button
-                onClick={handleFinalizeAndProceed}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
-              >
-                <span>CONTINUE TO BONUS INTERMISSION</span>
-                <ArrowRight size={18} />
-              </button>
+              {/* Celebratory Auto-proceed Counter & Proceed Button */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button
+                  onClick={handleFinalizeAndProceed}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
+                >
+                  <span>CONTINUE TO ROUND 2 & BONUS</span>
+                  <ArrowRight size={18} />
+                </button>
+                {winnersTimer > 0 && (
+                  <span className="text-xs font-mono text-slate-400">
+                    Auto-proceeding in <strong className="text-amber-400">{winnersTimer}s</strong>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -576,9 +996,9 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                   Contestant: <span className="font-bold text-white">{player.username}</span>
                 </div>
                 <div className="text-xs font-mono">
-                  Wallet: <span className="font-black text-amber-400">${player.chips.toLocaleString()}</span>
+                  Wallet: <span className="font-black text-amber-400">${myCurrentChips.toLocaleString()}</span>
                   {mySeat?.betAmount ? (
-                    <span className="text-slate-400 ml-2">| Bet: <strong className="text-white">${mySeat.betAmount}</strong></span>
+                    <span className="text-slate-400 ml-2">| Challenge Bet: <strong className="text-white">${mySeat.betAmount}</strong></span>
                   ) : null}
                 </div>
               </div>
@@ -586,14 +1006,14 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
             {/* ACTION CONTROLS */}
             {tableState?.status === 'betting' ? (
-              /* BETTING CONTROLS */
-              <div className="flex items-center gap-3">
+              /* PER-CHALLENGE BETTING CONTROLS */
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                 <span className="text-xs font-mono uppercase text-slate-400 font-bold hidden sm:inline">
-                  Select Wager:
+                  Challenge Bet:
                 </span>
                 {([10, 30, 'ALL_IN'] as BetAmount[]).map((amount) => {
-                  const betVal: number = amount === 'ALL_IN' ? player.chips : amount;
-                  const canAfford: boolean = player.chips >= betVal;
+                  const betVal: number = amount === 'ALL_IN' ? myCurrentChips : amount;
+                  const canAfford: boolean = myCurrentChips >= betVal;
                   const isSelected: boolean = selectedBet === amount || mySeat?.betAmount === betVal;
 
                   return (
@@ -601,7 +1021,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                       key={amount}
                       onClick={() => handlePlaceBet(amount)}
                       disabled={!canAfford || isMyBetPlaced}
-                      className={`px-5 py-2.5 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 cursor-pointer border ${
+                      className={`px-4 sm:px-5 py-2.5 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 cursor-pointer border ${
                         isSelected
                           ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
                           : canAfford && !isMyBetPlaced
@@ -615,12 +1035,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 })}
               </div>
             ) : tableState?.status === 'playing' ? (
-              /* CLASSIFICATION ANSWER BUTTONS */
+              /* CLASSIFICATION ANSWER BUTTONS WITH DYNAMIC MULTIPLIER REWARDS */
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handleSelectAnswer('real')}
                   disabled={myAnswer !== null || !!feedReveal}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-display font-black text-sm uppercase tracking-wider transition-all duration-150 cursor-pointer border-2 ${
+                  className={`flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-display font-black text-sm uppercase tracking-wider transition-all duration-150 cursor-pointer border-2 ${
                     myAnswer === 'real'
                       ? 'bg-emerald-600 border-emerald-400 text-white shadow-tactile'
                       : myAnswer === null && !feedReveal
@@ -630,12 +1050,17 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 >
                   <CheckCircle2 size={18} />
                   <span>REAL LIFE</span>
+                  {myAnswer === null && !feedReveal && (
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                      ⚡{liveMultiplier}x
+                    </span>
+                  )}
                 </button>
 
                 <button
                   onClick={() => handleSelectAnswer('ai')}
                   disabled={myAnswer !== null || !!feedReveal}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-display font-black text-sm uppercase tracking-wider transition-all duration-150 cursor-pointer border-2 ${
+                  className={`flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-display font-black text-sm uppercase tracking-wider transition-all duration-150 cursor-pointer border-2 ${
                     myAnswer === 'ai'
                       ? 'bg-rose-600 border-rose-400 text-white shadow-tactile'
                       : myAnswer === null && !feedReveal
@@ -645,6 +1070,11 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 >
                   <Video size={18} />
                   <span>AI GENERATED</span>
+                  {myAnswer === null && !feedReveal && (
+                    <span className="text-[10px] font-mono text-rose-400 bg-rose-950/80 px-1.5 py-0.5 rounded border border-rose-500/30">
+                      ⚡{liveMultiplier}x
+                    </span>
+                  )}
                 </button>
               </div>
             ) : (
@@ -652,7 +1082,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 <span className="text-xs font-mono text-slate-400">
                   {tableState.status === 'waiting'
                     ? (mySeat ? `Seated at S${mySeatNumber} • ${mySeat.isReady ? 'Ready for Host' : 'Set Ready'}` : 'Click any vacant seat above')
-                    : 'Settling table results...'}
+                    : 'Settling challenge results...'}
                 </span>
                 {tableState.status === 'waiting' && mySeat && (
                   <button

@@ -1,6 +1,7 @@
 // src/host/HostChatInterface.tsx
 import { useState, useEffect, useRef } from 'react';
 import { network_manager } from '../services/network';
+import { getWsUrl } from '../services/apiConfig';
 
 interface ChatMessage {
   id: string;
@@ -104,7 +105,7 @@ export default function HostChatInterface() {
     };
 
     // Connect as host
-    const hostAddress = import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:8080`;
+    const hostAddress = getWsUrl();
     network_manager.connect_as_host(hostAddress);
 
     return () => {

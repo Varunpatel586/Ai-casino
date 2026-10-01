@@ -84,10 +84,12 @@ async function generateWithPollinationsClientSide(prompt: string): Promise<strin
   return URL.createObjectURL(blob);
 }
 
+import { getBackendUrl } from './apiConfig';
+
 // 3. Pollinations (Backend Proxy)
 async function generateWithPollinationsBackend(prompt: string): Promise<string> {
   const encodedPrompt = encodeURIComponent(prompt);
-  const baseUrl = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:8080`;
+  const baseUrl = getBackendUrl();
   const url = `${baseUrl}/api/generate-pollinations?prompt=${encodedPrompt}`;
   
   const response = await fetch(url);

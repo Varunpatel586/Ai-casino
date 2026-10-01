@@ -230,7 +230,8 @@ The Host Command Center provides full operational control over live events:
 
 4. **Access the Applications:**
    - **Contestant Interface:** `http://localhost:5173/`
-   - **Host Controller:** `http://localhost:5173/host`
+   - **Dedicated Host Command:** Run `npm run host` to view credentials and launch the Host Controller
+   - **Host Controller Direct URL:** `http://localhost:5173/host`
 
 ---
 
@@ -259,6 +260,7 @@ The Host Command Center provides full operational control over live events:
 | :--- | :--- | :--- |
 | `npm run dev` | `vite --host` | Starts Vite frontend dev server with network access |
 | `npm run server` | `node server.js` | Launches Express + Socket.io backend server |
+| `npm run host` | `node scripts/launchHost.js` | Dedicated host command: prints Pit Boss credentials and opens `/host` in default browser |
 | `npm run build` | `vite build` | Compiles optimized production frontend bundle into `/dist` |
 | `npm run preview` | `vite preview` | Previews production build locally |
 | `npm run typecheck` | `tsc --noEmit -p tsconfig.app.json` | Validates TypeScript types across the codebase |

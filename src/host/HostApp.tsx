@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { network_manager } from '../services/network';
+import { getWsUrl } from '../services/apiConfig';
 
 interface ChatMessage {
   id: string;
@@ -147,7 +148,7 @@ export default function HostApp() {
     setIsLoading(true);
     network_manager.connection_callback = handleConnection;
     network_manager.message_callback = handleMessage;
-    network_manager.connect_as_host(import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:8080`);
+    network_manager.connect_as_host(getWsUrl());
 
     return () => {
       network_manager.disconnect();

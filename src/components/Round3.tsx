@@ -5,6 +5,7 @@ import BettingPanel from './BettingPanel';
 import ChatInterface from './chat/ChatInterface';
 import { network_manager } from '../services/network';
 import { reset_conversation } from '../services/gemini_chat';
+import { getWsUrl } from '../services/apiConfig';
 
 
 interface Round3Props {
@@ -117,7 +118,7 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
     try {
       if (!network_manager.is_connected()) {
         // Automatically connect to the WebSocket server
-        const hostAddress = import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:8080`;
+        const hostAddress = getWsUrl();
         console.log(`Connecting to ${hostAddress}...`);
         network_manager.set_username?.(username || '');
         await network_manager.connect_to_host(hostAddress);
@@ -127,7 +128,7 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
     } catch (error: unknown) {
       console.error('Connection error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setConnectionError(`Failed to connect to server: ${errorMessage}. Make sure the WebSocket server is running with "npm run host".`);
+      setConnectionError(`Failed to connect to server: ${errorMessage}. Make sure the backend server is running with "npm run server".`);
 
       // Fall back to AI mode (this will be handled by the connection callback)
       console.log('🔄 Human connection failed, connection callback will handle fallback to AI mode');

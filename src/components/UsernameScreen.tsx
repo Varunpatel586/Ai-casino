@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { UserCheck, Shield, ChevronRight, Hash } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { UserCheck, Shield, ChevronRight, Hash, Zap, ExternalLink, CheckCircle2 } from 'lucide-react';
 
 interface UsernameScreenProps {
   onSubmit: (username: string, roomCode: string) => void;
@@ -9,6 +9,88 @@ interface UsernameScreenProps {
 export default function UsernameScreen({ onSubmit, defaultRoom }: UsernameScreenProps) {
   const [username, setUsername] = useState('');
   const [roomCode, setRoomCode] = useState(defaultRoom || 'TABLE_01');
+  const [isPuterSignedIn, setIsPuterSignedIn] = useState(false);
+  const [puterUsername, setPuterUsername] = useState<string | null>(null);
+  const [isPuterLoading, setIsPuterLoading] = useState(false);
+
+  // Check existing Puter authentication session on mount
+  useEffect(() => {
+    const checkPuter = async () => {
+      try {
+        if (typeof window !== 'undefined' && (window as any).puter) {
+          const puter = (window as any).puter;
+          const signedIn = typeof puter.auth?.isSignedIn === 'function'
+            ? puter.auth.isSignedIn()
+            : (typeof puter.isSignedIn === 'function' ? puter.isSignedIn() : false);
+          
+          setIsPuterSignedIn(signedIn);
+
+          if (signedIn) {
+            const user = typeof puter.auth?.getUser === 'function'
+              ? await puter.auth.getUser()
+              : (typeof puter.getUser === 'function' ? await puter.getUser() : null);
+            if (user?.username) {
+              setPuterUsername(user.username);
+              // Pre-fill contestant moniker if empty
+              setUsername(prev => prev || user.username);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Puter session check error:', err);
+      }
+    };
+
+    checkPuter();
+  }, []);
+
+  const handlePuterSignIn = async () => {
+    setIsPuterLoading(true);
+    try {
+      if (typeof window !== 'undefined' && (window as any).puter) {
+        const puter = (window as any).puter;
+        if (typeof puter.auth?.signIn === 'function') {
+          await puter.auth.signIn();
+        } else if (typeof puter.signIn === 'function') {
+          await puter.signIn();
+        }
+
+        const signedIn = typeof puter.auth?.isSignedIn === 'function'
+          ? puter.auth.isSignedIn()
+          : (typeof puter.isSignedIn === 'function' ? puter.isSignedIn() : false);
+
+        setIsPuterSignedIn(signedIn);
+
+        if (signedIn) {
+          const user = typeof puter.auth?.getUser === 'function'
+            ? await puter.auth.getUser()
+            : (typeof puter.getUser === 'function' ? await puter.getUser() : null);
+          if (user?.username) {
+            setPuterUsername(user.username);
+            setUsername(prev => prev || user.username);
+          }
+        }
+      } else {
+        window.open('https://puter.com', '_blank');
+      }
+    } catch (e) {
+      console.warn('Puter sign in error:', e);
+    } finally {
+      setIsPuterLoading(false);
+    }
+  };
+
+  const handlePuterSignOut = async () => {
+    try {
+      if (typeof window !== 'undefined' && (window as any).puter?.auth?.signOut) {
+        await (window as any).puter.auth.signOut();
+      }
+      setIsPuterSignedIn(false);
+      setPuterUsername(null);
+    } catch (e) {
+      console.warn('Puter sign out error:', e);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +168,60 @@ export default function UsernameScreen({ onSubmit, defaultRoom }: UsernameScreen
             </p>
           </div>
 
+          {/* Puter AI Image Generation Credits Card */}
+          <div className="bg-[#10141F] border border-[#232B3D] rounded-xl p-3.5 text-left">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <Zap size={14} className={isPuterSignedIn ? 'text-emerald-400' : 'text-amber-400'} />
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-200">
+                  AI Image Credits (Round 2)
+                </span>
+              </div>
+              {isPuterSignedIn ? (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold flex items-center gap-1">
+                  <CheckCircle2 size={10} />
+                  <span>CREDITS READY</span>
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
+                  FREE SIGN-IN
+                </span>
+              )}
+            </div>
+
+            <p className="text-[11px] text-slate-400 font-mono mb-2.5 leading-relaxed">
+              {isPuterSignedIn
+                ? `Connected to @${puterUsername}. Your personal Puter free quota will be used for Round 2 image synthesis.`
+                : 'Sign in to Puter once so your individual free credits power Round 2 prompt duels.'}
+            </p>
+
+            {isPuterSignedIn ? (
+              <div className="flex items-center justify-between pt-1 border-t border-[#1C2333]">
+                <span className="text-xs font-mono text-emerald-400 font-bold">
+                  Signed In: @{puterUsername}
+                </span>
+                <button
+                  type="button"
+                  onClick={handlePuterSignOut}
+                  className="text-[10px] font-mono text-slate-500 hover:text-slate-300 underline cursor-pointer"
+                >
+                  Change Account
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePuterSignIn}
+                disabled={isPuterLoading}
+                className="w-full py-2.5 px-3 bg-[#181F2E] hover:bg-[#20293D] border border-amber-500/40 hover:border-amber-400 text-amber-400 hover:text-amber-300 rounded-lg font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:translate-y-0.5"
+              >
+                <Zap size={13} className="text-amber-400" />
+                <span>{isPuterLoading ? 'Opening Puter Auth...' : 'Connect Puter (1-Click Free Sign-Up)'}</span>
+                <ExternalLink size={12} className="opacity-70" />
+              </button>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={!username.trim()}
@@ -100,17 +236,6 @@ export default function UsernameScreen({ onSubmit, defaultRoom }: UsernameScreen
           <div className="flex items-center justify-center gap-2 text-slate-500">
             <Shield size={13} className="text-emerald-400" />
             <span>Starting bankroll ($50) credited automatically</span>
-          </div>
-
-          <div className="pt-2 border-t border-[#1C2230]">
-            <a 
-              href="/host" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-amber-400 hover:text-amber-300 hover:underline font-bold"
-            >
-              👑 Are you the Host? Open Pit Boss Controller →
-            </a>
           </div>
         </div>
       </div>

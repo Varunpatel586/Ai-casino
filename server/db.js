@@ -75,6 +75,15 @@ try {
 try {
   db.exec('ALTER TABLE players ADD COLUMN is_ready INTEGER DEFAULT 0');
 } catch (_) {}
+try {
+  db.exec('ALTER TABLE answers ADD COLUMN time_taken REAL DEFAULT 0');
+} catch (_) {}
+try {
+  db.exec('ALTER TABLE answers ADD COLUMN multiplier INTEGER DEFAULT 1');
+} catch (_) {}
+try {
+  db.exec('ALTER TABLE answers ADD COLUMN net_delta INTEGER DEFAULT 0');
+} catch (_) {}
 
 export function getOrCreateRoom(roomId = 'table_01', roomCode = null) {
   const selectStmt = db.prepare('SELECT * FROM rooms WHERE room_id = ?');
@@ -231,6 +240,25 @@ export function lockAllBets(roomId) {
   stmt.run(roomId);
 }
 
+export function updatePlayerChips(roomId, playerId, chips) {
+  const stmt = db.prepare(`
+    UPDATE players
+    SET chips = ?, last_seen = ?
+    WHERE room_id = ? AND player_id = ?
+  `);
+  stmt.run(chips, Date.now(), roomId, playerId);
+  return getPlayer(roomId, playerId);
+}
+
+export function resetPlayerBets(roomId) {
+  const stmt = db.prepare(`
+    UPDATE players
+    SET bet_amount = 0, bet_status = 'not_bet', answer_status = 'not_answered'
+    WHERE room_id = ?
+  `);
+  stmt.run(roomId);
+}
+
 export function resetPlayerAnswerStatuses(roomId) {
   const stmt = db.prepare(`
     UPDATE players
@@ -240,12 +268,12 @@ export function resetPlayerAnswerStatuses(roomId) {
   stmt.run(roomId);
 }
 
-export function recordAnswer(roomId, playerId, feedIndex, answer, isCorrect) {
+export function recordAnswer(roomId, playerId, feedIndex, answer, isCorrect, timeTaken = 0, multiplier = 1, netDelta = 0) {
   const insertStmt = db.prepare(`
-    INSERT OR REPLACE INTO answers (room_id, player_id, feed_index, answer, is_correct, submitted_at)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO answers (room_id, player_id, feed_index, answer, is_correct, time_taken, multiplier, net_delta, submitted_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  insertStmt.run(roomId, playerId, feedIndex, answer, isCorrect ? 1 : 0, Date.now());
+  insertStmt.run(roomId, playerId, feedIndex, answer, isCorrect ? 1 : 0, timeTaken, multiplier, netDelta, Date.now());
 
   const updatePlayerStmt = db.prepare(`
     UPDATE players
@@ -326,6 +354,8 @@ export default {
   upsertPlayer,
   updatePlayerConnection,
   updatePlayerBet,
+  updatePlayerChips,
+  resetPlayerBets,
   lockAllBets,
   resetPlayerAnswerStatuses,
   recordAnswer,
