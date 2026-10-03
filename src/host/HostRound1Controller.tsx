@@ -186,17 +186,25 @@ export default function HostRound1Controller() {
   const occupiedCount = players.length;
 
   const currentFeedIndex = tableState?.currentFeedIndex ?? 0;
-  const totalFeeds = tableState?.totalFeeds || 15;
-  const isVideoRound = currentFeedIndex >= 10;
+  const isVideoRound = tableState?.currentVideo?.type === 'video' || currentFeedIndex >= 5;
+  const totalFeeds = tableState?.totalFeeds || 10;
   const challengeDuration = isVideoRound ? 45 : 30;
 
-  // Active Multiplier calculation based on elapsed time
+  // Active Multiplier calculation based on elapsed time:
+  // Images (30s): <=5s -> 5x, <=10s -> 4x, <=15s -> 3x, <=20s -> 2x, >20s -> 1x
+  // Videos (45s): <=5s -> 5x, <=10s -> 4x, <=20s -> 3x, <=30s -> 2x, >30s -> 1x
   const elapsed = Math.max(0, challengeDuration - countdown);
   let liveMultiplier = 1;
   let nextThresholdSecs = 0;
 
   if (isVideoRound) {
-    if (elapsed <= 20) {
+    if (elapsed <= 5) {
+      liveMultiplier = 5;
+      nextThresholdSecs = 5 - elapsed;
+    } else if (elapsed <= 10) {
+      liveMultiplier = 4;
+      nextThresholdSecs = 10 - elapsed;
+    } else if (elapsed <= 20) {
       liveMultiplier = 3;
       nextThresholdSecs = 20 - elapsed;
     } else if (elapsed <= 30) {
@@ -207,9 +215,15 @@ export default function HostRound1Controller() {
       nextThresholdSecs = 0;
     }
   } else {
-    if (elapsed <= 10) {
-      liveMultiplier = 3;
+    if (elapsed <= 5) {
+      liveMultiplier = 5;
+      nextThresholdSecs = 5 - elapsed;
+    } else if (elapsed <= 10) {
+      liveMultiplier = 4;
       nextThresholdSecs = 10 - elapsed;
+    } else if (elapsed <= 15) {
+      liveMultiplier = 3;
+      nextThresholdSecs = 15 - elapsed;
     } else if (elapsed <= 20) {
       liveMultiplier = 2;
       nextThresholdSecs = 20 - elapsed;
@@ -273,12 +287,16 @@ export default function HostRound1Controller() {
                 {tableState?.status === 'betting' ? (
                   seatPlayer.betAmount > 0 ? (
                     <strong className="text-white">Bet: ${seatPlayer.betAmount}</strong>
+                  ) : seatPlayer.chips <= 0 ? (
+                    <span className="text-cyan-400 font-bold">Watching</span>
                   ) : (
                     <span className="text-slate-500">Choosing...</span>
                   )
                 ) : tableState?.status === 'playing' ? (
                   seatPlayer.answerStatus === 'answered' ? (
                     <span className="text-emerald-400 font-bold">LOCKED ✓</span>
+                  ) : seatPlayer.chips <= 0 ? (
+                    <span className="text-cyan-400">WATCHING</span>
                   ) : (
                     <span className="text-slate-500 animate-pulse">THINKING</span>
                   )
@@ -290,15 +308,17 @@ export default function HostRound1Controller() {
 
             {/* Instant Seat Chip Delta during reveal */}
             {seatPlayer.lastDelta !== undefined && (
-              <div className={`mt-1 py-0.5 px-1.5 rounded text-[10px] font-mono font-black text-center ${
-                seatPlayer.lastDelta >= 0
+              <div className={`mt-1 py-0.5 px-1.5 rounded text-[10px] font-sans font-bold text-center ${
+                seatPlayer.lastDelta > 0
                   ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300'
-                  : 'bg-rose-500/20 border border-rose-500/50 text-rose-300'
+                  : seatPlayer.lastDelta < 0
+                  ? 'bg-rose-500/20 border border-rose-500/50 text-rose-300'
+                  : 'bg-slate-800/80 border border-slate-700 text-slate-400'
               }`}>
-                {seatPlayer.lastDelta >= 0 ? `+$${seatPlayer.lastDelta}` : `-$${Math.abs(seatPlayer.lastDelta)}`}
-                {seatPlayer.lastMultiplier && seatPlayer.lastMultiplier > 1 && seatPlayer.lastDelta > 0 && (
+                <span>{seatPlayer.lastDelta > 0 ? `+$${seatPlayer.lastDelta}` : seatPlayer.lastDelta < 0 ? `-$${Math.abs(seatPlayer.lastDelta)}` : '$0 (Watching)'}</span>
+                {(seatPlayer.lastMultiplier ?? 0) > 1 && seatPlayer.lastDelta > 0 ? (
                   <span className="ml-1 text-amber-300">⚡{seatPlayer.lastMultiplier}x</span>
-                )}
+                ) : null}
               </div>
             )}
           </div>
@@ -312,18 +332,18 @@ export default function HostRound1Controller() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07090E] text-slate-100 font-sans selection:bg-amber-500 selection:text-black antialiased p-4 sm:p-6 lg:p-8">
+    <div className="w-full h-full flex-1 min-h-0 overflow-y-auto bg-[#07090E] text-slate-100 font-sans selection:bg-amber-500 selection:text-black antialiased p-3 sm:p-4">
       <div className="max-w-[1440px] mx-auto">
         {/* Error notification */}
         {errorMessage && (
-          <div className="mb-4 bg-rose-500/20 border border-rose-500 text-rose-300 px-4 py-2.5 rounded-xl font-mono text-xs flex items-center gap-2">
+          <div className="mb-3 bg-rose-500/20 border border-rose-500 text-rose-300 px-4 py-2 rounded-xl font-mono text-xs flex items-center gap-2">
             <AlertCircle size={16} />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {/* SEPARATE HOST CONTROLLER AREA */}
-        <div className="bg-[#10131B] border border-[#232B3E] rounded-3xl p-5 mb-5 shadow-2xl flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-[#10131B] border border-[#232B3E] rounded-2xl p-3 sm:p-4 mb-3 shadow-xl flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center shadow-sm">
               <ShieldAlert size={24} />
@@ -395,7 +415,7 @@ export default function HostRound1Controller() {
         </div>
 
         {/* HOST ACTION BAR */}
-        <div className="bg-[#0E121B] border border-[#1E2536] rounded-2xl px-5 py-3 mb-6 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+        <div className="bg-[#0E121B] border border-[#1E2536] rounded-xl px-4 py-2 mb-3 flex flex-wrap items-center justify-between gap-2.5 text-xs font-mono">
           <div className="flex items-center gap-2 text-slate-400">
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
             <span>
@@ -438,11 +458,11 @@ export default function HostRound1Controller() {
         </div>
 
         {/* MAIN ARENA LAYOUT: 3D Table on Left, Live Leaderboard on Right */}
-        <div className="flex flex-col lg:flex-row gap-5 items-start">
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
           {/* 3D Table Area */}
           <div className="flex-1 w-full min-w-0">
             {/* 3D TABLE AS MAIN ENVIRONMENT WITH 6 PERIMETER SEATS (No Host Seat) */}
-            <div className="relative w-full min-h-[580px] sm:min-h-[640px] md:min-h-[700px] rounded-3xl overflow-hidden border border-[#1E2535] bg-[#07090E] shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between p-4 sm:p-7">
+            <div className="relative w-full rounded-3xl overflow-hidden border border-[#1E2535] bg-[#07090E] shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between p-3 sm:p-5" style={{minHeight: '380px', maxHeight: 'calc(100vh - 230px)'}}>
           {/* STATIC HIGH-PERFORMANCE TABLE BACKGROUND */}
           <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
             <img
@@ -560,13 +580,13 @@ export default function HostRound1Controller() {
                     {tableState.status === 'playing' && (
                       <div className="absolute top-3 right-3 z-10">
                         <div className={`px-2.5 py-1 rounded-lg backdrop-blur-md font-mono text-[11px] font-black uppercase flex items-center gap-1 shadow-lg border ${
-                          liveMultiplier === 3
-                            ? 'bg-amber-500/30 border-amber-400 text-amber-300'
-                            : liveMultiplier === 2
+                          liveMultiplier >= 4
+                            ? 'bg-amber-500/30 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.5)]'
+                            : liveMultiplier >= 2
                             ? 'bg-cyan-500/30 border-cyan-400 text-cyan-300'
                             : 'bg-black/60 border-slate-700 text-slate-400'
                         }`}>
-                          <Zap size={12} className={liveMultiplier === 3 ? 'text-amber-400' : 'text-cyan-400'} />
+                          <Zap size={12} className={liveMultiplier >= 4 ? 'text-amber-400' : liveMultiplier >= 2 ? 'text-cyan-400' : 'text-slate-400'} />
                           <span>{liveMultiplier}x MULTIPLIER {liveMultiplier > 1 ? `(${nextThresholdSecs}s left)` : ''}</span>
                         </div>
                       </div>
@@ -619,7 +639,7 @@ export default function HostRound1Controller() {
       </div>
 
       {/* DEDICATED RIGHT-SIDE LIVE LEADERBOARD (Desktop) */}
-      <div className="hidden lg:block w-[300px] xl:w-[320px] shrink-0 sticky top-24">
+      <div className="hidden lg:block w-[300px] xl:w-[320px] shrink-0 sticky top-4">
         <LiveLeaderboardSide
           players={players}
           currentFeedIndex={currentFeedIndex}

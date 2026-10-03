@@ -5,9 +5,10 @@ interface ChipDisplayProps {
   username: string;
 }
 
-export default function ChipDisplay({ chips, username }: ChipDisplayProps) {
+export default function ChipDisplay({ chips = 0, username }: ChipDisplayProps) {
+  const safeChips = typeof chips === 'number' && !isNaN(chips) ? chips : 0;
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#0E1118]/90 backdrop-blur-md border-b border-[#232938] px-4 sm:px-8 py-3">
+    <header className="w-full flex-shrink-0 z-50 bg-[#0E1118]/95 backdrop-blur-md border-b border-[#232938] px-4 sm:px-6 py-2">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         {/* Player Credential Badge */}
         <div className="flex items-center gap-3">
@@ -30,7 +31,7 @@ export default function ChipDisplay({ chips, username }: ChipDisplayProps) {
 
         {/* Center Hallmark (Desktop only) */}
         <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded bg-[#141824] border border-[#262D3D] text-[11px] font-mono tracking-widest text-amber-400/80 uppercase">
-          <span>Turing High-Stakes Lounge</span>
+          <span>AI Casino High-Stakes Lounge</span>
         </div>
 
         {/* Tactile Casino Chip Balance */}
@@ -45,7 +46,7 @@ export default function ChipDisplay({ chips, username }: ChipDisplayProps) {
               Chip Bankroll
             </div>
             <div className="text-white font-black text-xl sm:text-2xl font-mono tabular-nums leading-none tracking-tight">
-              ${chips.toLocaleString()}
+              ${safeChips.toLocaleString()}
             </div>
           </div>
         </div>

@@ -1,8 +1,7 @@
 import db from './db.js';
 
-// Round 1 (AI vs Real): 10 Images + 5 Videos (15 Total Challenges)
-export const roundVideos = [
-  // --- 10 Images ---
+// Master Pool of 10 Visual Challenges (Exact labels & classification logic preserved)
+export const allRound1Images = [
   { id: 1, title: 'Visual Challenge 1', type: 'image', isAI: false, mediaSrc: '/images/round1/img1.jpg', videoSrc: '/images/round1/img1.jpg' },
   { id: 2, title: 'Visual Challenge 2', type: 'image', isAI: true, mediaSrc: '/images/round1/img2.jpg', videoSrc: '/images/round1/img2.jpg' },
   { id: 3, title: 'Visual Challenge 3', type: 'image', isAI: false, mediaSrc: '/images/round1/img3.jpg', videoSrc: '/images/round1/img3.jpg' },
@@ -13,14 +12,36 @@ export const roundVideos = [
   { id: 8, title: 'Visual Challenge 8', type: 'image', isAI: true, mediaSrc: '/images/round1/img8.jpg', videoSrc: '/images/round1/img8.jpg' },
   { id: 9, title: 'Visual Challenge 9', type: 'image', isAI: false, mediaSrc: '/images/round1/img9.jpg', videoSrc: '/images/round1/img9.jpg' },
   { id: 10, title: 'Visual Challenge 10', type: 'image', isAI: true, mediaSrc: '/images/round1/img10.jpg', videoSrc: '/images/round1/img10.jpg' },
+];
 
-  // --- 5 Videos ---
+// Master Pool of 5 Video Surveillance Challenges
+export const allRound1Videos = [
   { id: 11, title: 'Video Surveillance 1', type: 'video', isAI: false, mediaSrc: '/Videos/round1/vid1.mp4', videoSrc: '/Videos/round1/vid1.mp4' },
   { id: 12, title: 'Video Surveillance 2', type: 'video', isAI: true, mediaSrc: '/Videos/round1/vid2.mp4', videoSrc: '/Videos/round1/vid2.mp4' },
   { id: 13, title: 'Video Surveillance 3', type: 'video', isAI: false, mediaSrc: '/Videos/round1/vid3.mp4', videoSrc: '/Videos/round1/vid3.mp4' },
   { id: 14, title: 'Video Surveillance 4', type: 'video', isAI: false, mediaSrc: '/Videos/round1/vid4.mp4', videoSrc: '/Videos/round1/vid4.mp4' },
   { id: 15, title: 'Video Surveillance 5', type: 'video', isAI: true, mediaSrc: '/Videos/round1/vid5.mp4', videoSrc: '/Videos/round1/vid5.mp4' },
 ];
+
+/**
+ * Generates a fresh round of 10 challenges:
+ * - Exactly 5 distinct images chosen at random from the 10-image master pool, in randomized order
+ * - Followed by the 5 surveillance videos
+ * All image labels (isAI: true vs isAI: false) and media paths remain strictly preserved.
+ */
+export function generateRoomChallenges() {
+  const pool = [...allRound1Images];
+  // Fisher-Yates shuffle
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const selectedImages = pool.slice(0, 5);
+  return [...selectedImages, ...allRound1Videos];
+}
+
+// Fallback constant for backwards compatibility
+export const roundVideos = generateRoomChallenges();
 
 export class MultiplayerManager {
   constructor(io) {
@@ -29,6 +50,10 @@ export class MultiplayerManager {
     this.botIntervals = new Map(); // roomId -> Array of timeouts
     this.hostSockets = new Map(); // roomId -> socket.id
     this.playerLastDeltas = new Map(); // `${roomId}:${playerId}` -> { delta, multiplier, isCorrect }
+    this.roomChallenges = new Map(); // roomId -> Array of 10 challenges (5 randomized images + 5 videos)
+
+    // Initialize challenges for table_01
+    this.generateNewRoundChallenges('table_01');
 
     // Auto-recovery: If room was left in playing/betting/settled state from previous run, reset to waiting
     try {
@@ -42,6 +67,23 @@ export class MultiplayerManager {
     }
 
     this.setupSocketEvents();
+  }
+
+  getRoomChallenges(roomId = 'table_01') {
+    if (!this.roomChallenges.has(roomId)) {
+      this.generateNewRoundChallenges(roomId);
+    }
+    return this.roomChallenges.get(roomId);
+  }
+
+  generateNewRoundChallenges(roomId = 'table_01') {
+    const challenges = generateRoomChallenges();
+    this.roomChallenges.set(roomId, challenges);
+    console.log(
+      `[Multiplayer] Fresh challenge deck generated for ${roomId} (5 randomized images + 5 videos):\n` +
+      challenges.map((c, i) => `  ${i + 1}. ${c.title} (${c.type}, isAI=${c.isAI}, src=${c.mediaSrc})`).join('\n')
+    );
+    return challenges;
   }
 
   setupSocketEvents() {
@@ -75,7 +117,8 @@ export class MultiplayerManager {
     const room = db.getOrCreateRoom(roomId);
     const players = db.getPlayersInRoom(roomId);
     const settlements = room.status === 'settled' ? db.getRoomSettlements(roomId) : [];
-    const currentVideo = roundVideos[room.current_feed_index] || roundVideos[0];
+    const challenges = this.getRoomChallenges(roomId);
+    const currentVideo = challenges[room.current_feed_index] || challenges[0];
     const isHostActive = this.hostSockets.has(roomId);
 
     return {
@@ -84,7 +127,7 @@ export class MultiplayerManager {
       hostConnected: isHostActive,
       status: room.status,
       currentFeedIndex: room.current_feed_index,
-      totalFeeds: roundVideos.length,
+      totalFeeds: challenges.length,
       roundTimer: room.round_timer,
       feedStartTime: room.feed_start_time,
       currentVideo: {
@@ -264,6 +307,9 @@ export class MultiplayerManager {
       return;
     }
 
+    // Generate a fresh random selection of 5 images out of 10, followed by the 5 videos
+    this.generateNewRoundChallenges(roomId);
+
     // Clear any previous delta records for this room
     players.forEach((p) => this.playerLastDeltas.delete(`${roomId}:${p.player_id}`));
 
@@ -291,20 +337,29 @@ export class MultiplayerManager {
   // --- PER-CHALLENGE WAGER PHASE (15s Window) ---
   startWagerPhase(roomId, feedIndex) {
     this.clearRoomTimer(roomId);
-    if (feedIndex >= roundVideos.length) {
+    const challenges = this.getRoomChallenges(roomId);
+    if (feedIndex >= challenges.length) {
       this.settleRound(roomId);
       return;
     }
 
-    // Reset player bets for this specific challenge
+    // Reset player bets and clear previous deltas for this specific challenge
     db.resetPlayerBets(roomId);
+    const playersInRoom = db.getPlayersInRoom(roomId);
+    playersInRoom.forEach((p) => {
+      this.playerLastDeltas.delete(`${roomId}:${p.player_id}`);
+      // If player has 0 chips, they are unable to wager and auto-locked in spectator mode with $0 bet
+      if (p.chips <= 0) {
+        db.updatePlayerBet(roomId, p.player_id, 0);
+      }
+    });
     db.updateRoomStatus(roomId, 'betting', feedIndex, 15);
     this.broadcastTableState(roomId);
 
-    const currentItem = roundVideos[feedIndex];
+    const currentItem = challenges[feedIndex];
     this.io.to(roomId).emit('wager_phase_started', {
       feedIndex,
-      totalFeeds: roundVideos.length,
+      totalFeeds: challenges.length,
       duration: 15,
       video: {
         id: currentItem.id,
@@ -331,10 +386,10 @@ export class MultiplayerManager {
 
       if (secondsLeft <= 0) {
         this.clearRoomTimer(roomId);
-        // Default any remaining unbet human players to min(chips, 10)
+        // Default any remaining unbet players to min(chips, 10), or 0 if out of chips
         db.getPlayersInRoom(roomId).forEach((p) => {
           if (p.bet_status === 'not_bet') {
-            const minBet = Math.min(p.chips > 0 ? p.chips : 10, 10);
+            const minBet = p.chips > 0 ? Math.min(p.chips, 10) : 0;
             db.updatePlayerBet(roomId, p.player_id, minBet);
           }
         });
@@ -358,8 +413,13 @@ export class MultiplayerManager {
       return;
     }
 
+    if (player.chips <= 0) {
+      socket.emit('error_message', { message: 'Bankroll depleted ($0). Spectating feed in watch mode.' });
+      return;
+    }
+
     const numericBet = betAmount === 'ALL_IN' ? player.chips : Number(betAmount);
-    if (numericBet <= 0 || (player.chips > 0 && numericBet > player.chips)) {
+    if (numericBet <= 0 || numericBet > player.chips) {
       socket.emit('error_message', { message: 'Insufficient chips or invalid bet.' });
       return;
     }
@@ -388,22 +448,25 @@ export class MultiplayerManager {
   // --- CHALLENGE DISPLAY PHASE (30s Images / 45s Videos) ---
   startFeed(roomId, feedIndex) {
     this.clearRoomTimer(roomId);
-    if (feedIndex >= roundVideos.length) {
+    const challenges = this.getRoomChallenges(roomId);
+    if (feedIndex >= challenges.length) {
       this.settleRound(roomId);
       return;
     }
 
-    const currentVideo = roundVideos[feedIndex];
+    const currentVideo = challenges[feedIndex];
     const duration = currentVideo?.type === 'video' ? 45 : 30;
     const feedStartTime = Date.now();
 
     db.resetPlayerAnswerStatuses(roomId);
+    const playersInFeed = db.getPlayersInRoom(roomId);
+    playersInFeed.forEach((p) => this.playerLastDeltas.delete(`${roomId}:${p.player_id}`));
     db.updateRoomStatus(roomId, 'playing', feedIndex, duration, feedStartTime);
     this.broadcastTableState(roomId);
 
     this.io.to(roomId).emit('feed_started', {
       feedIndex,
-      totalFeeds: roundVideos.length,
+      totalFeeds: challenges.length,
       duration,
       feedStartTime,
       video: {
@@ -426,14 +489,20 @@ export class MultiplayerManager {
           if (roomNow.status === 'playing' && roomNow.current_feed_index === feedIndex) {
             const timeTaken = Number((delay / 1000).toFixed(1));
             
-            // Calculate bot speed multiplier
+            // Calculate bot speed multiplier:
+            // Images: <=5s: 5x, <=10s: 4x, <=15s: 3x, <=20s: 2x, >20s: 1x
+            // Videos: <=5s: 5x, <=10s: 4x, <=20s: 3x, <=30s: 2x, >30s: 1x
             let multiplier = 1;
             if (currentVideo.type === 'video') {
-              if (timeTaken <= 20) multiplier = 3;
+              if (timeTaken <= 5) multiplier = 5;
+              else if (timeTaken <= 10) multiplier = 4;
+              else if (timeTaken <= 20) multiplier = 3;
               else if (timeTaken <= 30) multiplier = 2;
               else multiplier = 1;
             } else {
-              if (timeTaken <= 10) multiplier = 3;
+              if (timeTaken <= 5) multiplier = 5;
+              else if (timeTaken <= 10) multiplier = 4;
+              else if (timeTaken <= 15) multiplier = 3;
               else if (timeTaken <= 20) multiplier = 2;
               else multiplier = 1;
             }
@@ -482,7 +551,8 @@ export class MultiplayerManager {
       return;
     }
 
-    const currentVideo = roundVideos[feedIndex];
+    const challenges = this.getRoomChallenges(roomId);
+    const currentVideo = challenges[feedIndex];
     if (!currentVideo) return;
 
     const player = db.getPlayer(roomId, playerId);
@@ -493,21 +563,26 @@ export class MultiplayerManager {
     const timeTaken = Math.max(0.1, Number(((Date.now() - feedStartTime) / 1000).toFixed(1)));
 
     // Calculate Speed Multiplier:
-    // Images (30s): <=10s: 3x, 10-20s: 2x, >20s: 1x
-    // Videos (45s): <=20s: 3x, 20-30s: 2x, >30s: 1x
+    // Images: <=5s: 5x, <=10s: 4x, <=15s: 3x, <=20s: 2x, >20s: 1x
+    // Videos: <=5s: 5x, <=10s: 4x, <=20s: 3x, <=30s: 2x, >30s: 1x
     let multiplier = 1;
     if (currentVideo.type === 'video') {
-      if (timeTaken <= 20) multiplier = 3;
+      if (timeTaken <= 5) multiplier = 5;
+      else if (timeTaken <= 10) multiplier = 4;
+      else if (timeTaken <= 20) multiplier = 3;
       else if (timeTaken <= 30) multiplier = 2;
       else multiplier = 1;
     } else {
-      if (timeTaken <= 10) multiplier = 3;
+      if (timeTaken <= 5) multiplier = 5;
+      else if (timeTaken <= 10) multiplier = 4;
+      else if (timeTaken <= 15) multiplier = 3;
       else if (timeTaken <= 20) multiplier = 2;
       else multiplier = 1;
     }
 
     const isCorrect = (answer === 'ai' && currentVideo.isAI) || (answer === 'real' && !currentVideo.isAI);
-    const bet = player.bet_amount || 10;
+    const rawBet = player.bet_amount && player.bet_amount > 0 ? player.bet_amount : (player.chips > 0 ? 10 : 0);
+    const bet = Math.max(0, Math.min(player.chips > 0 ? player.chips : 0, rawBet));
     const netDelta = isCorrect ? (bet * multiplier) : (-bet);
 
     db.recordAnswer(roomId, playerId, feedIndex, answer, isCorrect, timeTaken, multiplier, netDelta);
@@ -539,7 +614,8 @@ export class MultiplayerManager {
     this.clearRoomTimer(roomId);
     db.updateRoomStatus(roomId, 'revealing', feedIndex, 0);
 
-    const currentVideo = roundVideos[feedIndex];
+    const challenges = this.getRoomChallenges(roomId);
+    const currentVideo = challenges[feedIndex];
     const players = db.getPlayersInRoom(roomId);
     const answers = db.getAnswersForFeed(roomId, feedIndex);
     const answerMap = new Map(answers.map((a) => [a.player_id, a]));
@@ -555,7 +631,8 @@ export class MultiplayerManager {
       let netDelta = 0;
       let chosenAnswer = 'none';
 
-      const bet = p.bet_amount || 10;
+      const rawBet = p.bet_amount && p.bet_amount > 0 ? p.bet_amount : (p.chips > 0 ? 10 : 0);
+      const bet = Math.max(0, Math.min(p.chips > 0 ? p.chips : 0, rawBet));
 
       if (a) {
         isCorrect = Boolean(a.is_correct);
@@ -564,11 +641,11 @@ export class MultiplayerManager {
         netDelta = a.net_delta;
         chosenAnswer = a.answer;
       } else {
-        // Did not answer in time: loss of bet
+        // Did not answer in time: loss of bet (or $0 if in watching spectator mode)
         isCorrect = false;
         multiplier = 0;
         netDelta = -bet;
-        chosenAnswer = 'timeout';
+        chosenAnswer = p.chips <= 0 ? 'watching' : 'timeout';
       }
 
       // Update player's chip balance immediately
@@ -598,9 +675,9 @@ export class MultiplayerManager {
 
     this.io.to(roomId).emit('feed_revealed', {
       feedIndex,
-      totalFeeds: roundVideos.length,
+      totalFeeds: challenges.length,
       isAI: currentVideo.isAI,
-      classification: currentVideo.isAI ? 'AI GENERATED' : 'AUTHENTIC REAL LIFE',
+      classification: currentVideo.isAI ? 'AI' : 'REAL',
       playerResults,
     });
 
@@ -610,7 +687,7 @@ export class MultiplayerManager {
     // After 4.5 seconds of reveal display, move to next challenge's wager phase or settle
     setTimeout(() => {
       const nextIndex = feedIndex + 1;
-      if (nextIndex < roundVideos.length) {
+      if (nextIndex < challenges.length) {
         this.startWagerPhase(roomId, nextIndex);
       } else {
         this.settleRound(roomId);
@@ -618,10 +695,11 @@ export class MultiplayerManager {
     }, 4500);
   }
 
-  // --- FINAL ROUND SETTLEMENT (AFTER 15 CHALLENGES) ---
+  // --- FINAL ROUND SETTLEMENT (AFTER ALL CHALLENGES) ---
   settleRound(roomId) {
     this.clearRoomTimer(roomId);
-    db.updateRoomStatus(roomId, 'settled', roundVideos.length - 1, 0);
+    const challenges = this.getRoomChallenges(roomId);
+    db.updateRoomStatus(roomId, 'settled', challenges.length - 1, 0);
 
     const players = db.getPlayersInRoom(roomId);
 
@@ -656,6 +734,7 @@ export class MultiplayerManager {
     this.clearRoomTimer(roomId);
     const players = db.getPlayersInRoom(roomId);
     players.forEach((p) => this.playerLastDeltas.delete(`${roomId}:${p.player_id}`));
+    this.generateNewRoundChallenges(roomId);
     db.resetRoomSession(roomId);
     this.broadcastTableState(roomId);
   }

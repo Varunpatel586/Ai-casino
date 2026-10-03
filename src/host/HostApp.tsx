@@ -223,7 +223,7 @@ export default function HostApp() {
 
   if (!hasJoined) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="w-full h-full flex-1 min-h-0 overflow-hidden bg-slate-900 flex items-center justify-center p-4">
         <div className="bg-slate-800 p-8 rounded-xl max-w-md w-full border border-purple-500/30">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Operator Login</h2>
           <input
@@ -251,7 +251,7 @@ export default function HostApp() {
   const isClaimedByMe = activePlayer?.claimedById === localIdRef.current;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex h-screen overflow-hidden">
+    <div className="w-full h-full flex-1 min-h-0 bg-slate-900 text-white flex overflow-hidden">
       {/* LEFT SIDEBAR */}
       <div className="w-80 bg-slate-800 border-r border-slate-700 flex flex-col">
         <div className="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">

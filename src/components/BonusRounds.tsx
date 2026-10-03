@@ -60,58 +60,59 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
   };
 
   if (screen === 'menu') {
-    const stageLabel = currentRound === 1.5 
-      ? 'STAGE I INTERMISSION' 
-      : currentRound === 2.5 
-        ? 'STAGE II INTERMISSION' 
+    const stageLabel = currentRound === 1.5
+      ? 'STAGE I INTERMISSION'
+      : currentRound === 2.5
+        ? 'STAGE II INTERMISSION'
         : 'FINAL VAULT LOUNGE';
 
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center px-4 pt-24 pb-12">
-        <div className="max-w-3xl w-full text-center">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-3xl w-full text-center h-full flex flex-col justify-between py-2 sm:py-3">
           {/* Header Plaque */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
-            <span>{stageLabel}</span>
+          <div className="flex-shrink-0">
+            <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
+              <span>{stageLabel}</span>
+            </div>
+
+            <h1 className="text-2xl sm:text-4xl font-display font-black text-white uppercase tracking-tight mb-1">
+              Side Action Tables
+            </h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-sans max-w-lg mx-auto">
+              Amplify your tournament chip bankroll before proceeding. Each side table can be played once per intermission.
+            </p>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-display font-black text-white uppercase tracking-tight mb-2">
-            Side Action Tables
-          </h1>
-          <p className="text-slate-400 text-sm sm:text-base font-sans max-w-lg mx-auto mb-10">
-            Amplify your tournament chip bankroll before proceeding. Each side table can be played once per intermission.
-          </p>
-
-          <div className="grid md:grid-cols-2 gap-5 mb-10 text-left">
+          <div className="grid md:grid-cols-2 gap-3 sm:gap-4 my-auto text-left w-full">
             {/* Round 1: Neural Wheel and Card Game */}
             {currentRound === 1.5 && (
               <>
                 <button
                   onClick={() => setScreen('wheel')}
                   disabled={playedGames.has('wheel')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
-                    playedGames.has('wheel')
-                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                      : 'bg-[#12151E] border-[#283248] hover:border-amber-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
-                  }`}
+                  className={`relative p-4 sm:p-5 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('wheel')
+                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                    : 'bg-[#12151E] border-[#283248] hover:border-amber-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                    }`}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Sparkles size={24} />
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Sparkles size={20} />
                     </div>
                     {playedGames.has('wheel') ? (
-                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
-                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-slate-400 bg-[#181D2A] px-2 py-0.5 rounded-full border border-white/10">
+                        <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
                     ) : (
-                      <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                         FREE SPIN
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                  <h3 className="text-lg font-display font-black text-white uppercase mb-0.5">
                     Neural Roulette
                   </h3>
-                  <p className="text-slate-400 text-xs font-sans mb-4">
+                  <p className="text-slate-400 text-xs font-sans mb-3 line-clamp-2">
                     Calibrate the probabilistic wheel for an immediate chip injection without risking your stack.
                   </p>
                   <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
@@ -125,11 +126,10 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                 <button
                   onClick={() => setScreen('cardgame')}
                   disabled={playedGames.has('cardgame')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
-                    playedGames.has('cardgame')
-                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                      : 'bg-[#12151E] border-[#283248] hover:border-blue-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
-                  }`}
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('cardgame')
+                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                    : 'bg-[#12151E] border-[#283248] hover:border-blue-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-blue-500/30 text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -167,11 +167,10 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                 <button
                   onClick={() => setScreen('datadash')}
                   disabled={playedGames.has('datadash')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
-                    playedGames.has('datadash')
-                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                      : 'bg-[#12151E] border-[#283248] hover:border-emerald-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
-                  }`}
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('datadash')
+                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                    : 'bg-[#12151E] border-[#283248] hover:border-emerald-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -204,11 +203,10 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                 <button
                   onClick={() => setScreen('dicegame')}
                   disabled={playedGames.has('dicegame')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
-                    playedGames.has('dicegame')
-                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                      : 'bg-[#12151E] border-[#283248] hover:border-purple-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
-                  }`}
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('dicegame')
+                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                    : 'bg-[#12151E] border-[#283248] hover:border-purple-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-purple-500/30 text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -246,11 +244,10 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                 <button
                   onClick={() => setScreen('minesgame')}
                   disabled={playedGames.has('minesgame')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
-                    playedGames.has('minesgame')
-                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                      : 'bg-[#12151E] border-[#283248] hover:border-rose-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
-                  }`}
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('minesgame')
+                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                    : 'bg-[#12151E] border-[#283248] hover:border-rose-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-rose-500/30 text-rose-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -283,11 +280,10 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                 <button
                   onClick={() => setScreen('numberguess')}
                   disabled={playedGames.has('numberguess')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${
-                    playedGames.has('numberguess')
-                      ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                      : 'bg-[#12151E] border-[#283248] hover:border-emerald-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
-                  }`}
+                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('numberguess')
+                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
+                    : 'bg-[#12151E] border-[#283248] hover:border-emerald-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -320,14 +316,19 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
             )}
           </div>
 
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center flex-shrink-0 mt-2">
             <button
-              onClick={() => onComplete(0)}
-              className="py-4 px-10 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
+              onClick={() => {
+                if (currentChips <= 0) {
+                  onChipUpdate(30); // Guaranteed starter bailout if wheel was skipped
+                }
+                onComplete(0);
+              }}
+              className="py-2.5 sm:py-3 px-8 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-sm sm:text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
             >
               Continue To Next Stage
             </button>
-            <span className="text-xs font-mono text-slate-500 mt-2">
+            <span className="text-[10px] sm:text-xs font-mono text-slate-500 mt-1.5">
               Side games are optional. You can proceed directly to the tournament.
             </span>
           </div>

@@ -2,9 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: 100vw;
+  max-height: 100vh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 @layer base {
   body {
-    background-color: #08090D;
+    background-color: #060b14;
     color: #F8FAFC;
     font-family: 'Plus Jakarta Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -30,12 +59,28 @@ div[id^="puter-"] {
   z-index: -9999 !important;
 }
 
-/* Subtle table felt texture & lighting */
+/* Authentic Vibrant Casino Felt & Ambient Lighting Atmosphere */
 .casino-table-bg {
-  background-color: #08090D;
+  background-color: #060b14;
   background-image: 
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(245, 158, 11, 0.07), transparent),
-    radial-gradient(ellipse 60% 40% at 50% 110%, rgba(16, 185, 129, 0.04), transparent);
+    /* 1. Overhead Chandelier Warm Gold & Amber Radiance (Top Center) */
+    radial-gradient(ellipse 90% 45% at 50% -5%, rgba(245, 158, 11, 0.28) 0%, rgba(217, 119, 6, 0.12) 42%, transparent 72%),
+    /* 2. Iconic Casino Emerald / Jade Gaming Table Felt (Center Table) */
+    radial-gradient(ellipse 85% 58% at 50% 52%, rgba(16, 185, 129, 0.20) 0%, rgba(5, 150, 105, 0.10) 45%, transparent 75%),
+    /* 3. High-Roller Neon Sapphire & Electric Cyan Glow (Bottom Left) */
+    radial-gradient(circle at 10% 92%, rgba(37, 99, 235, 0.24) 0%, rgba(14, 165, 233, 0.12) 40%, transparent 65%),
+    /* 4. Royal Amethyst & Magenta Velvet Neon Glow (Bottom Right) */
+    radial-gradient(circle at 90% 92%, rgba(147, 51, 234, 0.24) 0%, rgba(219, 39, 119, 0.10) 40%, transparent 65%),
+    /* 5. High-Stakes Ruby Crimson Edge Accent (Mid Left) */
+    radial-gradient(circle at -4% 45%, rgba(225, 29, 72, 0.16) 0%, transparent 45%),
+    /* 6. Radiant Topaz Amber Edge Accent (Mid Right) */
+    radial-gradient(circle at 104% 45%, rgba(245, 158, 11, 0.18) 0%, transparent 45%),
+    /* 7. Luxury Casino Felt Diamond Lattice & Rosette Watermark Pattern */
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 L60 30 L30 60 L0 30 Z' fill='none' stroke='%23f59e0b' stroke-width='0.75' stroke-opacity='0.045'/%3E%3Cpolygon points='30%2C23 37%2C30 30%2C37 23%2C30' fill='%2310b981' fill-opacity='0.05'/%3E%3Ccircle cx='0' cy='0' r='2' fill='%23f59e0b' fill-opacity='0.06'/%3E%3Ccircle cx='60' cy='0' r='2' fill='%23f59e0b' fill-opacity='0.06'/%3E%3Ccircle cx='0' cy='60' r='2' fill='%23f59e0b' fill-opacity='0.06'/%3E%3Ccircle cx='60' cy='60' r='2' fill='%23f59e0b' fill-opacity='0.06'/%3E%3C/svg%3E"),
+    /* 8. Soft Edge Falloff Vignette for Focus & Cinematic Depth */
+    radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(4, 7, 14, 0.65) 100%);
+  background-attachment: fixed;
+  background-size: auto, auto, auto, auto, auto, auto, 60px 60px, auto;
 }
 
 .casino-panel {

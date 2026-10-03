@@ -206,9 +206,9 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Intro Screen
   if (phase === 'intro') {
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
-        <div className="max-w-2xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 sm:p-10 shadow-2xl text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-4">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 shadow-2xl text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
             <MessageCircle size={14} />
             <span>Event III • The Ultimate Turing Test</span>
           </div>
@@ -262,7 +262,7 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Betting Screen
   if (phase === 'betting') {
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
         <div className="max-w-2xl w-full">
           <BettingPanel currentChips={currentChips} onBet={handleBet} />
         </div>
@@ -273,8 +273,8 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Mode Selection Screen (random selection in progress)
   if (phase === 'mode-select') {
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
-        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 text-center shadow-2xl">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl">
           <div className="w-16 h-16 rounded-2xl bg-[#181D2A] border border-amber-500/30 flex items-center justify-center mx-auto mb-6">
             <MessageCircle className="text-amber-400 animate-pulse" size={32} />
           </div>
@@ -300,8 +300,8 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Human Chat Connection Screen (when connecting to host)
   if (phase === 'playing' && actualMode === 'human' && !isConnected) {
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
-        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 text-center shadow-2xl">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl">
           <div className="w-16 h-16 rounded-2xl bg-[#181D2A] border border-blue-500/30 flex items-center justify-center mx-auto mb-6">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400 border-t-transparent" />
           </div>
@@ -347,9 +347,9 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Chat Interface Screen - with 3-message limit and verdict modal
   if (phase === 'playing' && actualMode) {
     return (
-      <div className="min-h-screen casino-table-bg flex flex-col pt-16">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex flex-col overflow-hidden">
         {/* Subround HUD Banner */}
-        <div className="bg-[#12151E] border-b border-[#232938] px-4 sm:px-8 py-3">
+        <div className="bg-[#12151E] border-b border-[#232938] px-4 sm:px-6 py-2 flex-shrink-0">
           <div className="max-w-5xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-3">
               <button 
@@ -453,8 +453,8 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
     const winnings = Math.max(0, Math.floor(currentBet * (scorePercentage / 50)));
 
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
-        <div className="max-w-2xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 sm:p-10 text-center shadow-2xl">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl">
           <div className="w-14 h-14 rounded-2xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-4">
             <MessageCircle size={28} />
           </div>
@@ -505,7 +505,7 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
 
   // Fallback
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+    <div className="flex-1 min-h-0 bg-slate-900 flex items-center justify-center">
       <div className="text-center">
         <h2 className="text-2xl text-white mb-4">Something went wrong</h2>
         <button

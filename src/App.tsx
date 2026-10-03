@@ -14,6 +14,7 @@ import HostRound1Controller from './host/HostRound1Controller';
 import HostChatInterface from './host/HostChatInterface';
 import UnifiedHostView from './host/UnifiedHostView';
 import OperatorSetup from './components/OperatorSetup';
+import ErrorBoundary from './components/ErrorBoundary';
 import { network_manager } from './services/network';
 import { getBackendUrl } from './services/apiConfig';
 
@@ -119,7 +120,7 @@ function App() {
     }
   };
 
-  const handleRound1Complete = (score: number, bet: number, totalFeeds = 15, finalChips?: number) => {
+  const handleRound1Complete = (score: number, bet: number, totalFeeds = 10, finalChips?: number) => {
     let newChips = player.chips;
     let earnings = 0;
     if (typeof finalChips === 'number') {
@@ -254,7 +255,10 @@ function App() {
   };
 
   const handleChipUpdate = (chips: number) => {
-    setPlayer(prev => ({ ...prev, chips }));
+    setPlayer(prev => {
+      if (prev.chips === chips) return prev;
+      return { ...prev, chips };
+    });
   };
 
   const showChipDisplay = ['round1', 'round2', 'round3', 'bonus'].includes(screen);
@@ -269,7 +273,7 @@ function App() {
       case 'rules':
         return <RulesScreen onContinue={handleContinueFromRules} />;
       case 'round1':
-        return <MultiplayerRound1 player={player} roomId={roomId} onComplete={handleRound1Complete} />;
+        return <MultiplayerRound1 player={player} roomId={roomId} onComplete={handleRound1Complete} onChipUpdate={handleChipUpdate} />;
       case 'round2':
         return <Round1 currentChips={player.chips} onComplete={handleRound2Complete} />;
       case 'round3':
@@ -297,32 +301,48 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#08090D] text-slate-100 font-sans selection:bg-amber-500 selection:text-black antialiased">
+    <div className="w-screen h-screen max-w-full max-h-full casino-table-bg text-slate-100 font-sans selection:bg-amber-500 selection:text-black antialiased overflow-hidden flex flex-col">
       {/* Main game routes */}
       <Routes>
         <Route path="/" element={
-          <>
+          <div className="w-full h-full flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            {renderGameScreen()}
-          </>
+            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+              <ErrorBoundary>
+                {renderGameScreen()}
+              </ErrorBoundary>
+            </div>
+          </div>
         } />
         <Route path="/player" element={
-          <>
+          <div className="w-full h-full flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            {renderGameScreen()}
-          </>
+            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+              <ErrorBoundary>
+                {renderGameScreen()}
+              </ErrorBoundary>
+            </div>
+          </div>
         } />
         <Route path="/contestant" element={
-          <>
+          <div className="w-full h-full flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            {renderGameScreen()}
-          </>
+            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+              <ErrorBoundary>
+                {renderGameScreen()}
+              </ErrorBoundary>
+            </div>
+          </div>
         } />
         <Route path="/play" element={
-          <>
+          <div className="w-full h-full flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            {renderGameScreen()}
-          </>
+            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+              <ErrorBoundary>
+                {renderGameScreen()}
+              </ErrorBoundary>
+            </div>
+          </div>
         } />
         <Route path="/host" element={<UnifiedHostView />} />
         <Route path="/host/round1" element={<UnifiedHostView initialTab="round1" />} />
@@ -332,10 +352,12 @@ function App() {
         <Route path="/round1-host" element={<HostRound1Controller />} />
         <Route path="/operator-setup" element={<OperatorSetup />} />
         <Route path="*" element={
-          <>
+          <div className="w-full h-full flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            {renderGameScreen()}
-          </>
+            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+              {renderGameScreen()}
+            </div>
+          </div>
         } />
       </Routes>
     </div>

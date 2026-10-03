@@ -55,17 +55,17 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
   };
 
   return (
-    <div className="min-h-screen casino-table-bg flex items-center justify-center px-4 pt-24 pb-12">
-      <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl">
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+      <div className="max-w-md sm:max-w-lg w-full bg-[#12151E] border border-[#232938] rounded-2xl p-4 sm:p-6 text-center shadow-2xl my-auto">
         {/* Header */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-blue-500/30 text-blue-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
+        <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-blue-500/30 text-blue-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
           <span>Side Action // 2.0x Payout</span>
         </div>
 
-        <h2 className="text-2xl sm:text-4xl font-display font-black text-white uppercase tracking-tight mb-2">
+        <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
           High-Card Duel
         </h2>
-        <p className="text-slate-400 text-xs sm:text-sm font-sans mb-6">
+        <p className="text-slate-400 text-xs font-sans mb-3">
           Wager your chips on the house card. If your selected card matches the hidden dealer card, you double your wager.
         </p>
 

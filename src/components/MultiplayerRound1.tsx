@@ -28,9 +28,10 @@ interface MultiplayerRound1Props {
   player: Player;
   onComplete: (score: number, bet: number, totalFeeds?: number, finalChips?: number) => void;
   roomId?: string;
+  onChipUpdate?: (chips: number) => void;
 }
 
-export default function MultiplayerRound1({ player, onComplete, roomId: propRoomId }: MultiplayerRound1Props) {
+export default function MultiplayerRound1({ player, onComplete, roomId: propRoomId, onChipUpdate }: MultiplayerRound1Props) {
   // Read room code from prop, URL query param, or default to table_01
   const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const roomParam = propRoomId || urlParams.get('room');
@@ -49,6 +50,11 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   const [winnersTimer, setWinnersTimer] = useState<number>(15); // 15s celebration before auto-proceed
   const [showMobileLeaderboard, setShowMobileLeaderboard] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const lastReportedChipsRef = useRef<number>(player.chips);
+
+  useEffect(() => {
+    lastReportedChipsRef.current = player.chips;
+  }, [player.chips]);
 
   // Preload all Round 1 images and video buffers into browser cache for instant zero-latency rendering
   useEffect(() => {
@@ -87,22 +93,27 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   useEffect(() => {
     const socket = multiplayerSocket.connect();
 
-    socket.on('table_state', (state: TableState) => {
+    const handleTableState = (state: TableState) => {
       setTableState(state);
       setCountdown(state.roundTimer);
-    });
+      const me = state.players?.find((p) => p.playerId === player.id);
+      if (me && typeof me.chips === 'number' && me.chips !== lastReportedChipsRef.current) {
+        lastReportedChipsRef.current = me.chips;
+        onChipUpdate?.(me.chips);
+      }
+    };
 
-    socket.on('seat_assigned', ({ seatNumber, playerId }) => {
+    const handleSeatAssigned = ({ seatNumber, playerId }: { seatNumber: number; playerId: string }) => {
       if (playerId === player.id) {
         setMySeatNumber(seatNumber);
       }
-    });
+    };
 
-    socket.on('timer_tick', ({ secondsLeft }) => {
+    const handleTimerTick = ({ secondsLeft }: { secondsLeft: number }) => {
       setCountdown(secondsLeft);
-    });
+    };
 
-    socket.on('wager_phase_started', (data?: { duration?: number }) => {
+    const handleWagerPhaseStarted = (data?: { duration?: number }) => {
       setMyAnswer(null);
       setFeedReveal(null);
       setSelectedBet(null);
@@ -111,9 +122,9 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
       if (data?.duration) {
         setCountdown(data.duration);
       }
-    });
+    };
 
-    socket.on('feed_started', (data?: { duration?: number }) => {
+    const handleFeedStarted = (data?: { duration?: number }) => {
       setMyAnswer(null);
       setFeedReveal(null);
       setLockedTimeTaken(null);
@@ -126,24 +137,43 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
         videoRef.current.load();
         videoRef.current.play().catch(() => {});
       }
-    });
+    };
 
-    socket.on('feed_revealed', (data: FeedRevealedData) => {
+    const handleFeedRevealed = (data: FeedRevealedData) => {
       setFeedReveal(data);
-    });
+      const meResult = data.playerResults?.find((pr) => pr.playerId === player.id);
+      if (meResult && typeof meResult.newChips === 'number' && meResult.newChips !== lastReportedChipsRef.current) {
+        lastReportedChipsRef.current = meResult.newChips;
+        onChipUpdate?.(meResult.newChips);
+      }
+    };
 
-    socket.on('error_message', ({ message }) => {
+    const handleErrorMessage = ({ message }: { message: string }) => {
       setErrorMessage(message);
       setTimeout(() => setErrorMessage(null), 4000);
-    });
+    };
+
+    socket.on('table_state', handleTableState);
+    socket.on('seat_assigned', handleSeatAssigned);
+    socket.on('timer_tick', handleTimerTick);
+    socket.on('wager_phase_started', handleWagerPhaseStarted);
+    socket.on('feed_started', handleFeedStarted);
+    socket.on('feed_revealed', handleFeedRevealed);
+    socket.on('error_message', handleErrorMessage);
 
     // Join room as player
     multiplayerSocket.joinTable(roomId, player.id, player.username, player.chips);
 
     return () => {
-      // socket disconnect managed globally
+      socket.off('table_state', handleTableState);
+      socket.off('seat_assigned', handleSeatAssigned);
+      socket.off('timer_tick', handleTimerTick);
+      socket.off('wager_phase_started', handleWagerPhaseStarted);
+      socket.off('feed_started', handleFeedStarted);
+      socket.off('feed_revealed', handleFeedRevealed);
+      socket.off('error_message', handleErrorMessage);
     };
-  }, [roomId, player.id, player.username, player.chips]);
+  }, [roomId, player.id, player.username]);
 
   // Video playback sync on feed change
   useEffect(() => {
@@ -170,25 +200,31 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     }
   }, [tableState?.status]);
 
-  const mySeat = tableState?.players.find((p) => p.playerId === player.id);
+  const mySeat = tableState?.players?.find((p) => p.playerId === player.id);
   const isMyBetPlaced = mySeat?.betStatus === 'placed' || mySeat?.betStatus === 'locked';
-  const myCurrentChips = mySeat ? mySeat.chips : player.chips;
+  const myCurrentChips = mySeat ? (mySeat.chips ?? 0) : (player.chips ?? 0);
 
-  // Compute challenge mode (Image 1-10 vs Video 11-15)
+  // Compute challenge mode (5 Images 0-4 vs 5 Videos 5-9)
   const currentFeedIndex = tableState?.currentFeedIndex ?? 0;
-  const isVideoRound = currentFeedIndex >= 10;
-  const totalFeeds = tableState?.totalFeeds || 15;
+  const isVideoRound = tableState?.currentVideo?.type === 'video' || currentFeedIndex >= 5;
+  const totalFeeds = tableState?.totalFeeds || 10;
   const challengeDuration = isVideoRound ? 45 : 30;
 
-  // Active Multiplier calculation based on elapsed time
-  // Images (30s): <=10s -> 3x, 10-20s -> 2x, >20s -> 1x
-  // Videos (45s): <=20s -> 3x, 20-30s -> 2x, >30s -> 1x
+  // Active Multiplier calculation based on elapsed time:
+  // Images (30s): <=5s -> 5x, <=10s -> 4x, <=15s -> 3x, <=20s -> 2x, >20s -> 1x
+  // Videos (45s): <=5s -> 5x, <=10s -> 4x, <=20s -> 3x, <=30s -> 2x, >30s -> 1x
   const elapsed = Math.max(0, challengeDuration - countdown);
   let liveMultiplier = 1;
   let nextThresholdSecs = 0;
 
   if (isVideoRound) {
-    if (elapsed <= 20) {
+    if (elapsed <= 5) {
+      liveMultiplier = 5;
+      nextThresholdSecs = 5 - elapsed;
+    } else if (elapsed <= 10) {
+      liveMultiplier = 4;
+      nextThresholdSecs = 10 - elapsed;
+    } else if (elapsed <= 20) {
       liveMultiplier = 3;
       nextThresholdSecs = 20 - elapsed;
     } else if (elapsed <= 30) {
@@ -199,9 +235,15 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
       nextThresholdSecs = 0;
     }
   } else {
-    if (elapsed <= 10) {
-      liveMultiplier = 3;
+    if (elapsed <= 5) {
+      liveMultiplier = 5;
+      nextThresholdSecs = 5 - elapsed;
+    } else if (elapsed <= 10) {
+      liveMultiplier = 4;
       nextThresholdSecs = 10 - elapsed;
+    } else if (elapsed <= 15) {
+      liveMultiplier = 3;
+      nextThresholdSecs = 15 - elapsed;
     } else if (elapsed <= 20) {
       liveMultiplier = 2;
       nextThresholdSecs = 20 - elapsed;
@@ -218,8 +260,10 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   };
 
   const handlePlaceBet = (amount: BetAmount) => {
+    if (myCurrentChips <= 0) return;
     setSelectedBet(amount);
     const numericBet = amount === 'ALL_IN' ? myCurrentChips : amount;
+    if (numericBet <= 0) return;
     multiplayerSocket.placeBet(roomId, player.id, numericBet);
   };
 
@@ -247,21 +291,21 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   };
 
   const handleFinalizeAndProceed = () => {
-    if (!tableState?.settlements) return;
-    const mySettlement = tableState.settlements.find((s) => s.playerId === player.id);
+    const mySettlement = tableState?.settlements?.find((s) => s.playerId === player.id);
     const score = mySettlement ? mySettlement.score : 0;
     const bet = mySettlement ? mySettlement.betAmount : (mySeat?.betAmount || 10);
-    const finalChips = mySettlement ? mySettlement.finalChips : myCurrentChips;
+    const finalChips = mySettlement ? (mySettlement.finalChips ?? 0) : (myCurrentChips ?? 0);
+    onChipUpdate?.(finalChips);
     onComplete(score, bet, totalFeeds, finalChips);
   };
 
   // Helper to get player in seat 1..6
   const getPlayerInSeat = (seatNum: number): PlayerSeat | undefined => {
-    return tableState?.players.find((p) => p.seatNumber === seatNum);
+    return tableState?.players?.find((p) => p.seatNumber === seatNum);
   };
 
-  const readyCount = tableState?.players.filter((p) => p.isReady).length || 0;
-  const totalOccupied = tableState?.players.length || 0;
+  const readyCount = tableState?.players?.filter((p) => p.isReady).length || 0;
+  const totalOccupied = tableState?.players?.length || 0;
 
   // Compact Player Seat Pod with Real-time Chip Balance & Delta Badge
   const renderSeatPod = (seatNum: number) => {
@@ -269,74 +313,82 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     const isMe = seatPlayer?.playerId === player.id;
     const isReady = Boolean(seatPlayer?.isReady);
 
+    const revealMatch = feedReveal?.playerResults?.find((pr) => pr.seatNumber === seatNum || (seatPlayer && pr.playerId === seatPlayer.playerId));
+    const activeDelta = revealMatch ? revealMatch.netDelta : seatPlayer?.lastDelta;
+    const activeMultiplier = revealMatch ? revealMatch.multiplier : seatPlayer?.lastMultiplier;
+
     return (
       <div 
         key={seatNum}
-        className={`relative z-20 flex flex-col justify-between p-2.5 sm:p-3 rounded-2xl border transition-all duration-300 select-none shadow-xl ${
+        className={`relative z-20 flex flex-col justify-between p-1.5 sm:p-2 rounded-xl border transition-all duration-300 select-none shadow-xl ${
           isMe
-            ? 'bg-[#121826]/95 border-amber-400 ring-2 ring-amber-400/40 shadow-[0_0_25px_rgba(251,191,36,0.3)]'
+            ? 'bg-[#121826]/95 border-amber-400 ring-2 ring-amber-400/40 shadow-[0_0_20px_rgba(251,191,36,0.3)]'
             : seatPlayer
             ? 'bg-[#0B0F19]/90 border-[#222B3D]'
             : 'bg-[#07090F]/70 border-dashed border-[#1B2233] opacity-60'
         }`}
-        style={{ minWidth: '140px', maxWidth: '180px' }}
+        style={{ minWidth: '115px', maxWidth: '145px' }}
       >
         {/* Top Header: Seat Number & Status */}
-        <div className="flex items-center justify-between gap-1 mb-1.5">
-          <span className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md ${
+        <div className="flex items-center justify-between gap-1 mb-1">
+          <span className={`text-[9px] font-mono font-black px-1.5 py-0.2 rounded ${
             isMe ? 'bg-amber-400 text-slate-950 shadow-sm' : 'bg-[#181F2E] text-slate-400 border border-[#2B354D]'
           }`}>
             S{seatNum}
           </span>
 
           {seatPlayer ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <span className={`w-1.5 h-1.5 rounded-full ${
                 seatPlayer.connected ? 'bg-emerald-400' : 'bg-rose-500'
               }`} />
-              <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${
+              <span className={`text-[8px] font-mono font-bold uppercase tracking-wider ${
                 isReady ? 'text-emerald-400' : 'text-amber-400'
               }`}>
                 {isReady ? 'READY' : 'WAIT'}
               </span>
             </div>
           ) : (
-            <span className="text-[9px] font-mono text-slate-500 uppercase">VACANT</span>
+            <span className="text-[8px] font-mono text-slate-500 uppercase">VACANT</span>
           )}
         </div>
 
         {/* Moniker & Chips */}
         {seatPlayer ? (
           <div>
-            <div className="text-xs font-display font-black text-white truncate flex items-center gap-1">
+            <div className="text-[11px] sm:text-xs font-display font-black text-white truncate flex items-center gap-1">
               <span className="truncate">{seatPlayer.username}</span>
-              {isMe && <span className="text-[10px] text-amber-400 font-mono">★</span>}
+              {isMe && <span className="text-[9px] text-amber-400 font-mono">★</span>}
               {seatPlayer.playerId.startsWith('bot-') && (
-                <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                <span className="text-[7px] font-mono px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
                   BOT
                 </span>
               )}
             </div>
 
-            <div className="flex items-center justify-between mt-1 text-[11px] font-mono">
-              <div className="flex items-center gap-1">
-                <Coins size={11} className="text-amber-400" />
-                <span className="font-black text-amber-400">${seatPlayer.chips}</span>
+            <div className="flex items-center justify-between mt-0.5 text-[10px] font-mono">
+              <div className="flex items-center gap-0.5">
+                <Coins size={10} className="text-amber-400" />
+                <span className="font-black text-amber-400">${(seatPlayer.chips ?? 0).toLocaleString()}</span>
               </div>
-              {seatPlayer.betAmount > 0 && (
-                <span className="text-[10px] text-slate-400 font-bold">
+              {(seatPlayer.betAmount ?? 0) > 0 ? (
+                <span className="text-[9px] text-slate-400 font-bold">
                   Bet: ${seatPlayer.betAmount}
                 </span>
-              )}
+              ) : (seatPlayer.chips ?? 0) <= 0 ? (
+                <span className="text-[9px] text-cyan-400 font-bold font-mono">
+                  Watching
+                </span>
+              ) : null}
             </div>
 
             {/* Answer Status in Playing Phase */}
             {tableState?.status === 'playing' && (
-              <div className="mt-1 pt-1 border-t border-[#1C2333] flex items-center justify-between text-[9px] font-mono">
+              <div className="mt-0.5 pt-0.5 border-t border-[#1C2333] flex items-center justify-between text-[8px] font-mono">
                 <span className="text-slate-500 uppercase">CHOICE:</span>
                 {seatPlayer.answerStatus === 'answered' ? (
                   <span className="text-emerald-400 font-black flex items-center gap-0.5">
-                    <Check size={9} />
+                    <Check size={8} />
                     <span>LOCKED</span>
                   </span>
                 ) : (
@@ -345,22 +397,24 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
               </div>
             )}
 
-            {/* Live Delta Badge (Shown during reveal or if lastDelta exists) */}
-            {seatPlayer.lastDelta !== undefined && (
-              <div className={`mt-1 py-0.5 px-1.5 rounded text-[10px] font-mono font-black text-center animate-fade-in ${
-                seatPlayer.lastDelta >= 0
+            {/* Live Delta Badge (Shown during reveal) */}
+            {(tableState?.status === 'revealing' || !!feedReveal) && activeDelta !== undefined && (
+              <div className={`mt-0.5 py-0.5 px-1.5 rounded text-[10px] font-sans font-bold text-center animate-fade-in ${
+                activeDelta > 0
                   ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                  : 'bg-rose-500/20 border border-rose-500/50 text-rose-300'
+                  : activeDelta < 0
+                  ? 'bg-rose-500/20 border border-rose-500/50 text-rose-300'
+                  : 'bg-slate-800/80 border border-slate-700 text-slate-400'
               }`}>
-                {seatPlayer.lastDelta >= 0 ? `+$${seatPlayer.lastDelta}` : `-$${Math.abs(seatPlayer.lastDelta)}`}
-                {seatPlayer.lastMultiplier && seatPlayer.lastMultiplier > 1 && seatPlayer.lastDelta > 0 && (
-                  <span className="ml-1 text-amber-300">⚡{seatPlayer.lastMultiplier}x</span>
-                )}
+                <span>{activeDelta > 0 ? `+$${activeDelta}` : activeDelta < 0 ? `-$${Math.abs(activeDelta)}` : '$0 (Watching)'}</span>
+                {(activeMultiplier ?? 0) > 1 && activeDelta > 0 ? (
+                  <span className="ml-0.5 text-amber-300 font-mono">⚡{activeMultiplier}x</span>
+                ) : null}
               </div>
             )}
           </div>
         ) : (
-          <div className="py-2 text-center text-slate-500 font-mono text-[11px]">
+          <div className="py-1 text-center text-slate-500 font-mono text-[10px]">
             {tableState?.status === 'waiting' && !mySeat ? (
               <button
                 onClick={() => handleSelectSeat(seatNum)}
@@ -379,8 +433,8 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
   if (!tableState) {
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24 text-slate-100">
-        <div className="max-w-md w-full bg-[#12151E] border border-[#2B354D] rounded-3xl p-8 shadow-2xl text-center">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-4 text-slate-100 select-none overflow-hidden">
+        <div className="max-w-md w-full bg-[#12151E] border border-[#2B354D] rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
           <div className="w-14 h-14 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Users size={28} />
           </div>
@@ -411,37 +465,34 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   }
 
   // Find local player result for current feed reveal
-  const myRevealResult = feedReveal?.playerResults.find((pr) => pr.playerId === player.id);
+  const myRevealResult = feedReveal?.playerResults?.find((pr) => pr.playerId === player.id);
 
   return (
-    <div className="min-h-screen casino-table-bg text-slate-100 p-3 sm:p-6 pt-20 pb-36">
-      <div className="max-w-[1440px] mx-auto">
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg text-slate-100 p-2 sm:p-3 flex flex-col justify-between overflow-hidden select-none">
+      <div className="w-full max-w-[1440px] mx-auto h-full flex flex-col justify-between overflow-hidden">
         {/* Top Notification Bar */}
         {errorMessage && (
-          <div className="mb-4 bg-rose-500/20 border border-rose-500 text-rose-300 px-4 py-2.5 rounded-xl font-mono text-xs flex items-center gap-2 animate-bounce">
-            <AlertCircle size={16} />
+          <div className="mb-2 bg-rose-500/20 border border-rose-500 text-rose-300 px-3 py-1.5 rounded-xl font-mono text-xs flex items-center gap-2">
+            <AlertCircle size={14} />
             <span>{errorMessage}</span>
           </div>
         )}
 
-        {/* Phase Transition Banner (Challenge 11 / Video phase starts) */}
-        {currentFeedIndex === 10 && tableState.status === 'betting' && (
-          <div className="mb-5 bg-gradient-to-r from-blue-900/60 via-purple-900/60 to-blue-900/60 border-2 border-cyan-400/60 p-4 rounded-2xl text-center shadow-[0_0_30px_rgba(6,182,212,0.3)] animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono text-xs font-black uppercase mb-1">
-              <Sparkles size={13} />
-              <span>STAGE II UNLOCKED: VIDEO SURVEILLANCE</span>
+        {/* Phase Transition Banner (Challenge 6 / Video phase starts) */}
+        {currentFeedIndex === 5 && tableState.status === 'betting' && (
+          <div className="mb-2 bg-gradient-to-r from-blue-900/60 via-purple-900/60 to-blue-900/60 border border-cyan-400/60 p-2.5 rounded-xl text-center shadow-[0_0_20px_rgba(6,182,212,0.3)] animate-fade-in flex-shrink-0">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 font-mono text-[10px] font-black uppercase mb-0.5">
+              <Sparkles size={11} />
+              <span>STAGE II: VIDEO SURVEILLANCE</span>
             </div>
-            <h3 className="text-xl font-display font-black text-white uppercase tracking-tight">
-              📸 10 Image Challenges Completed! Next: 5 Surveillance Feeds
+            <h3 className="text-sm font-display font-black text-white uppercase tracking-tight">
+              📸 5 Image Challenges Done! Next: 5 Surveillance Feeds (45s • up to 5x multiplier)
             </h3>
-            <p className="text-cyan-200 text-xs font-mono mt-1">
-              Timer increased to <strong>45 seconds</strong>. Max speed bonus: <strong>3x Multiplier</strong> for answers under 20 seconds!
-            </p>
           </div>
         )}
 
         {/* Header HUD */}
-        <div className="flex flex-wrap justify-between items-center gap-4 bg-[#12151E] border border-[#232938] rounded-2xl px-6 py-3.5 mb-6 shadow-2xl">
+        <div className="flex flex-wrap justify-between items-center gap-2 bg-[#12151E] border border-[#232938] rounded-xl px-4 py-2 mb-2 shadow-xl flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center">
               <Video size={20} />
@@ -479,13 +530,13 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
             {/* Speed Multiplier Badge during Playing Phase */}
             {tableState.status === 'playing' && (
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono text-xs font-black uppercase border transition-all duration-300 ${
-                liveMultiplier === 3
+                liveMultiplier >= 4
                   ? 'bg-amber-400/20 border-amber-400 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)] animate-pulse'
-                  : liveMultiplier === 2
+                  : liveMultiplier >= 2
                   ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
                   : 'bg-slate-800 border-slate-700 text-slate-400'
               }`}>
-                <Zap size={14} className={liveMultiplier === 3 ? 'text-amber-400' : 'text-cyan-400'} />
+                <Zap size={14} className={liveMultiplier >= 4 ? 'text-amber-400' : liveMultiplier >= 2 ? 'text-cyan-400' : 'text-slate-400'} />
                 <span>
                   {liveMultiplier}x Speed Multiplier {liveMultiplier > 1 ? `(${nextThresholdSecs}s left)` : ''}
                 </span>
@@ -499,7 +550,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
               title="View Live Standings"
             >
               <Trophy size={13} />
-              <span>Standings ({tableState.players.length})</span>
+              <span>Standings ({tableState?.players?.length ?? 0})</span>
             </button>
 
             {/* Countdown Clock */}
@@ -514,10 +565,10 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
         </div>
 
         {/* MAIN WORKSPACE LAYOUT: 3D Table on Left, Live Leaderboard on Right */}
-        <div className="flex flex-col lg:flex-row gap-5 items-start">
+        <div className="flex-1 min-h-0 w-full flex flex-col lg:flex-row gap-3 items-stretch overflow-hidden">
           {/* 3D TABLE AS MAIN ENVIRONMENT */}
-          <div className="flex-1 w-full min-w-0">
-            <div className="relative w-full min-h-[580px] sm:min-h-[640px] md:min-h-[700px] rounded-3xl overflow-hidden border border-[#1E2535] bg-[#07090E] shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between p-4 sm:p-7">
+          <div className="flex-1 w-full min-w-0 h-full flex flex-col overflow-hidden">
+            <div className="relative w-full h-full rounded-2xl overflow-hidden border border-[#1E2535] bg-[#07090E] shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between p-2 sm:p-3">
           {/* STATIC HIGH-PERFORMANCE TABLE BACKGROUND */}
           <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
             <img
@@ -531,18 +582,18 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
           </div>
 
           {/* TOP ROW: PLAYER 1 (Left) & PLAYER 2 (Right) */}
-          <div className="relative z-20 flex items-center justify-between gap-4 w-full">
+          <div className="relative z-20 flex items-center justify-between gap-2 sm:gap-4 w-full shrink-0">
             <div>{renderSeatPod(1)}</div>
             <div>{renderSeatPod(2)}</div>
           </div>
 
           {/* MIDDLE ROW: PLAYER 6 (Left), CENTER STAGE (Covers 'WHITE BLACKJACK'), PLAYER 3 (Right) */}
-          <div className="relative z-20 flex items-center justify-between gap-3 sm:gap-6 my-auto w-full">
+          <div className="relative z-20 flex-1 min-h-0 flex items-center justify-between gap-2 sm:gap-4 my-1 w-full overflow-hidden">
             {/* Left: Player 6 */}
             <div className="shrink-0">{renderSeatPod(6)}</div>
 
             {/* CENTER TABLE STAGE: Conceals 'WHITE BLACKJACK' */}
-            <div className="flex-1 max-w-xl mx-auto flex items-center justify-center pointer-events-auto">
+            <div className="flex-1 min-h-0 h-full max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto flex items-center justify-center pointer-events-auto px-1 sm:px-2">
               {tableState.status === 'waiting' ? (
                 /* LOBBY FELT CREST */
                 <div className="bg-[#0B1713]/92 backdrop-blur-sm border border-amber-500/40 rounded-3xl px-6 py-5 sm:px-8 sm:py-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(11,23,19,0.9)] max-w-md w-full animate-fade-in">
@@ -596,7 +647,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 </div>
               ) : tableState.status === 'betting' ? (
                 /* PER-CHALLENGE WAGER PHASE CONSOLE */
-                <div className="bg-[#0B1019]/95 backdrop-blur-md border border-amber-500/50 rounded-3xl p-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.9)] max-w-md w-full animate-fade-in">
+                <div className="bg-[#0B1019]/95 backdrop-blur-md border border-amber-500/50 rounded-3xl p-5 sm:p-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.9)] max-w-lg w-full animate-fade-in">
                   <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-2 animate-pulse">
                     <Coins size={24} />
                   </div>
@@ -604,10 +655,10 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                     CHALLENGE {currentFeedIndex + 1} OF {totalFeeds} • {isVideoRound ? '🎥 VIDEO ROUND' : '📸 IMAGE ROUND'}
                   </div>
                   <h4 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
-                    {isMyBetPlaced ? `Wager Placed: $${mySeat?.betAmount}` : 'Select Wager for this Challenge'}
+                    {isMyBetPlaced ? `Wager Placed: $${mySeat?.betAmount ?? 0}` : 'Select Wager for this Challenge'}
                   </h4>
                   <p className="text-slate-400 text-xs font-mono mb-4">
-                    {isVideoRound ? '45s Video • Guess in ≤20s for 3x, ≤30s for 2x' : '30s Image • Guess in ≤10s for 3x, ≤20s for 2x'}
+                    {isVideoRound ? '45s Video • Speed Multipliers: ≤5s 5x, ≤10s 4x, ≤20s 3x, ≤30s 2x, >30s 1x' : '30s Image • Speed Multipliers: ≤5s 5x, ≤10s 4x, ≤15s 3x, ≤20s 2x, >20s 1x'}
                   </p>
 
                   <div className="text-3xl font-mono font-black text-amber-400 mb-4">
@@ -617,22 +668,23 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                   {/* Inline Quick Bet Selectors for Center Felt */}
                   <div className="flex items-center justify-center gap-2">
                     {([10, 30, 'ALL_IN'] as BetAmount[]).map((amount) => {
-                      const betVal = amount === 'ALL_IN' ? myCurrentChips : amount;
-                      const canAfford = myCurrentChips >= betVal;
-                      const isSelected = selectedBet === amount || mySeat?.betAmount === betVal;
+                      const betVal = amount === 'ALL_IN' ? Math.max(0, myCurrentChips) : amount;
+                      const canAfford = myCurrentChips >= betVal && betVal > 0;
+                      const isSelected = selectedBet === amount || (mySeat?.betAmount === betVal && betVal > 0);
 
                       return (
                         <button
                           key={amount}
                           onClick={() => handlePlaceBet(amount)}
-                          disabled={!canAfford || isMyBetPlaced}
-                          className={`px-4 py-2 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 cursor-pointer border ${
+                          disabled={!canAfford || isMyBetPlaced || myCurrentChips <= 0}
+                          className={`px-4 py-2 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 border ${
                             isSelected
                               ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
-                              : canAfford && !isMyBetPlaced
-                              ? 'bg-[#181D2A] text-slate-200 border-[#2E374D] hover:border-amber-400/60'
+                              : canAfford && !isMyBetPlaced && myCurrentChips > 0
+                              ? 'bg-[#181D2A] text-slate-200 border-[#2E374D] hover:border-amber-400/60 cursor-pointer'
                               : 'bg-[#10131B] text-slate-600 border-[#1C2230] opacity-40 cursor-not-allowed'
                           }`}
+                          title={myCurrentChips <= 0 ? 'Unable to wager with $0 chips' : undefined}
                         >
                           {amount === 'ALL_IN' ? `ALL-IN ($${betVal})` : `$${amount}`}
                         </button>
@@ -642,24 +694,24 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 </div>
               ) : (tableState.status === 'playing' || tableState.status === 'revealing') ? (
                 /* LIVE MEDIA CHALLENGE FEED (IMAGES & VIDEOS) */
-                <div className="bg-[#0A0D15]/95 backdrop-blur-md border border-[#2B354D] rounded-3xl p-3 sm:p-4 shadow-2xl w-full">
-                  <div className="flex justify-between items-center mb-2 px-1 text-xs font-mono">
+                <div className="bg-[#0A0D15]/95 backdrop-blur-md border border-[#2B354D] rounded-2xl p-2 sm:p-2.5 shadow-2xl w-full h-full max-h-[52vh] sm:max-h-[56vh] flex flex-col justify-between overflow-hidden">
+                  <div className="flex justify-between items-center mb-1 px-1 text-xs font-mono shrink-0">
                     <span className="text-slate-400 uppercase font-bold flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                      Feed {currentFeedIndex + 1} of {totalFeeds} • {isVideoRound ? '🎥 Surveillance Video' : '📸 Intelligence Image'}
+                      Feed {currentFeedIndex + 1} of {totalFeeds} • {isVideoRound ? '🎥 Video Surveillance' : '📸 Intelligence Image'}
                     </span>
                     <span className="text-amber-400 font-bold">
                       {countdown}s left
                     </span>
                   </div>
 
-                  <div className="aspect-video max-h-[340px] bg-black rounded-2xl overflow-hidden border border-[#242C3E] relative flex items-center justify-center shadow-inner mx-auto">
+                  <div className="w-full flex-1 min-h-[260px] sm:min-h-[320px] bg-black/95 rounded-xl overflow-hidden border border-[#242C3E] relative flex items-center justify-center shadow-inner mx-auto">
                     {tableState.currentVideo?.type === 'image' || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc || '') ? (
                       <img
                         key={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
                         src={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
                         alt={tableState.currentVideo?.title || 'Reality Feed'}
-                        className="w-full h-full object-contain select-none animate-fade-in transition-opacity duration-200"
+                        className="max-w-full max-h-full w-auto h-auto object-contain select-none animate-fade-in transition-opacity duration-200 shadow-2xl"
                         loading="eager"
                         decoding="async"
                       />
@@ -668,7 +720,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                         key={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
                         ref={videoRef}
                         src={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
-                        className="w-full h-full object-contain"
+                        className="max-w-full max-h-full w-auto h-auto object-contain shadow-2xl"
                         preload="auto"
                         playsInline
                         autoPlay
@@ -682,15 +734,15 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
                     {/* Speed Multiplier Watermark Badge */}
                     {tableState.status === 'playing' && (
-                      <div className="absolute top-3 right-3 z-10">
+                      <div className="absolute top-2.5 right-2.5 z-10">
                         <div className={`px-2.5 py-1 rounded-lg backdrop-blur-md font-mono text-[11px] font-black uppercase flex items-center gap-1 shadow-lg border ${
-                          liveMultiplier === 3
+                          liveMultiplier >= 4
                             ? 'bg-amber-500/30 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.5)]'
-                            : liveMultiplier === 2
+                            : liveMultiplier >= 2
                             ? 'bg-cyan-500/30 border-cyan-400 text-cyan-300'
                             : 'bg-black/60 border-slate-700 text-slate-400'
                         }`}>
-                          <Zap size={12} className={liveMultiplier === 3 ? 'text-amber-400' : 'text-cyan-400'} />
+                          <Zap size={12} className={liveMultiplier >= 4 ? 'text-amber-400' : liveMultiplier >= 2 ? 'text-cyan-400' : 'text-slate-400'} />
                           <span>{liveMultiplier}x MULTIPLIER</span>
                         </div>
                       </div>
@@ -698,7 +750,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
                     {/* Lock-in Notification Badge */}
                     {myAnswer && !feedReveal && (
-                      <div className="absolute bottom-3 left-3 z-10 bg-slate-950/80 backdrop-blur-md border border-emerald-500/60 text-emerald-300 px-3 py-1 rounded-lg font-mono text-xs flex items-center gap-1.5 shadow-lg">
+                      <div className="absolute bottom-2.5 left-2.5 z-10 bg-slate-950/80 backdrop-blur-md border border-emerald-500/60 text-emerald-300 px-3 py-1 rounded-lg font-mono text-xs flex items-center gap-1.5 shadow-lg">
                         <CheckCircle2 size={13} className="text-emerald-400" />
                         <span>Locked in: {myAnswer.toUpperCase()} (⚡{lockedMultiplier}x at {lockedTimeTaken?.toFixed(1)}s)</span>
                       </div>
@@ -706,44 +758,50 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
                     {/* Instant Reveal Overlay (4.5s) */}
                     {feedReveal && (
-                      <div className="absolute inset-0 bg-[#090A0F]/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-fade-in z-20">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-2 border shadow-lg ${
+                      <div className="absolute inset-0 bg-[#090A0F]/95 backdrop-blur-sm flex flex-col items-center justify-center p-3 text-center animate-fade-in z-20 overflow-y-auto">
+                        <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-1.5 border shadow-lg shrink-0 ${
                           feedReveal.isAI 
                             ? 'bg-rose-500/20 border-rose-500/60 text-rose-400' 
                             : 'bg-emerald-500/20 border-emerald-500/60 text-emerald-400'
                         }`}>
-                          {feedReveal.isAI ? <Video size={28} /> : <CheckCircle2 size={28} />}
+                          {feedReveal.isAI ? <Video size={22} /> : <CheckCircle2 size={22} />}
                         </div>
-                        <span className="text-[11px] font-mono uppercase text-slate-400 tracking-wider">Verified Reality Classification:</span>
-                        <h4 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-wider my-1">
+                        <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-400 tracking-wider shrink-0">Verified Reality Classification:</span>
+                        <h4 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-wider my-1 shrink-0">
                           {feedReveal.classification}
                         </h4>
 
                         {/* Local Player Payout Banner */}
                         {myRevealResult && (
-                          <div className={`mt-2 py-1 px-4 rounded-xl font-mono text-sm font-black border ${
-                            myRevealResult.isCorrect
+                          <div className={`my-1.5 py-1 px-4 rounded-xl font-mono text-xs sm:text-sm font-black border shrink-0 ${
+                            (myRevealResult.netDelta ?? 0) === 0
+                              ? 'bg-slate-800/80 border-slate-700 text-slate-300'
+                              : myRevealResult.isCorrect
                               ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
                               : 'bg-rose-500/20 border-rose-500 text-rose-300'
                           }`}>
-                            {myRevealResult.isCorrect
+                            {(myRevealResult.netDelta ?? 0) === 0
+                              ? '👁️ Watching Feed ($0 at risk)'
+                              : myRevealResult.isCorrect
                               ? `🎉 CORRECT! +$${myRevealResult.netDelta} (⚡${myRevealResult.multiplier}x Multiplier Applied)`
                               : `❌ INCORRECT (-$${Math.abs(myRevealResult.netDelta ?? (mySeat?.betAmount || 10))})`}
                           </div>
                         )}
 
                         {/* Compact Table Seat Chip Ledger */}
-                        <div className="mt-3 flex flex-wrap gap-1.5 justify-center max-w-md">
-                          {feedReveal.playerResults.map((pr) => (
+                        <div className="mt-1 flex flex-wrap gap-1.5 justify-center max-w-lg shrink-0">
+                          {feedReveal?.playerResults?.map((pr) => (
                             <span 
                               key={pr.playerId}
-                              className={`text-[9px] font-mono px-2 py-0.5 rounded border ${
-                                pr.isCorrect 
+                              className={`text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded border ${
+                                (pr.netDelta ?? 0) === 0
+                                  ? 'bg-slate-800/50 border-slate-700 text-slate-400'
+                                  : pr.isCorrect 
                                   ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' 
                                   : 'bg-rose-500/10 border-rose-500/40 text-rose-400'
                               }`}
                             >
-                              S{pr.seatNumber}: {pr.isCorrect ? `+$${pr.netDelta} (⚡${pr.multiplier}x)` : `-$${Math.abs(pr.netDelta ?? 10)}`}
+                              S{pr.seatNumber}: {(pr.netDelta ?? 0) === 0 ? '$0 (Watching)' : pr.isCorrect ? `+$${pr.netDelta} (⚡${pr.multiplier}x)` : `-$${Math.abs(pr.netDelta ?? 10)}`}
                             </span>
                           ))}
                         </div>
@@ -751,10 +809,10 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                     )}
                   </div>
 
-                  <p className="text-slate-400 text-[11px] font-mono text-center mt-1.5">
+                  <p className="text-slate-400 text-xs font-mono text-center mt-1.5 shrink-0 truncate">
                     {isVideoRound 
-                      ? (isPlayingVideo ? '▶ Surveillance stream active (45s) • Guess under 20s for 3x speed multiplier' : '▶ Surveillance stream ready (45s) • Guess under 20s for 3x speed multiplier') 
-                      : '📸 Image challenge (30s) • Guess under 10s for 3x speed multiplier'}
+                      ? (isPlayingVideo ? '▶ Surveillance stream active (45s) • Guess under 5s for 5x speed multiplier' : '▶ Surveillance stream ready (45s) • Guess under 5s for 5x speed multiplier') 
+                      : '📸 Image challenge (30s) • Guess under 5s for 5x speed multiplier'}
                   </p>
                 </div>
               ) : (
@@ -779,7 +837,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
           </div>
 
           {/* BOTTOM ROW: PLAYER 5 (Left) & PLAYER 4 (Right) */}
-          <div className="relative z-20 flex items-center justify-between gap-4 w-full">
+          <div className="relative z-20 flex items-center justify-between gap-2 sm:gap-4 w-full shrink-0">
             <div>{renderSeatPod(5)}</div>
             <div>{renderSeatPod(4)}</div>
           </div>
@@ -787,13 +845,14 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
       </div>
 
       {/* DEDICATED RIGHT-SIDE LIVE LEADERBOARD (Desktop) */}
-      <div className="hidden lg:block w-[300px] xl:w-[320px] shrink-0 sticky top-24">
+      <div className="hidden lg:flex flex-col w-[260px] xl:w-[280px] h-full shrink-0 overflow-hidden">
         <LiveLeaderboardSide
-          players={tableState.players}
+          players={tableState?.players || []}
           currentFeedIndex={currentFeedIndex}
           totalFeeds={totalFeeds}
-          status={tableState.status}
+          status={tableState?.status}
           currentPlayerId={player.id}
+          feedReveal={feedReveal}
         />
       </div>
     </div>
@@ -803,11 +862,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
       <div className="fixed inset-0 z-50 bg-[#07090E]/90 backdrop-blur-md flex items-center justify-center p-4 lg:hidden animate-fade-in">
         <div className="w-full max-w-sm">
           <LiveLeaderboardSide
-            players={tableState.players}
+            players={tableState?.players || []}
             currentFeedIndex={currentFeedIndex}
             totalFeeds={totalFeeds}
-            status={tableState.status}
+            status={tableState?.status}
             currentPlayerId={player.id}
+            feedReveal={feedReveal}
             isMobileDrawer
             onClose={() => setShowMobileLeaderboard(false)}
           />
@@ -834,14 +894,14 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 Round 1 Winners Showcase
               </h3>
               <p className="text-slate-400 text-xs font-mono max-w-lg mx-auto mb-6">
-                All 10 Image & 5 Surveillance Video challenges settled. Final scores & chip balances locked into the arena ledger.
+                All 5 Image & 5 Surveillance Video challenges settled. Final scores & chip balances locked into the arena ledger.
               </p>
 
               {/* PODIUM OF TOP 3 CONTESTANTS */}
-              {tableState.settlements && tableState.settlements.length > 0 && (
+              {(tableState?.settlements?.length ?? 0) > 0 && (
                 <div className="grid grid-cols-3 gap-3 sm:gap-4 max-w-xl mx-auto mb-8 items-end">
                   {/* 2nd Place (Silver) */}
-                  {tableState.settlements[1] && (
+                  {tableState?.settlements?.[1] && (
                     <div className="bg-[#121826] border border-slate-400/40 rounded-2xl p-3 sm:p-4 text-center order-1 h-[190px] flex flex-col justify-between shadow-lg">
                       <div className="w-9 h-9 rounded-xl bg-slate-400/20 border border-slate-400/40 text-slate-300 flex items-center justify-center mx-auto font-mono font-black text-sm">
                         🥈 2
@@ -856,14 +916,14 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                       </div>
                       <div className="pt-2 border-t border-[#1C2538]">
                         <div className="text-base font-mono font-black text-amber-400">
-                          ${tableState.settlements[1].finalChips}
+                          ${(tableState.settlements[1].finalChips ?? 0).toLocaleString()}
                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* 1st Place (Gold Champion) */}
-                  {tableState.settlements[0] && (
+                  {tableState?.settlements?.[0] && (
                     <div className="bg-gradient-to-b from-[#1C2638] to-[#121826] border-2 border-amber-400 rounded-2xl p-4 sm:p-5 text-center order-2 h-[225px] flex flex-col justify-between shadow-[0_0_25px_rgba(251,191,36,0.35)]">
                       <div className="w-12 h-12 rounded-2xl bg-amber-400/30 border border-amber-400 text-amber-300 flex items-center justify-center mx-auto font-mono font-black text-base shadow-sm">
                         🥇 1
@@ -881,14 +941,14 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                       </div>
                       <div className="pt-2 border-t border-amber-500/40">
                         <div className="text-lg font-mono font-black text-amber-400">
-                          ${tableState.settlements[0].finalChips}
+                          ${(tableState.settlements[0].finalChips ?? 0).toLocaleString()}
                         </div>
                       </div>
                     </div>
                   )}
 
                   {/* 3rd Place (Bronze) */}
-                  {tableState.settlements[2] && (
+                  {tableState?.settlements?.[2] && (
                     <div className="bg-[#121826] border border-amber-700/40 rounded-2xl p-3 sm:p-4 text-center order-3 h-[175px] flex flex-col justify-between shadow-lg">
                       <div className="w-9 h-9 rounded-xl bg-amber-700/20 border border-amber-700/40 text-amber-600 flex items-center justify-center mx-auto font-mono font-black text-sm">
                         🥉 3
@@ -903,7 +963,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                       </div>
                       <div className="pt-2 border-t border-[#1C2538]">
                         <div className="text-base font-mono font-black text-amber-400">
-                          ${tableState.settlements[2].finalChips}
+                          ${(tableState.settlements[2].finalChips ?? 0).toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -918,9 +978,9 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                   <span>{totalFeeds} Challenges Completed</span>
                 </div>
                 <div className="divide-y divide-[#182133]">
-                  {tableState.settlements.map((s, idx) => {
+                  {tableState?.settlements?.map((s, idx) => {
                     const isMe = s.playerId === player.id;
-                    const isPositive = s.netEarnings >= 0;
+                    const isPositive = (s.netEarnings ?? 0) >= 0;
 
                     return (
                       <div 
@@ -950,12 +1010,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                           <div>
                             <span className="text-slate-300">{s.score} / {totalFeeds}</span>
                             <div className={`text-[10px] font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                              {isPositive ? `+$${s.netEarnings}` : `-$${Math.abs(s.netEarnings)}`}
+                              {isPositive ? `+$${s.netEarnings ?? 0}` : `-$${Math.abs(s.netEarnings ?? 0)}`}
                             </div>
                           </div>
                           <div className="border-l border-[#20293D] pl-3 min-w-[70px]">
                             <div className="text-[9px] text-slate-500 uppercase">Bankroll</div>
-                            <div className="font-black text-amber-400 text-sm">${s.finalChips}</div>
+                            <div className="font-black text-amber-400 text-sm">${(s.finalChips ?? 0).toLocaleString()}</div>
                           </div>
                         </div>
                       </div>
@@ -984,8 +1044,8 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
         )}
 
         {/* BOTTOM ACTIVE PLAYER ACTION DOCK */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0E1119]/95 backdrop-blur-md border-t border-[#232938] p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
-          <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-4">
+        <div className="w-full flex-shrink-0 z-40 bg-[#0E1119]/95 backdrop-blur-md border border-[#232938] rounded-xl px-3 py-2 shadow-lg mt-1.5">
+          <div className="w-full flex flex-wrap items-center justify-between gap-3">
             {/* Player Info Badge */}
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center font-mono font-black text-sm">
@@ -996,7 +1056,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                   Contestant: <span className="font-bold text-white">{player.username}</span>
                 </div>
                 <div className="text-xs font-mono">
-                  Wallet: <span className="font-black text-amber-400">${myCurrentChips.toLocaleString()}</span>
+                  Wallet: <span className="font-black text-amber-400">${(myCurrentChips ?? 0).toLocaleString()}</span>
                   {mySeat?.betAmount ? (
                     <span className="text-slate-400 ml-2">| Challenge Bet: <strong className="text-white">${mySeat.betAmount}</strong></span>
                   ) : null}
@@ -1012,22 +1072,23 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                   Challenge Bet:
                 </span>
                 {([10, 30, 'ALL_IN'] as BetAmount[]).map((amount) => {
-                  const betVal: number = amount === 'ALL_IN' ? myCurrentChips : amount;
-                  const canAfford: boolean = myCurrentChips >= betVal;
-                  const isSelected: boolean = selectedBet === amount || mySeat?.betAmount === betVal;
+                  const betVal: number = amount === 'ALL_IN' ? Math.max(0, myCurrentChips) : amount;
+                  const canAfford: boolean = myCurrentChips >= betVal && betVal > 0;
+                  const isSelected: boolean = selectedBet === amount || (mySeat?.betAmount === betVal && betVal > 0);
 
                   return (
                     <button
                       key={amount}
                       onClick={() => handlePlaceBet(amount)}
-                      disabled={!canAfford || isMyBetPlaced}
-                      className={`px-4 sm:px-5 py-2.5 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 cursor-pointer border ${
+                      disabled={!canAfford || isMyBetPlaced || myCurrentChips <= 0}
+                      className={`px-4 sm:px-5 py-2.5 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 border ${
                         isSelected
                           ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
-                          : canAfford && !isMyBetPlaced
-                          ? 'bg-[#181D2A] text-slate-200 border-[#2E374D] hover:border-amber-400/60'
+                          : canAfford && !isMyBetPlaced && myCurrentChips > 0
+                          ? 'bg-[#181D2A] text-slate-200 border-[#2E374D] hover:border-amber-400/60 cursor-pointer'
                           : 'bg-[#10131B] text-slate-600 border-[#1C2230] opacity-40 cursor-not-allowed'
                       }`}
+                      title={myCurrentChips <= 0 ? 'Unable to wager with $0 chips' : undefined}
                     >
                       {amount === 'ALL_IN' ? `ALL-IN ($${betVal})` : `$${amount}`}
                     </button>
@@ -1049,7 +1110,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                   }`}
                 >
                   <CheckCircle2 size={18} />
-                  <span>REAL LIFE</span>
+                  <span>REAL</span>
                   {myAnswer === null && !feedReveal && (
                     <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/30">
                       ⚡{liveMultiplier}x
@@ -1069,7 +1130,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                   }`}
                 >
                   <Video size={18} />
-                  <span>AI GENERATED</span>
+                  <span>AI</span>
                   {myAnswer === null && !feedReveal && (
                     <span className="text-[10px] font-mono text-rose-400 bg-rose-950/80 px-1.5 py-0.5 rounded border border-rose-500/30">
                       ⚡{liveMultiplier}x

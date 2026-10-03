@@ -68,7 +68,13 @@ const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, current
     // Generate a random spin (multiple rotations plus a random segment)
     const spins = 5 + Math.random() * 3; // 5-8 full rotations for more unpredictability
     const degreesPerSegment = 360 / wheelSegments.length;
-    const randomSegment = Math.floor(Math.random() * wheelSegments.length);
+    
+    // When player is broke or out of chips, guarantee landing on a winning segment (multiplier > 0)
+    // Indices [1, 2, 3, 5, 7] correspond to 50, 20, 30, 100, 40 points (guaranteeing $20-$100 chips for next rounds)
+    const winningSegments = [1, 2, 3, 5, 7];
+    const randomSegment = currentChips <= 0
+      ? winningSegments[Math.floor(Math.random() * winningSegments.length)]
+      : Math.floor(Math.random() * wheelSegments.length);
     const totalDegrees = spins * 360 + randomSegment * degreesPerSegment;
 
     console.log('NeuralWheel: Spinning to segment', randomSegment, 'with total degrees:', totalDegrees);
@@ -102,6 +108,11 @@ const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, current
         earnings = result.multiplier; // Use the actual multiplier value
         console.log('NeuralWheel: Free spin! Awarding', earnings, 'chips for', result.result);
         onChipUpdate(currentChips + earnings);
+      } else if (currentChips <= 0) {
+        // Guaranteed bailout safety net: minimum 30 chips
+        earnings = 30;
+        console.log('NeuralWheel: Emergency rescue! Awarding', earnings, 'chips');
+        onChipUpdate(currentChips + earnings);
       } else {
         console.log('NeuralWheel: No earnings for', result.result, '- multiplier:', result.multiplier);
       }
@@ -109,22 +120,23 @@ const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, current
   };
 
   return (
-    <div className="min-h-screen casino-table-bg flex items-center justify-center px-4 pt-24 pb-12">
-      <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl">
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+      <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-4 sm:p-6 text-center shadow-2xl my-auto">
         {/* Header */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
+        <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
           <span>Free Side Action</span>
         </div>
 
-        <h2 className="text-2xl sm:text-4xl font-display font-black text-white uppercase tracking-tight mb-2">
+        <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
           Neural Roulette
         </h2>
-        <p className="text-slate-400 text-xs sm:text-sm font-sans mb-6">
+        <p className="text-slate-400 text-xs font-sans mb-2">
           Zero-risk house spin. Land on points or the Jackpot to credit your tournament bankroll.
         </p>
 
+
         {/* Wheel Assembly */}
-        <div className="relative w-72 h-72 sm:w-80 sm:h-80 mx-auto mb-6 p-2 rounded-full bg-[#0D0F16] border-4 border-[#283248] shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center justify-center">
+        <div className="relative w-56 h-56 sm:w-64 sm:h-64 mx-auto mb-4 p-1.5 rounded-full bg-[#0D0F16] border-4 border-[#283248] shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center justify-center">
           {/* Wheel Pointer */}
           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-30 drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)]">
             <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-amber-400"></div>
@@ -211,9 +223,11 @@ const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, current
             <p className="text-2xl font-display font-black text-white mb-1">
               {wheelResult.result}
             </p>
-            <p className="text-sm font-mono font-bold" style={{ color: wheelResult.multiplier > 0 ? '#10B981' : '#F43F5E' }}>
+            <p className="text-sm font-mono font-bold" style={{ color: (wheelResult.multiplier > 0 || currentChips <= 0) ? '#10B981' : '#F43F5E' }}>
               {wheelResult.multiplier > 0
                 ? `+${wheelResult.multiplier} Chips Credited`
+                : currentChips <= 0
+                ? '+30 Chips Credited'
                 : 'No chips credited. Better luck on the main floor.'}
             </p>
           </div>

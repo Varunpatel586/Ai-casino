@@ -143,9 +143,9 @@ export default function UnifiedHostView({ initialTab = 'round1' }: UnifiedHostVi
   const operatorSetupUrl = `${originUrl}/operator-setup`;
 
   return (
-    <div className="min-h-screen bg-[#08090D] flex flex-col text-slate-100 font-sans">
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex flex-col text-slate-100 font-sans overflow-hidden">
       {/* Global Host Navigation Header */}
-      <header className="sticky top-0 z-50 bg-[#10131B]/95 backdrop-blur-md border-b border-[#232938] px-4 py-2.5 sm:px-6">
+      <header className="sticky top-0 z-50 bg-[#10131B]/95 backdrop-blur-md border-b border-[#232938] px-4 py-2 sm:px-6 flex-shrink-0">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
@@ -222,14 +222,14 @@ export default function UnifiedHostView({ initialTab = 'round1' }: UnifiedHostVi
       </header>
 
       {/* Main View Area */}
-      <main className="flex-1">
+      <main className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
         {activeTab === 'round1' ? (
           <HostRound1Controller />
         ) : activeTab === 'round3' ? (
           <HostChatInterface />
         ) : (
           /* DEDICATED PUTER & PLAYER AUTH MANAGEMENT VIEW */
-          <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6">
+          <div className="max-w-5xl mx-auto w-full h-full py-6 px-4 sm:px-6 overflow-y-auto">
             {/* Header Banner */}
             <div className="bg-[#121622] border border-[#232B3E] rounded-2xl p-6 sm:p-8 mb-8 shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />

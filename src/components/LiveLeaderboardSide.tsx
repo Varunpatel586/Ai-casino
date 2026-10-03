@@ -8,7 +8,7 @@ import {
   Bot, 
   Users 
 } from 'lucide-react';
-import { PlayerSeat } from '../services/multiplayerSocket';
+import { PlayerSeat, FeedRevealedData } from '../services/multiplayerSocket';
 
 interface LiveLeaderboardSideProps {
   players: PlayerSeat[];
@@ -16,6 +16,7 @@ interface LiveLeaderboardSideProps {
   totalFeeds?: number;
   status?: 'waiting' | 'betting' | 'playing' | 'revealing' | 'settled';
   currentPlayerId?: string;
+  feedReveal?: FeedRevealedData | null;
   onClose?: () => void;
   isMobileDrawer?: boolean;
 }
@@ -23,9 +24,10 @@ interface LiveLeaderboardSideProps {
 export default function LiveLeaderboardSide({
   players,
   currentFeedIndex = 0,
-  totalFeeds = 15,
+  totalFeeds = 10,
   status = 'waiting',
   currentPlayerId,
+  feedReveal,
   onClose,
   isMobileDrawer = false,
 }: LiveLeaderboardSideProps) {
@@ -36,19 +38,19 @@ export default function LiveLeaderboardSide({
   return (
     <aside 
       aria-label="Live Arena Standings"
-      className={`flex flex-col bg-[#0B0F19]/95 backdrop-blur-md border border-[#222C3E] rounded-3xl overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.85)] ${
-        isMobileDrawer ? 'w-full max-w-sm mx-auto' : 'w-full'
+      className={`flex flex-col bg-[#0B0F19]/95 backdrop-blur-md border border-[#222C3E] rounded-2xl overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.85)] ${
+        isMobileDrawer ? 'w-full max-w-sm mx-auto' : 'w-full h-full max-h-full'
       }`}
     >
       {/* Header */}
-      <div className="p-4 bg-gradient-to-r from-[#141A29] to-[#0E1320] border-b border-[#20293D] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center shadow-inner">
-            <Trophy size={16} />
+      <div className="p-3 bg-gradient-to-r from-[#141A29] to-[#0E1320] border-b border-[#20293D] flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center shadow-inner">
+            <Trophy size={14} />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <h3 className="text-xs font-mono font-black uppercase tracking-wider text-slate-200">
                 LIVE STANDINGS
               </h3>
@@ -75,7 +77,7 @@ export default function LiveLeaderboardSide({
       </div>
 
       {/* Ranked Players List */}
-      <div className="p-3 space-y-2 flex-1 overflow-y-auto max-h-[540px]">
+      <div className="p-2 space-y-1.5 flex-1 min-h-0 overflow-y-auto max-h-full">
         {sortedPlayers.length === 0 ? (
           <div className="py-8 text-center text-slate-500 font-mono text-xs">
             <Users size={24} className="mx-auto mb-2 opacity-50" />
@@ -186,24 +188,40 @@ export default function LiveLeaderboardSide({
                     </div>
 
                     {/* Animated Delta Badge (when challenge reveals) */}
-                    {player.lastDelta !== undefined ? (
-                      <span
-                        className={`inline-block text-[9px] font-mono font-black px-1.5 py-0.2 rounded mt-0.5 animate-fade-in ${
-                          player.lastDelta >= 0
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.25)]'
-                            : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                        }`}
-                      >
-                        {player.lastDelta >= 0 ? `+$${player.lastDelta}` : `-$${Math.abs(player.lastDelta)}`}
-                        {player.lastMultiplier && player.lastMultiplier > 1 && player.lastDelta > 0 && (
-                          <span className="ml-0.5 text-amber-300">⚡{player.lastMultiplier}x</span>
-                        )}
-                      </span>
-                    ) : player.betAmount > 0 && status === 'playing' ? (
-                      <span className="text-[9px] font-mono text-slate-400">
-                        At risk: ${player.betAmount}
-                      </span>
-                    ) : null}
+                    {(() => {
+                      const revealMatch = feedReveal?.playerResults?.find(pr => pr.playerId === player.playerId);
+                      const activeDelta = revealMatch ? revealMatch.netDelta : player.lastDelta;
+                      const activeMultiplier = revealMatch ? revealMatch.multiplier : player.lastMultiplier;
+
+                      if ((status === 'revealing' || !!feedReveal) && activeDelta !== undefined) {
+                        return (
+                          <span
+                            className={`inline-block text-[10px] font-sans font-bold px-1.5 py-0.5 rounded mt-0.5 animate-fade-in ${
+                              activeDelta > 0
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.25)]'
+                                : activeDelta < 0
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                : 'bg-slate-800/80 text-slate-400 border border-slate-700'
+                            }`}
+                          >
+                            <span>{activeDelta > 0 ? `+$${activeDelta}` : activeDelta < 0 ? `-$${Math.abs(activeDelta)}` : '$0 (Watching)'}</span>
+                            {(activeMultiplier ?? 0) > 1 && activeDelta > 0 ? (
+                              <span className="ml-0.5 text-amber-300 font-mono">⚡{activeMultiplier}x</span>
+                            ) : null}
+                          </span>
+                        );
+                      }
+
+                      if (player.betAmount > 0 && status === 'playing') {
+                        return (
+                          <span className="text-[9px] font-mono text-slate-400">
+                            At risk: ${player.betAmount}
+                          </span>
+                        );
+                      }
+
+                      return null;
+                    })()}
                   </div>
                 </div>
               </div>
@@ -219,7 +237,7 @@ export default function LiveLeaderboardSide({
           <span>Total Table Bankroll:</span>
         </div>
         <span className="font-black text-amber-400 text-xs">
-          ${totalTableBankroll.toLocaleString()}
+          ${(totalTableBankroll ?? 0).toLocaleString()}
         </span>
       </div>
     </aside>

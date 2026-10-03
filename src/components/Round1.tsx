@@ -130,9 +130,9 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'intro') {
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
-        <div className="max-w-2xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 sm:p-10 shadow-2xl text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-4">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 shadow-2xl text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
             <ImageIcon size={14} />
             <span>Event II • Visual Turing Challenge</span>
           </div>
@@ -185,7 +185,7 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'betting') {
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
         <div className="max-w-2xl w-full">
           <BettingPanel 
             currentChips={currentChips} 
@@ -200,8 +200,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'playing') {
     return (
-      <div className="min-h-screen casino-table-bg p-4 sm:p-8 pt-24">
-        <div className="max-w-3xl mx-auto">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg p-3 sm:p-5 flex flex-col justify-between max-w-4xl mx-auto overflow-hidden select-none">
+        <div className="w-full">
           {/* Header Progress */}
           <div className="flex justify-between items-center mb-6 bg-[#12151E] border border-[#232938] rounded-xl px-5 py-3">
             <div className="flex items-center gap-2 text-xs font-mono uppercase text-slate-400">
@@ -253,8 +253,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
     const isTimeRunningOut = promptTimeLeft <= 10;
 
     return (
-      <div className="min-h-screen casino-table-bg p-4 sm:p-8 pt-24">
-        <div className="max-w-3xl mx-auto">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg p-3 sm:p-5 flex flex-col justify-between max-w-4xl mx-auto overflow-hidden select-none">
+        <div className="w-full">
           {/* Top Bar with Digital Countdown */}
           <div className="flex justify-between items-center mb-6 bg-[#12151E] border border-[#232938] rounded-xl px-5 py-3">
             <span className="text-xs font-mono uppercase text-slate-400">
@@ -315,8 +315,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'generating') {
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
-        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 text-center shadow-2xl">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl my-auto">
           <div className="w-16 h-16 rounded-2xl bg-[#181D2A] border border-amber-500/30 flex items-center justify-center mx-auto mb-6">
             <Sparkles className="text-amber-400 animate-spin" size={32} />
           </div>
@@ -336,8 +336,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'comparison') {
     return (
-      <div className="min-h-screen casino-table-bg p-4 sm:p-8 pt-24">
-        <div className="max-w-5xl mx-auto">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg p-3 sm:p-5 flex flex-col justify-between max-w-4xl mx-auto overflow-hidden select-none">
+        <div className="w-full">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-2">
@@ -408,8 +408,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'results') {
     return (
-      <div className="min-h-screen casino-table-bg flex items-center justify-center p-6 pt-24">
-        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-8 text-center shadow-2xl">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl my-auto">
           <div className="w-14 h-14 rounded-2xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-4">
             <ImageIcon size={28} />
           </div>

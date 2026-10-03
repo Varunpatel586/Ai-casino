@@ -32,6 +32,11 @@ if (!supabaseUrl || !supabaseKey) {
 
 // --- HTTP API ROUTES ---
 
+app.post('/api/log-error', (req, res) => {
+  console.error('\n🚨 [CLIENT REACT CRASH LOGGED]:\n', req.body.message, '\nStack:\n', req.body.stack, '\nComponent Stack:\n', req.body.componentStack, '\n');
+  res.json({ received: true });
+});
+
 const mockPlayers = new Map();
 
 // Get player data (or create if doesn't exist)
