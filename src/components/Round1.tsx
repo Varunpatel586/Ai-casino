@@ -148,8 +148,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'intro') {
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
-        <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 shadow-2xl text-center">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
+        <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 shadow-2xl text-center my-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
             <ImageIcon size={14} />
             <span>Event II • Visual Turing Challenge</span>
@@ -203,8 +203,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'betting') {
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
-        <div className="max-w-2xl w-full">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
+        <div className="max-w-2xl w-full my-auto">
           <BettingPanel 
             currentChips={currentChips} 
             onBet={handleBet} 
@@ -333,7 +333,7 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'generating') {
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
         <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl my-auto">
           <div className="w-16 h-16 rounded-2xl bg-[#181D2A] border border-amber-500/30 flex items-center justify-center mx-auto mb-6">
             <Sparkles className="text-amber-400 animate-spin" size={32} />
@@ -455,7 +455,7 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
     const scoredCount = appraisals.filter(Boolean).length;
 
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
         <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl my-auto">
           <div className="w-14 h-14 rounded-2xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-4">
             <ImageIcon size={28} />

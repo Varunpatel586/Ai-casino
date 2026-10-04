@@ -101,7 +101,7 @@ export default function UsernameScreen({ onSubmit, defaultRoom }: UsernameScreen
   };
 
   return (
-    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
       <div className="max-w-md w-full bg-[#12151E] border border-[#262D3D] rounded-2xl p-4 sm:p-6 shadow-2xl relative my-auto">
         {/* Top Metallic Accent */}
         <div className="w-12 h-1 bg-gradient-to-r from-amber-400 to-amber-600 rounded-full mx-auto mb-3" />

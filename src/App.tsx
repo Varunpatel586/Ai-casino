@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { GameScreen, Player, LeaderboardEntry } from './types';
 import IntroScreen from './components/IntroScreen';
@@ -52,6 +52,7 @@ function App() {
     gameState: {},
   });
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
+  const playerRef = useRef(player);
 
   // Starting Lobby -> Player Name Insertion & Room Setup
   const handleStartGame = () => {
@@ -120,6 +121,23 @@ function App() {
     }
   };
 
+  // Keep a live reference to the freshest player state so the debounced saver
+  // always writes the latest balance (React state can lag behind rapid updates).
+  useEffect(() => {
+    playerRef.current = player;
+  }, [player]);
+
+  // Persist chip/state changes to the database. The bonus intermission only
+  // mutates chips locally via onChipUpdate, so without this the bonus-round
+  // balance never reaches the DB. Debounced to avoid spamming the API.
+  useEffect(() => {
+    if (!player.username) return;
+    const timer = setTimeout(() => {
+      saveProgressToDB(playerRef.current);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [player.chips, player.currentRound, player.bonusEarnings, player.username]);
+
   const handleRound1Complete = (score: number, bet: number, totalFeeds = 10, finalChips?: number) => {
     let newChips = player.chips;
     let earnings = 0;
@@ -145,13 +163,14 @@ function App() {
   };
 
   const handleBonus1Complete = (earnings: number) => {
+    const current = playerRef.current;
     console.log('App: handleBonus1Complete called with earnings:', earnings);
-    const finalChips = player.chips + earnings;
-    console.log('App: Updating player chips from', player.chips, 'to', finalChips);
+    const finalChips = current.chips + earnings;
+    console.log('App: Updating player chips from', current.chips, 'to', finalChips);
     const updatedPlayer = {
-      ...player,
+      ...current,
       chips: finalChips,
-      bonusEarnings: player.bonusEarnings + earnings,
+      bonusEarnings: current.bonusEarnings + earnings,
       currentRound: 2,
     };
 
@@ -174,11 +193,12 @@ function App() {
   };
 
   const handleBonus2Complete = (earnings: number) => {
-    const finalChips = player.chips + earnings;
+    const current = playerRef.current;
+    const finalChips = current.chips + earnings;
     const updatedPlayer = {
-      ...player,
+      ...current,
       chips: finalChips,
-      bonusEarnings: player.bonusEarnings + earnings,
+      bonusEarnings: current.bonusEarnings + earnings,
       currentRound: 3,
     };
 
@@ -205,11 +225,12 @@ function App() {
   };
 
   const handleBonusComplete = async (earnings: number) => {
-    const finalChips = player.chips + earnings;
+    const current = playerRef.current;
+    const finalChips = current.chips + earnings;
     const updatedPlayer = {
-      ...player,
+      ...current,
       chips: finalChips,
-      bonusEarnings: player.bonusEarnings + earnings,
+      bonusEarnings: current.bonusEarnings + earnings,
     };
 
     setPlayer(updatedPlayer);
@@ -303,7 +324,7 @@ function App() {
         <Route path="/" element={
           <div className="w-full h-full flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0 w-full overflow-y-auto flex flex-col">
               <ErrorBoundary>
                 {renderGameScreen()}
               </ErrorBoundary>
@@ -313,7 +334,7 @@ function App() {
         <Route path="/player" element={
           <div className="w-full h-full flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0 w-full overflow-y-auto flex flex-col">
               <ErrorBoundary>
                 {renderGameScreen()}
               </ErrorBoundary>
@@ -323,7 +344,7 @@ function App() {
         <Route path="/contestant" element={
           <div className="w-full h-full flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0 w-full overflow-y-auto flex flex-col">
               <ErrorBoundary>
                 {renderGameScreen()}
               </ErrorBoundary>
@@ -333,7 +354,7 @@ function App() {
         <Route path="/play" element={
           <div className="w-full h-full flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0 w-full overflow-y-auto flex flex-col">
               <ErrorBoundary>
                 {renderGameScreen()}
               </ErrorBoundary>
@@ -350,7 +371,7 @@ function App() {
         <Route path="*" element={
           <div className="w-full h-full flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+            <div className="flex-1 min-h-0 w-full overflow-y-auto flex flex-col">
               {renderGameScreen()}
             </div>
           </div>

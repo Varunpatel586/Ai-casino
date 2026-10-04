@@ -77,7 +77,7 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
 
 
   return (
-    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
       <div className="max-w-md sm:max-w-lg w-full bg-[#12151E] border border-[#232938] rounded-2xl p-4 sm:p-6 text-center shadow-2xl my-auto">
         {/* Header */}
         <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-purple-500/30 text-purple-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">

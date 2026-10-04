@@ -67,8 +67,8 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         : 'FINAL VAULT LOUNGE';
 
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
-        <div className="max-w-3xl w-full text-center h-full flex flex-col justify-between py-2 sm:py-3">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
+        <div className="max-w-3xl w-full text-center min-h-full flex flex-col justify-between py-2 sm:py-3">
           {/* Header Plaque */}
           <div className="flex-shrink-0">
             <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
