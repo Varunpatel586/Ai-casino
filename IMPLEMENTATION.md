@@ -6,7 +6,7 @@ This document outlines proposed architecture, feature plans, file modifications,
 > **Workflow Protocol:**
 > 1. **Plan First:** Every new feature, bug fix, or architectural change is drafted and documented here first.
 > 2. **Approval Gate:** Implementation **only begins after explicit user confirmation to proceed**.
-> 3. **Execution & Log:** Once approved, tasks are executed, checklist items are checked off, and completed work is permanently logged in [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md).
+> 3. **Execution & Log:** Once approved, tasks are executed, checklist items are checked off, and completed work is permanently logged in [`WALKTHROUGH.md`](WALKTHROUGH.md).
 
 ---
 
@@ -18,12 +18,12 @@ This document outlines proposed architecture, feature plans, file modifications,
 - **Objective:**
   Integrate direct one-click Puter sign-up and authentication across both the Host Dashboard and the Contestant Lobby screen so that every player signs in to their own Puter account. This ensures their personal free credits are used for image generation (FLUX 1.1 Pro in Round 2) instead of consuming host / backend API quota.
 - **Architectural & Design Changes:**
-  1. **Player Start / Lobby Integration ([`src/components/UsernameScreen.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/components/UsernameScreen.tsx)):**
+  1. **Player Start / Lobby Integration ([`src/components/UsernameScreen.tsx`](src/components/UsernameScreen.tsx)):**
      - Added a Puter Free Credit Auth card directly within the contestant moniker registration form.
      - When unauthenticated: Displays an interactive button: `⚡ Connect Puter (1-Click Free Sign-Up)` that triggers `window.puter.auth.signIn()`.
      - When authenticated: Displays a glowing emerald badge: `✅ Puter Connected as @{username} • Free Image Credits Active` with a disconnect / change account trigger.
      - Detects existing active Puter sessions on initial component mount via `window.puter.auth.isSignedIn()`.
-  2. **Host Dashboard Integration ([`src/host/UnifiedHostView.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/host/UnifiedHostView.tsx)):**
+  2. **Host Dashboard Integration ([`src/host/UnifiedHostView.tsx`](src/host/UnifiedHostView.tsx)):**
      - Added a dedicated **Puter & Players** tab (`puter`) alongside "Round 1 Table" and "Round 3 Turing".
      - Header quick-action pill showing current host Puter auth status.
      - Dedicated Puter management view providing:
@@ -31,18 +31,18 @@ This document outlines proposed architecture, feature plans, file modifications,
        - Player station onboarding instructions to ensure zero host credit consumption.
        - Quick copyable links (`playerLobbyUrl` and `operatorSetupUrl`) with live clipboard copy feedback.
        - Interactive 6-player station readiness checklist.
-  3. **Launcher Banner Synchronization ([`scripts/launchHost.js`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/scripts/launchHost.js)):**
+  3. **Launcher Banner Synchronization ([`scripts/launchHost.js`](scripts/launchHost.js)):**
      - Included the dedicated Puter & Player Setup URL in the terminal launcher output (`npm run host`).
   4. **Documentation & Quality Assurance:**
-     - Updated [`README.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/README.md) and logged completion in [`WALKTHROUGH.md`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/WALKTHROUGH.md).
+     - Updated [`README.md`](README.md) and logged completion in [`WALKTHROUGH.md`](WALKTHROUGH.md).
      - Verified complete TypeScript compilation with `npm run typecheck` (0 errors).
 
 - **Phased Execution Checklist Executed & Verified:**
-  - [x] **Step 1: Integrate One-Click Puter Auth into Player Lobby ([`src/components/UsernameScreen.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/components/UsernameScreen.tsx))**
+  - [x] **Step 1: Integrate One-Click Puter Auth into Player Lobby ([`src/components/UsernameScreen.tsx`](src/components/UsernameScreen.tsx))**
     - Added state for Puter auth status and username.
     - Implemented `handlePuterSignIn` and `handlePuterSignOut`.
     - Rendered stylish cyberpunk Puter status / connect card.
-  - [x] **Step 2: Add Puter Setup View & Status Pill to Host Dashboard ([`src/host/UnifiedHostView.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/host/UnifiedHostView.tsx))**
+  - [x] **Step 2: Add Puter Setup View & Status Pill to Host Dashboard ([`src/host/UnifiedHostView.tsx`](src/host/UnifiedHostView.tsx))**
     - Added 'puter' tab to navigation tabs.
     - Built operator Puter status and player onboarding card with copyable links.
     - Added interactive 6-station checklist.
@@ -83,8 +83,8 @@ This document outlines proposed architecture, feature plans, file modifications,
      - On desktop & wide screens (`lg:`/`xl:`): The 3D table takes ~75% width, while the right-side leaderboard docks neatly at ~25% width (~280-320px) without cramping table seats.
      - On mobile / smaller screens: A floating toggle pill (`🏆 Standings (6)`) that smoothly slides in the leaderboard drawer on demand.
   4. **Reusable Component Architecture:**
-     - Created [`src/components/LiveLeaderboardSide.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/components/LiveLeaderboardSide.tsx) accepting `players: PlayerSeat[]`, `currentFeedIndex: number`, `totalFeeds: number`, `status: string`, and `currentPlayerId?: string`.
-     - Embedded in [`src/components/MultiplayerRound1.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/components/MultiplayerRound1.tsx) and [`src/host/HostRound1Controller.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/host/HostRound1Controller.tsx).
+     - Created [`src/components/LiveLeaderboardSide.tsx`](src/components/LiveLeaderboardSide.tsx) accepting `players: PlayerSeat[]`, `currentFeedIndex: number`, `totalFeeds: number`, `status: string`, and `currentPlayerId?: string`.
+     - Embedded in [`src/components/MultiplayerRound1.tsx`](src/components/MultiplayerRound1.tsx) and [`src/host/HostRound1Controller.tsx`](src/host/HostRound1Controller.tsx).
 
 ### Plan 5: Round 1 Overhaul — Per-Challenge Wager Flow, Speed Multipliers (3x/2x/1x), Instant Chip Settlements, and End-of-Round Winners Showcase
 - **Status:** ✅ **Completed & Fully Verified**
@@ -123,11 +123,11 @@ This document outlines proposed architecture, feature plans, file modifications,
   Terminated orphaned node process holding port 5174 (PID 48888), adjusted `vite.config.ts` to disable `strictPort: true` and remove hardcoded HMR port bindings, and launched the Vite dev server directly in the background.
 - **Checklist Executed:**
   - [x] **Step 1:** Identified process holding port 5174 (PID 48888) and killed it using PowerShell `Stop-Process`.
-  - [x] **Step 2:** Updated [`vite.config.ts`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/vite.config.ts) (`strictPort: false`, dynamic HMR) to prevent crashes if a port is temporarily occupied.
+  - [x] **Step 2:** Updated [`vite.config.ts`](vite.config.ts) (`strictPort: false`, dynamic HMR) to prevent crashes if a port is temporarily occupied.
   - [x] **Step 3:** Launched Vite dev server directly in the terminal background (`npm run dev`).
   - [x] **Step 4:** Verified HTTP 200 OK responses from both frontend (`http://localhost:5174/`) and backend API (`http://localhost:8080/api/leaderboard`).
 - **Files Modified:**
-  - [`vite.config.ts`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/vite.config.ts)
+  - [`vite.config.ts`](vite.config.ts)
 
 ### Plan 1: Replace Resource-Heavy 3D WebGL Background with Static Image in Round 1
 - **Status:** ✅ **Completed & Verified**
@@ -136,13 +136,13 @@ This document outlines proposed architecture, feature plans, file modifications,
   Replaced the heavy Sketchfab WebGL 3D iframe in Round 1 with an ultra-high quality, responsive static blackjack table background image across both player and host interfaces.
 - **Checklist Executed:**
   - [x] **Step 1:** Generated and copied high-fidelity casino blackjack table asset to `public/images/blackjack-table-bg.jpg`.
-  - [x] **Step 2:** Replaced Sketchfab 3D WebGL iframe in [`src/components/MultiplayerRound1.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/components/MultiplayerRound1.tsx) with responsive `<img>` and vignette shading.
-  - [x] **Step 3:** Replaced Sketchfab 3D WebGL iframe in [`src/host/HostRound1Controller.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/host/HostRound1Controller.tsx) with static image and overlays.
+  - [x] **Step 2:** Replaced Sketchfab 3D WebGL iframe in [`src/components/MultiplayerRound1.tsx`](src/components/MultiplayerRound1.tsx) with responsive `<img>` and vignette shading.
+  - [x] **Step 3:** Replaced Sketchfab 3D WebGL iframe in [`src/host/HostRound1Controller.tsx`](src/host/HostRound1Controller.tsx) with static image and overlays.
   - [x] **Step 4:** Validated production bundle build with `npm run build` (Passed cleanly, 0 errors, 7.07s).
 - **Files Modified:**
   - `public/images/blackjack-table-bg.jpg`
-  - [`src/components/MultiplayerRound1.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/components/MultiplayerRound1.tsx)
-  - [`src/host/HostRound1Controller.tsx`](file:///c:/Users/PRANAV%20ADVA/OneDrive/Desktop/Ai-casino/src/host/HostRound1Controller.tsx)
+  - [`src/components/MultiplayerRound1.tsx`](src/components/MultiplayerRound1.tsx)
+  - [`src/host/HostRound1Controller.tsx`](src/host/HostRound1Controller.tsx)
 - **Performance Impact:**
   - Eliminated GPU/WebGL render loop and iframe network overhead.
   - Instant background load time with zero frame drops or battery drain.

@@ -205,7 +205,7 @@ The Host Command Center provides full operational control over live events:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/pranavadva/ai-casino.git
+   git clone https://github.com/Varunpatel586/Ai-casino.git
    cd ai-casino
    ```
 
@@ -238,7 +238,7 @@ The Host Command Center provides full operational control over live events:
 ## 🚀 Deployment Guide
 
 ### Deploying Frontend to Vercel
-1. Link your GitHub repository `https://github.com/pranavadva/ai-casino` to Vercel.
+1. Link your GitHub repository `https://github.com/Varunpatel586/Ai-casino` to Vercel.
 2. Ensure Framework Preset is set to **Vite**.
 3. In Project Settings -> Environment Variables, add:
    - `VITE_BACKEND_URL`: Your live backend server URL (e.g. `https://ai-casino.onrender.com`)

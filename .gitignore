@@ -27,3 +27,6 @@ dist-ssr
 *.db
 *.db-shm
 *.db-wal
+
+# Bolt config may contain secrets - never commit
+.bolt/config.json

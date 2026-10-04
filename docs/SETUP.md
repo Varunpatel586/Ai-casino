@@ -9,14 +9,14 @@
 
 ### Terminal 1 — Frontend (Vite)
 ```powershell
-cd "c:\Users\PRANAV ADVA\OneDrive\Desktop\Ai-casino"
+cd "C:\path\to\ai-casino"
 npm run dev
 # Starts on http://localhost:5174
 ```
 
 ### Terminal 2 — Backend (Express + WebSocket + Socket.IO)
 ```powershell
-cd "c:\Users\PRANAV ADVA\OneDrive\Desktop\Ai-casino"
+cd "C:\path\to\ai-casino"
 npm run server
 # Starts on http://localhost:8080
 # WebSocket: ws://localhost:8080
@@ -25,7 +25,7 @@ npm run server
 
 ### Terminal 3 — Host Command Center (opens browser)
 ```powershell
-cd "c:\Users\PRANAV ADVA\OneDrive\Desktop\Ai-casino"
+cd "C:\path\to\ai-casino"
 npm run host
 # Detects running servers and opens http://localhost:5174/host
 ```
