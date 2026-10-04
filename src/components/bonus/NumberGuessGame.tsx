@@ -14,7 +14,6 @@ const NumberGuessGame: React.FC<NumberGuessGameProps> = ({
   onSelectBonusBet,
   onChipUpdate,
   selectedBet,
-  result,
   currentChips,
 }) => {
   const [targetNumber, setTargetNumber] = useState<number>(0);
@@ -60,7 +59,7 @@ const NumberGuessGame: React.FC<NumberGuessGameProps> = ({
     if (guess === targetNumber) {
       const winnings = selectedBet * 2;
       setMessage(`Correct! You won $${winnings}!`);
-      onChipUpdate(currentChips + winnings - selectedBet);
+      onChipUpdate(currentChips + winnings);
       setGameOver(true);
     } else if (newAttempts >= maxAttempts) {
       setMessage(`Game Over! The number was ${targetNumber}`);
@@ -76,11 +75,11 @@ const NumberGuessGame: React.FC<NumberGuessGameProps> = ({
         key={num}
         onClick={() => handleGuess(num)}
         disabled={gameOver}
-        className={`w-16 h-16 m-2 rounded-full text-xl font-bold transition-all duration-200 ${
+        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl font-mono text-xl font-black transition-all cursor-pointer ${
           userGuess === num
-            ? 'bg-green-600 text-white scale-110 ring-4 ring-green-400'
-            : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-        } ${gameOver ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            ? 'bg-emerald-600 text-white ring-4 ring-emerald-400/50 scale-105 shadow-tactile'
+            : 'bg-[#181D2A] hover:bg-[#202738] text-slate-200 border border-[#283248] hover:border-emerald-500/60'
+        } ${gameOver ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
       >
         {num}
       </button>
@@ -93,111 +92,119 @@ const NumberGuessGame: React.FC<NumberGuessGameProps> = ({
   }, [startNewGame]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 flex items-center justify-center px-4">
-      <div className="max-w-3xl w-full text-center">
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
-          <h2 className="text-5xl font-black text-white mb-4">Number Guess</h2>
-          <p className="text-xl text-green-300 mb-8">Guess the secret number and win!</p>
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+      <div className="max-w-md sm:max-w-lg w-full bg-[#12151E] border border-[#232938] rounded-2xl p-4 sm:p-6 text-center shadow-2xl my-auto">
+        {/* Header */}
+        <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-emerald-500/30 text-emerald-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
+          <span>Side Action // 2.0x Payout</span>
+        </div>
 
-          {/* Instructions */}
-          <div className="bg-green-900/30 border border-green-400/30 rounded-xl p-6 mb-8">
-            <h3 className="text-2xl font-bold text-white mb-3">How to Play:</h3>
-            <div className="text-green-200 space-y-2 text-left">
-              <p>1. Select your bet amount ($10, $20, or $30)</p>
-              <p>2. Guess a number between 1-10</p>
-              <p>3. You have 5 attempts to guess correctly</p>
-              <p>4. Win 2x your bet if you guess correctly!</p>
+        <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
+          Cipher Pin Code
+        </h2>
+        <p className="text-slate-400 text-xs font-sans mb-3">
+          Crack the secret 1 to 10 pin code within 5 precision attempts to double your wager.
+        </p>
+
+        {/* Wager Selection */}
+        {!hasDeductedBet && (
+          <div className="mb-6 p-4 bg-[#181D2A] border border-[#283248] rounded-xl">
+            <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block mb-3">
+              Step 1: Choose Wager Amount
+            </span>
+            <div className="flex justify-center gap-3">
+              {[10, 20, 30].map((amt) => {
+                const canAfford = currentChips >= amt;
+                const isSelected = selectedBet === amt;
+                return (
+                  <button
+                    key={amt}
+                    onClick={() => canAfford && handleBetSelect(amt)}
+                    disabled={!canAfford}
+                    className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center transition-all cursor-pointer ${
+                      isSelected
+                        ? 'ring-4 ring-amber-400 scale-105 shadow-chip'
+                        : 'border-2 border-dashed border-[#2E384D] hover:border-amber-400/60'
+                    } ${
+                      amt === 10
+                        ? 'bg-emerald-950/80 text-emerald-300'
+                        : amt === 20
+                          ? 'bg-blue-950/80 text-blue-300'
+                          : 'bg-purple-950/80 text-purple-300'
+                    } ${!canAfford ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
+                  >
+                    <span className="text-[10px] font-mono uppercase text-slate-400">CHIP</span>
+                    <span className="text-lg font-mono font-black">${amt}</span>
+                  </button>
+                );
+              })}
             </div>
+            {currentChips < 10 && (
+              <p className="text-xs font-mono text-rose-400 mt-2">Insufficient chips to enter this cipher challenge.</p>
+            )}
           </div>
+        )}
 
-          {/* Betting Options */}
-          {!hasDeductedBet && (
-            <div className="mb-8">
-              <h3 className="text-2xl font-bold text-white mb-4">Select Your Bet</h3>
-              <div className="flex gap-4 justify-center">
-                <button
-                  className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                    selectedBet === 10
-                      ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                      : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                  } ${currentChips < 10 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => currentChips >= 10 && handleBetSelect(10)}
-                  disabled={currentChips < 10}
-                >
-                  $10
-                </button>
-                <button
-                  className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                    selectedBet === 20
-                      ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                      : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                  } ${currentChips < 20 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => currentChips >= 20 && handleBetSelect(20)}
-                  disabled={currentChips < 20}
-                >
-                  $20
-                </button>
-                <button
-                  className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                    selectedBet === 30
-                      ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                      : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                  } ${currentChips < 30 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => currentChips >= 30 && handleBetSelect(30)}
-                  disabled={currentChips < 30}
-                >
-                  $30
-                </button>
-              </div>
-            </div>
-          )}
+        {/* Active Bet Notice */}
+        {hasDeductedBet && !gameOver && (
+          <div className="mb-4 inline-flex items-center gap-2 bg-[#181D2A] border border-emerald-500/30 px-3 py-1.5 rounded-full text-xs font-mono text-emerald-400">
+            <span>Wager Locked: <strong>${selectedBet}</strong> (Potential Payout: <strong>${selectedBet ? selectedBet * 2 : 0}</strong>)</span>
+          </div>
+        )}
 
-          {/* Game Area */}
-          <div className="mb-8">
-            <div className="flex justify-center items-center mb-6">
-              <div className="text-white text-xl">
-                Attempts: {attempts} / {maxAttempts}
+        {/* Pinpad & Attempts Area */}
+        {hasDeductedBet && (
+          <div className="mb-6 p-5 bg-[#0E1118] border border-[#232938] rounded-2xl">
+            {/* Attempt Pips */}
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#232938]">
+              <span className="text-xs font-mono uppercase text-slate-400">
+                Attempts Remaining
+              </span>
+              <div className="flex items-center gap-1.5">
+                {Array.from({ length: maxAttempts }).map((_, i) => (
+                  <span
+                    key={i}
+                    className={`w-3 h-3 rounded-full transition-all ${
+                      i < attempts
+                        ? 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.6)]'
+                        : 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
+                    }`}
+                  />
+                ))}
+                <span className="text-xs font-mono text-slate-300 font-bold ml-1.5">
+                  {maxAttempts - attempts} left
+                </span>
               </div>
             </div>
 
-            {selectedBet && hasDeductedBet && (
-              <div className="mb-6">
-                <p className="text-xl font-semibold text-white mb-4">
-                  Guess a number between 1 and 10
-                </p>
-              </div>
-            )}
-
-            {hasDeductedBet && (
-              <div className="flex flex-wrap justify-center gap-2 mb-6">
-                {renderNumberButtons()}
-              </div>
-            )}
-
+            {/* Hint Display */}
             {message && (
-              <div
-                className={`text-lg font-semibold my-4 p-4 rounded-xl ${
-                  gameOver && userGuess === targetNumber
-                    ? 'bg-green-900/50 border-2 border-green-400 text-green-300'
-                    : gameOver
-                      ? 'bg-red-900/50 border-2 border-red-400 text-red-300'
-                      : 'bg-blue-900/50 border-2 border-blue-400 text-blue-300'
-                }`}
-              >
+              <div className={`p-3 rounded-xl border text-sm font-mono font-bold mb-4 ${
+                gameOver && userGuess === targetNumber
+                  ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                  : gameOver
+                    ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                    : 'bg-[#181D2A] border-amber-500/30 text-amber-400'
+              }`}>
                 {message}
               </div>
             )}
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-4 justify-center">
-            <button
-              onClick={onBack}
-              className="px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-gray-500 to-gray-600 rounded-full hover:scale-110 transition-all duration-300"
-            >
-              BACK TO MENU
-            </button>
+            {/* Pinpad Grid */}
+            <div className="grid grid-cols-5 gap-2 max-w-xs mx-auto">
+              {renderNumberButtons()}
+            </div>
           </div>
+        )}
+
+        {/* Action Controls */}
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={onBack}
+            className="py-3 px-6 bg-[#181D2A] hover:bg-[#202738] border border-[#283248] hover:border-slate-500 text-slate-300 font-mono text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+          >
+            Back To Tables
+          </button>
         </div>
       </div>
     </div>

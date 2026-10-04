@@ -1,4 +1,4 @@
-import { DollarSign } from 'lucide-react';
+import { Coins, Flame, AlertCircle } from 'lucide-react';
 import { BetAmount } from '../types';
 
 interface BettingPanelProps {
@@ -10,44 +10,130 @@ interface BettingPanelProps {
 }
 
 export default function BettingPanel({ currentChips, onBet, disabled, minBet = 10, maxBet = 100 }: BettingPanelProps) {
-  const bets: { amount: BetAmount; label: string; color: string }[] = [
-    { amount: minBet, label: `$${minBet}`, color: 'from-green-500 to-green-600' },
-    { amount: Math.min(maxBet, minBet * 3), label: `$${Math.min(maxBet, minBet * 3)}`, color: 'from-blue-500 to-blue-600' },
-    { amount: 'ALL_IN', label: 'ALL IN', color: 'from-red-500 to-red-600' },
+  const bets: { 
+    amount: BetAmount; 
+    label: string; 
+    theme: {
+      outerRing: string;
+      innerBg: string;
+      accentText: string;
+      borderDashed: string;
+      sublabel: string;
+    }
+  }[] = [
+    { 
+      amount: minBet as BetAmount, 
+      label: `$${minBet}`, 
+      theme: {
+        outerRing: 'bg-gradient-to-b from-emerald-600 to-emerald-800 border-emerald-400',
+        innerBg: 'bg-[#0E1B16]',
+        accentText: 'text-emerald-400',
+        borderDashed: 'border-emerald-500/60',
+        sublabel: 'Standard Bet',
+      }
+    },
+    { 
+      amount: Math.min(maxBet, minBet * 3) as BetAmount, 
+      label: `$${Math.min(maxBet, minBet * 3)}`, 
+      theme: {
+        outerRing: 'bg-gradient-to-b from-blue-600 to-indigo-800 border-blue-400',
+        innerBg: 'bg-[#0E1424]',
+        accentText: 'text-blue-400',
+        borderDashed: 'border-blue-500/60',
+        sublabel: 'High Roller',
+      }
+    },
+    { 
+      amount: 'ALL_IN', 
+      label: 'ALL IN', 
+      theme: {
+        outerRing: 'bg-gradient-to-b from-rose-600 via-rose-700 to-amber-700 border-rose-400',
+        innerBg: 'bg-[#220B11]',
+        accentText: 'text-amber-400',
+        borderDashed: 'border-amber-400/80',
+        sublabel: 'Maximum Risk',
+      }
+    },
   ].filter(bet => 
     bet.amount === 'ALL_IN' || 
     (typeof bet.amount === 'number' && bet.amount <= maxBet && bet.amount >= minBet)
-  ) as { amount: BetAmount; label: string; color: string }[];
+  ) as {
+    amount: BetAmount;
+    label: string;
+    theme: {
+      outerRing: string;
+      innerBg: string;
+      accentText: string;
+      borderDashed: string;
+      sublabel: string;
+    };
+  }[];
 
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/20 rounded-2xl p-6">
-      <h3 className="text-2xl font-bold text-white mb-2 text-center">Place Your Bet</h3>
-      <p className="text-white/60 text-center mb-6">Choose wisely. Higher risk, higher reward.</p>
+    <div className="bg-[#12151E] border border-[#232938] rounded-2xl p-5 sm:p-7 shadow-2xl relative overflow-hidden">
+      {/* Table Baize Subtle Accent */}
+      <div className="text-center mb-5 sm:mb-6">
+        <div className="inline-flex items-center gap-2 text-xs uppercase tracking-widest font-mono font-bold text-amber-400/90 mb-1.5">
+          <Coins size={14} />
+          <span>Wager Placement</span>
+        </div>
+        <h3 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-tight">
+          Select Table Wager
+        </h3>
+        <p className="text-slate-400 text-xs sm:text-sm mt-1">
+          Each correct answer yields <span className="text-emerald-400 font-semibold font-mono">+1x Bet</span>. Each wrong guess deducts <span className="text-rose-400 font-semibold font-mono">-1x Bet</span>.
+        </p>
+      </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      {/* 3D Tactile Casino Chips Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         {bets.map((bet) => {
-          const betValue = bet.amount === 'ALL_IN' ? currentChips : bet.amount;
-          const canAfford = currentChips >= betValue;
+          const betValue = bet.amount === 'ALL_IN' ? Math.max(0, currentChips) : bet.amount;
+          const canAfford = currentChips >= betValue && betValue > 0;
+          const isAllIn = bet.amount === 'ALL_IN';
 
           return (
             <button
               key={bet.label}
               onClick={() => onBet(bet.amount)}
-              disabled={disabled || !canAfford}
-              className={`relative group px-6 py-8 rounded-xl font-bold text-white bg-gradient-to-br ${bet.color}
-                hover:scale-110 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed
-                disabled:hover:scale-100 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]`}
+              disabled={disabled || !canAfford || currentChips <= 0}
+              className={`group relative flex flex-col items-center justify-center p-4 sm:p-5 rounded-2xl border transition-all duration-200 outline-none
+                ${canAfford && !disabled && currentChips > 0
+                  ? 'bg-[#181D2A] border-[#2E374D] hover:border-amber-500/50 hover:bg-[#1E2435] hover:-translate-y-1 active:translate-y-0.5 shadow-tactile active:shadow-tactile-pressed cursor-pointer' 
+                  : 'bg-[#10131B] border-[#1C2230] opacity-50 cursor-not-allowed'
+                }`}
             >
-              <div className="flex flex-col items-center gap-2">
-                <DollarSign size={32} />
-                <span className="text-2xl">{bet.label}</span>
-                {bet.amount === 'ALL_IN' && (
-                  <span className="text-xs opacity-80">${currentChips}</span>
-                )}
+              {/* The Physical Casino Chip Icon */}
+              <div className={`relative w-20 h-20 sm:w-22 sm:h-22 rounded-full p-2 border-2 ${bet.theme.outerRing} shadow-chip mb-2 sm:mb-3 transition-transform group-hover:scale-105`}>
+                {/* Milled Edge Notches (Dashed Ring) */}
+                <div className={`w-full h-full rounded-full border-2 border-dashed ${bet.theme.borderDashed} ${bet.theme.innerBg} flex flex-col items-center justify-center`}>
+                  {isAllIn ? (
+                    <Flame className="text-amber-400 animate-pulse mb-0.5" size={18} />
+                  ) : (
+                    <span className="text-[9px] font-mono uppercase text-slate-400 tracking-wider">CHIP</span>
+                  )}
+                  <span className={`text-lg sm:text-xl font-black font-mono leading-none tracking-tight ${bet.theme.accentText}`}>
+                    {bet.label}
+                  </span>
+                </div>
               </div>
+
+              {/* Sub-label & Value */}
+              <div className="text-center">
+                <div className="text-xs uppercase font-mono font-bold tracking-wider text-slate-300">
+                  {bet.theme.sublabel}
+                </div>
+                <div className="text-xs text-slate-500 font-mono mt-0.5">
+                  Wager: <span className="text-slate-300 font-bold">${(betValue ?? 0).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Disabled Lock Overlay */}
               {!canAfford && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl text-sm">
-                  Not enough chips
+                <div className="absolute inset-0 bg-[#090A0F]/85 backdrop-blur-[2px] rounded-2xl flex flex-col items-center justify-center p-3 text-center">
+                  <AlertCircle size={20} className="text-rose-400 mb-1" />
+                  <span className="text-xs font-mono font-bold text-slate-300">Insufficient Chips</span>
+                  <span className="text-[10px] text-slate-500 font-mono">{currentChips <= 0 ? 'Bankroll: $0 (Watch mode)' : `Need $${betValue}`}</span>
                 </div>
               )}
             </button>
@@ -55,8 +141,13 @@ export default function BettingPanel({ currentChips, onBet, disabled, minBet = 1
         })}
       </div>
 
-      <div className="mt-4 text-center text-white/50 text-sm">
-        Current chips: <span className="text-yellow-400 font-bold">${currentChips}</span>
+      {/* Current Chips Readout Bar */}
+      <div className="mt-5 sm:mt-6 pt-3 sm:pt-4 border-t border-[#232938] flex flex-wrap justify-between items-center text-xs font-mono text-slate-400">
+        <span>MIN WAGER: ${minBet}</span>
+        <div className="flex items-center gap-2">
+          <span>ACTIVE WALLET:</span>
+          <span className="text-amber-400 font-bold text-sm tabular-nums">${(currentChips ?? 0).toLocaleString()}</span>
+        </div>
       </div>
     </div>
   );

@@ -77,18 +77,18 @@ class WebSocketHost {
       });
 
       ws.on('close', () => {
-        console.log(`❌ Connection closed: ${clientId}`);
+        console.log(`[WS Server] Connection closed: ${clientId}`);
         this.clients.delete(clientId);
         
         if (this.hostClient === ws) {
-          console.log('🏠 Host disconnected');
+          console.log('[WS Server] Host disconnected');
           this.hostClient = null;
           this.broadcastToPlayers({
             type: 'host-disconnected',
             message: 'Host has left the chat'
           });
         } else {
-          if (this.hostClient && this.hostClient.readyState === WebSocket.OPEN) {
+          if (this.hostClient && this.hostClient.readyState === 1) { // FIX BUG-006: use 1 (OPEN) directly
             this.sendToClient(this.hostClient, {
               type: 'player-left',
               clientId: clientId,
@@ -167,7 +167,7 @@ class WebSocketHost {
           this.clientUsernames.set(clientId, message.username);
           console.log(`👤 Player registered: ${clientId} as "${message.username}"`);
         }
-        if (this.hostClient && this.hostClient.readyState === 1) {
+        if (this.hostClient && this.hostClient.readyState === 1) { // FIX BUG-006: use 1 (OPEN) directly
           this.sendToClient(this.hostClient, {
             type: 'player-joined',
             clientId: clientId,
@@ -175,7 +175,7 @@ class WebSocketHost {
             timestamp: Date.now()
           });
           
-          // Send updated player list to host
+          // FIX BUG-007: was missing the 'type' field - client ignored this message
           const players = Array.from(this.clients.entries())
             .filter(([id, ws]) => ws !== this.hostClient && ws.readyState === 1)
             .map(([id, ws]) => ({
@@ -183,7 +183,9 @@ class WebSocketHost {
               username: this.clientUsernames.get(id) || 'Player',
               connected: true
             }));
+          console.log(`[WS Server] Sending player-list to host: ${players.length} player(s)`);
           this.sendToClient(this.hostClient, {
+            type: 'player-list', // FIX BUG-007: was missing this field
             players,
             timestamp: Date.now()
           });

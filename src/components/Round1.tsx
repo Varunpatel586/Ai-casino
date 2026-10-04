@@ -9,32 +9,37 @@ interface Round1Props {
   onComplete: (score: number, bet: number) => void;
 }
 
-// Original images for the challenge - in a real app, these could be from a database
+// Original images for the challenge
 const originalImages = [
   {
     id: 1,
     url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=500&auto=format&fit=crop',
-    description: 'A beautiful landscape'
+    description: 'A beautiful landscape',
+    keywords: ['landscape', 'mountain', 'lake', 'sunset', 'water', 'clouds', 'nature', 'beautiful', 'scenic']
   },
   {
     id: 2,
     url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=500&auto=format&fit=crop',
-    description: 'A cute animal'
+    description: 'A cute animal',
+    keywords: ['animal', 'fox', 'wildlife', 'cute', 'nature', 'orange', 'furry', 'forest', 'snow']
   },
   {
     id: 3,
     url: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=500&auto=format&fit=crop',
-    description: 'A scenic view'
+    description: 'A scenic view',
+    keywords: ['scenic', 'view', 'field', 'green', 'grass', 'trees', 'sky', 'summer', 'meadow']
   },
   {
     id: 4,
-    url: 'https://images.unsplash.com/photo-1433086969638-fb2aed80a3a8?w=500&auto=format&fit=crop',
-    description: 'A natural scene'
+    url: '/images/round1-img4.jpg',
+    description: 'A beautiful ocean view with trees',
+    keywords: ['blue', 'ocean', 'green', 'trees', 'clear', 'sky', 'white', 'clouds', 'sea', 'water', 'island']
   },
   {
     id: 5,
     url: 'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=500&auto=format&fit=crop',
-    description: 'A peaceful setting'
+    description: 'A peaceful setting',
+    keywords: ['red', 'poppies', 'flower', 'field', 'green', 'grass', 'nature', 'sky', 'summer', 'meadow']
   }
 ];
 
@@ -46,6 +51,7 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
   const [currentOriginalImage, setCurrentOriginalImage] = useState(originalImages[0]);
   const [promptTimeLeft, setPromptTimeLeft] = useState(60); // 1 minute for prompt phase
+  const [totalScore, setTotalScore] = useState(0);
 
   // Timer for prompt phase
   useEffect(() => {
@@ -85,7 +91,7 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
     setPhase('generating');
 
     try {
-      const image = await generateImage(userPrompt);
+      const image = await generateImage(userPrompt, currentOriginalImage.id);
       setGeneratedImage(image);
       setPhase('comparison');
     } catch (error) {
@@ -96,6 +102,17 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
   };
 
   const handleNextRound = () => {
+    // Calculate programmatic score based on keywords
+    const promptWords = userPrompt.toLowerCase().split(/\s+/);
+    const keywords = currentOriginalImage.keywords || [];
+    let matches = 0;
+    keywords.forEach(kw => {
+      if (promptWords.some(word => word.includes(kw))) matches++;
+    });
+    const accuracy = Math.min(100, Math.round((matches / Math.max(3, keywords.length / 2)) * 100));
+    const pointsGained = accuracy >= 50 ? 1 : 0;
+    setTotalScore(prev => prev + pointsGained);
+
     if (currentImageIndex < originalImages.length - 1) {
       setCurrentImageIndex(currentImageIndex + 1);
       setCurrentOriginalImage(originalImages[currentImageIndex + 1]);
@@ -108,62 +125,59 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
   };
 
   const handleFinishRound = () => {
-    onComplete(0, currentBet); // For now, giving 0 score since we're not implementing scoring
+    onComplete(totalScore, currentBet); // Give actual calculated score based on prompt accuracy
   };
 
   if (phase === 'intro') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center px-4">
-        <div className="max-w-3xl text-center">
-          <div className="mb-8">
-            <ImageIcon className="text-yellow-400 mx-auto mb-4" size={64} />
-            <h1 className="text-6xl font-black text-white mb-4">ROUND 1</h1>
-            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-500">
-              The AI Image Challenge
-            </h2>
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 shadow-2xl text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
+            <ImageIcon size={14} />
+            <span>Event II • Visual Turing Challenge</span>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
-            <p className="text-xl text-white/80 mb-4">
-              We'll show you 5 pairs of images. Your challenge: identify which one was generated by AI.
-            </p>
-            <p className="text-lg text-cyan-400">
-              Select the AI-generated image to score points!
-            </p>
-          </div>
+          <h1 className="text-4xl sm:text-5xl font-display font-black text-white tracking-tight uppercase mb-3">
+            The Prompt Gambit
+          </h1>
 
-          <div className="grid grid-cols-3 gap-4 mb-8 text-white">
-            <div className="bg-white/5 rounded-xl p-4">
-              <div className="text-3xl font-bold text-yellow-400">5</div>
-              <div className="text-sm">Image Pairs</div>
+          <p className="text-slate-300 text-base leading-relaxed mb-8 max-w-lg mx-auto">
+            You will be shown 5 target images. Study each image, then write a descriptive prompt to recreate it using neural generation. Higher keyword accuracy yields higher payouts.
+          </p>
+
+          <div className="grid grid-cols-3 gap-3 mb-8 text-left">
+            <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4">
+              <span className="text-[11px] font-mono uppercase text-slate-500 block">Artworks</span>
+              <span className="text-2xl font-mono font-black text-white">5 Total</span>
             </div>
-            <div className="bg-white/5 rounded-xl p-4">
-              <div className="text-3xl font-bold text-cyan-400">2</div>
-              <div className="text-sm">Minutes Total</div>
+            <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4">
+              <span className="text-[11px] font-mono uppercase text-slate-500 block">Prompt Window</span>
+              <span className="text-2xl font-mono font-black text-amber-400">60 Sec</span>
             </div>
-            <div className="bg-white/5 rounded-xl p-4">
-              <div className="text-3xl font-bold text-pink-400">1pt</div>
-              <div className="text-sm">Per Correct Guess</div>
+            <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4">
+              <span className="text-[11px] font-mono uppercase text-slate-500 block">Win Rate</span>
+              <span className="text-2xl font-mono font-black text-emerald-400">+1x / Pic</span>
             </div>
           </div>
 
           <button
             onClick={() => setPhase('betting')}
-            className="px-12 py-5 text-2xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-full hover:scale-110 transition-all duration-300 hover:shadow-[0_0_40px_rgba(192,132,252,0.6)]"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-lg uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
           >
-            Start Round 1
+            <span>PLACE WAGER &amp; START</span>
           </button>
 
-          {/* Development skip button */}
-          <button
-            onClick={() => {
-              // Skip to results with 0 score for testing
-              handleFinishRound();
-            }}
-            className="mt-4 px-6 py-3 text-sm font-bold text-white/60 bg-gray-600/50 rounded-full hover:bg-gray-600/70 transition-all duration-300"
-          >
-            Skip Round 1 (Dev)
-          </button>
+          {/* Development skip button for testing transitions */}
+          <div className="mt-4">
+            <button
+              onClick={() => {
+                handleFinishRound();
+              }}
+              className="text-xs font-mono text-slate-500 hover:text-slate-300 underline underline-offset-4 transition-colors cursor-pointer"
+            >
+              Skip Round (Dev Test)
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -171,13 +185,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'betting') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 sm:p-8">
-        <div className="max-w-2xl w-full bg-white/5 backdrop-blur-md border border-white/20 rounded-2xl p-6 sm:p-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-4 sm:mb-6 text-center">Place Your Bet</h1>
-          <p className="text-white/70 mb-6 sm:mb-8 text-center">
-            How many chips would you like to bet on this round? You'll win or lose based on your accuracy.
-          </p>
-          
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-2xl w-full">
           <BettingPanel 
             currentChips={currentChips} 
             onBet={handleBet} 
@@ -189,25 +198,37 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
     );
   }
 
-
   if (phase === 'playing') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 sm:p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Image {currentImageIndex + 1} of {originalImages.length}
-            </h2>
-            <p className="text-white/70 mb-6">
-              Look at this image and describe what you want the AI to generate
-            </p>
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg p-3 sm:p-5 flex flex-col justify-between max-w-4xl mx-auto overflow-hidden select-none">
+        <div className="w-full">
+          {/* Header Progress */}
+          <div className="flex justify-between items-center mb-6 bg-[#12151E] border border-[#232938] rounded-xl px-5 py-3">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase text-slate-400">
+              <span className="text-amber-400 font-bold">Art Specimen</span>
+              <span>•</span>
+              <span className="text-white font-bold">{currentImageIndex + 1} of {originalImages.length}</span>
+            </div>
+            <div className="text-xs font-mono text-slate-400">
+              Active Wager: <span className="text-amber-400 font-bold">${currentBet}</span>
+            </div>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-md border border-white/20 rounded-2xl p-6 sm:p-8 mb-8">
-            <div className="aspect-video bg-black/20 rounded-xl overflow-hidden mb-6">
+          {/* Exhibition Easel Card */}
+          <div className="bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 shadow-2xl">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-tight">
+                Inspect The Original Image
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">
+                Study colors, subject matter, composition, and atmosphere. You will describe it from memory.
+              </p>
+            </div>
+
+            <div className="aspect-video bg-black/60 rounded-xl overflow-hidden mb-6 border border-[#2E374D] shadow-inner">
               <img
                 src={currentOriginalImage.url}
-                alt="Original image"
+                alt="Target specimen"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -215,9 +236,9 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
             <div className="text-center">
               <button
                 onClick={handleImageSelect}
-                className="px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-full hover:scale-110 transition-all duration-300"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
               >
-                I understand this image
+                <span>I HAVE MEMORIZED THIS ARTWORK</span>
               </button>
             </div>
           </div>
@@ -232,38 +253,58 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
     const isTimeRunningOut = promptTimeLeft <= 10;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 sm:p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Describe what you want the AI to generate
-            </h2>
-            <div className={`text-2xl font-bold mb-2 ${isTimeRunningOut ? 'text-red-400 animate-pulse' : 'text-cyan-400'}`}>
-              {minutes}:{seconds.toString().padStart(2, '0')}
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg p-3 sm:p-5 flex flex-col justify-between max-w-4xl mx-auto overflow-hidden select-none">
+        <div className="w-full">
+          {/* Top Bar with Digital Countdown */}
+          <div className="flex justify-between items-center mb-6 bg-[#12151E] border border-[#232938] rounded-xl px-5 py-3">
+            <span className="text-xs font-mono uppercase text-slate-400">
+              Challenge <span className="text-white font-bold">{currentImageIndex + 1}/{originalImages.length}</span>
+            </span>
+
+            {/* Countdown Clock */}
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-lg font-mono text-sm font-bold border ${
+              isTimeRunningOut 
+                ? 'bg-rose-500/10 border-rose-500 text-rose-400 animate-pulse' 
+                : 'bg-[#181D2A] border-[#2E374D] text-amber-400'
+            }`}>
+              <span className="text-xs uppercase text-slate-400">Time Left:</span>
+              <span className="text-base tracking-wider">{minutes}:{seconds.toString().padStart(2, '0')}</span>
             </div>
-            <p className={`text-white/70 ${isTimeRunningOut ? 'text-red-300' : ''}`}>
-              {isTimeRunningOut ? 'Time running out!' : 'Write a detailed prompt describing the image you want the AI to create'}
-            </p>
           </div>
 
-          <div className="bg-white/5 backdrop-blur-md border border-white/20 rounded-2xl p-6 sm:p-8 mb-8">
+          {/* Prompt Terminal Box */}
+          <div className="bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 shadow-2xl">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-tight">
+                Synthesize Your Prompt
+              </h2>
+              <p className="text-slate-400 text-sm mt-1">
+                Provide detailed descriptors for the AI to recreate the original canvas.
+              </p>
+            </div>
+
             <div className="mb-6">
               <textarea
                 value={userPrompt}
                 onChange={(e) => setUserPrompt(e.target.value)}
-                placeholder="Describe the image you want the AI to generate... (e.g., 'A serene mountain landscape at sunset with a lake in the foreground')"
-                className="w-full h-32 p-4 bg-black/30 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Describe lighting, subject, landscape, atmosphere... (e.g. A serene mountain lake at sunset with crystal clear reflections and pine trees)"
+                className="w-full h-36 p-4 bg-[#181D2A] border border-[#2E374D] focus:border-amber-400 rounded-xl text-white placeholder-slate-500 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 transition-all resize-none"
+                autoFocus
               />
+              <div className="flex justify-between items-center text-[11px] font-mono text-slate-500 mt-2">
+                <span>Accurate keywords match higher payout points.</span>
+                <span>{userPrompt.length} chars</span>
+              </div>
             </div>
 
             <div className="text-center">
               <button
                 onClick={handlePromptSubmit}
                 disabled={!userPrompt.trim()}
-                className="px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-full hover:scale-110 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
               >
-                <Send className="inline mr-2" size={20} />
-                Generate Image
+                <Send size={18} />
+                <span>GENERATE AI CANVAS</span>
               </button>
             </div>
           </div>
@@ -274,14 +315,19 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'generating') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center px-4">
-        <div className="max-w-3xl text-center">
-          <div className="mb-8">
-            <Sparkles className="text-yellow-400 mx-auto mb-4 animate-spin" size={64} />
-            <h1 className="text-4xl font-black text-white mb-4">Generating Image</h1>
-            <p className="text-xl text-white/80">
-              Creating your AI image based on the prompt...
-            </p>
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl my-auto">
+          <div className="w-16 h-16 rounded-2xl bg-[#181D2A] border border-amber-500/30 flex items-center justify-center mx-auto mb-6">
+            <Sparkles className="text-amber-400 animate-spin" size={32} />
+          </div>
+          <h2 className="text-2xl font-display font-black text-white uppercase tracking-tight mb-2">
+            Synthesizing Canvas
+          </h2>
+          <p className="text-slate-400 text-sm font-mono mb-4">
+            Routing through AI generation cascade...
+          </p>
+          <div className="w-full bg-[#181D2A] rounded-full h-1.5 overflow-hidden">
+            <div className="bg-amber-400 h-full w-2/3 animate-pulse rounded-full" />
           </div>
         </div>
       </div>
@@ -290,33 +336,46 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
   if (phase === 'comparison') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 sm:p-8">
-        <div className="max-w-6xl mx-auto">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg p-3 sm:p-5 flex flex-col justify-between max-w-4xl mx-auto overflow-hidden select-none">
+        <div className="w-full">
+          {/* Header */}
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Compare the Images
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-2">
+              <span>Specimen Appraisal</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-display font-black text-white uppercase tracking-tight">
+              Compare Canvases
             </h2>
-            <p className="text-white/70 mb-6">
-              How well does the AI-generated image match what you expected?
+            <p className="text-slate-400 text-sm mt-1">
+              Verify how closely your prompt directed the AI to match the original piece.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="bg-white/5 backdrop-blur-md border border-white/20 rounded-2xl p-6 sm:p-8">
-              <h3 className="text-xl font-bold text-white mb-4">Original Image</h3>
-              <div className="aspect-video bg-black/20 rounded-xl overflow-hidden mb-4">
+          {/* Dual Gallery Easels */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Original */}
+            <div className="bg-[#12151E] border border-[#232938] rounded-xl p-5 shadow-md">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">Target Specimen</span>
+                <span className="text-[11px] font-mono text-emerald-400 uppercase">Original</span>
+              </div>
+              <div className="aspect-video bg-black/60 rounded-lg overflow-hidden mb-3 border border-[#283248]">
                 <img
                   src={currentOriginalImage.url}
                   alt="Original image"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <p className="text-white/70 text-sm">{currentOriginalImage.description}</p>
+              <p className="text-xs font-mono text-slate-400 truncate">{currentOriginalImage.description}</p>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-md border border-white/20 rounded-2xl p-6 sm:p-8">
-              <h3 className="text-xl font-bold text-white mb-4">AI Generated Image</h3>
-              <div className="aspect-video bg-black/20 rounded-xl overflow-hidden mb-4">
+            {/* AI Generated */}
+            <div className="bg-[#12151E] border border-[#232938] rounded-xl p-5 shadow-md">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">Generated Specimen</span>
+                <span className="text-[11px] font-mono text-amber-400 uppercase">AI Output</span>
+              </div>
+              <div className="aspect-video bg-black/60 rounded-lg overflow-hidden mb-3 border border-[#283248] flex items-center justify-center">
                 {generatedImage ? (
                   <img
                     src={generatedImage.data}
@@ -324,23 +383,61 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white/50">
-                    Failed to generate image
+                  <div className="text-slate-500 font-mono text-xs">
+                    Image generation unavailable
                   </div>
                 )}
               </div>
-              <p className="text-white/70 text-sm">Generated from: "{userPrompt}"</p>
+              <p className="text-xs font-mono text-slate-400 truncate">Prompt: "{userPrompt}"</p>
             </div>
           </div>
 
+          {/* Next Button */}
           <div className="text-center">
             <button
               onClick={handleNextRound}
-              className="px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-green-600 to-blue-600 rounded-full hover:scale-110 transition-all duration-300"
+              className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
             >
-              {currentImageIndex < originalImages.length - 1 ? 'Next Image' : 'See Results'}
+              <span>{currentImageIndex < originalImages.length - 1 ? 'NEXT ARTWORK' : 'FINALIZE ROUND 2'}</span>
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'results') {
+    return (
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl my-auto">
+          <div className="w-14 h-14 rounded-2xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-4">
+            <ImageIcon size={28} />
+          </div>
+
+          <div className="text-xs font-mono uppercase tracking-widest text-slate-400 mb-1">
+            Round 2 Complete
+          </div>
+          <h2 className="text-3xl font-display font-black text-white uppercase tracking-tight mb-6">
+            Valuation Settled
+          </h2>
+
+          <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-5 mb-6 text-left">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-xs font-mono text-slate-400">Recreation Score:</span>
+              <span className="text-xl font-mono font-bold text-amber-400">{totalScore} / 5</span>
+            </div>
+            <div className="flex justify-between items-center pt-3 border-t border-[#232938]">
+              <span className="text-xs font-mono text-slate-400">Active Wager:</span>
+              <span className="text-sm font-mono text-white font-bold">${currentBet}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleFinishRound}
+            className="w-full inline-flex items-center justify-center gap-2 py-4 px-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
+          >
+            <span>COLLECT WINNINGS &amp; ENTER VAULT</span>
+          </button>
         </div>
       </div>
     );

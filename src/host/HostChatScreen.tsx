@@ -140,7 +140,7 @@ export default function HostChatScreen() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="w-full h-full flex flex-col flex-1 min-h-0 overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
       <div className="bg-slate-800/50 backdrop-blur-md border-b border-purple-900/50 p-4">
         <div className="max-w-6xl mx-auto">

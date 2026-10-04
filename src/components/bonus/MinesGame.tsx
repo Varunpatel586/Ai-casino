@@ -16,7 +16,7 @@ interface Cell {
   content: string;
 }
 
-const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, result, currentChips }) => {
+const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, currentChips }) => {
   const [minesGrid, setMinesGrid] = useState<Cell[]>([]);
   const [mines, setMines] = useState<number[]>([]);
   const [gameOver, setGameOver] = useState(false);
@@ -32,7 +32,7 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipU
 
   const initGame = () => {
     const gridSize = 25;
-    const mineCount = 5;
+    const mineCount = 2; // Lowered from 5 to 2 so wipeouts are less common
     const newMines: number[] = [];
 
     // Place mines randomly
@@ -128,142 +128,152 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipU
   };
 
   const getCellClass = (cell: Cell) => {
-    let classes = 'w-16 h-16 flex items-center justify-center text-2xl font-bold border-2 transition-all duration-300 cursor-pointer select-none';
+    let classes = 'w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center text-xl sm:text-2xl font-bold rounded-xl transition-all duration-200 cursor-pointer select-none border-2';
 
     if (cell.revealed) {
       if (cell.isMine) {
-        classes += ' bg-gradient-to-br from-red-500 to-red-700 border-red-300 text-white shadow-lg transform scale-105';
+        classes += ' bg-rose-950/90 border-rose-500 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.5)] scale-105';
       } else {
-        classes += ' bg-gradient-to-br from-emerald-400 to-green-600 border-emerald-300 text-white shadow-lg transform scale-105';
+        classes += ' bg-emerald-950/80 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] scale-105';
       }
     } else {
-      classes += ' bg-gradient-to-br from-slate-600 to-slate-700 border-slate-400 hover:from-slate-500 hover:to-slate-600 hover:border-slate-300 hover:shadow-md hover:scale-105 active:scale-95';
+      classes += ' bg-[#181D2A] border-[#283248] text-slate-500 hover:border-amber-400/60 hover:bg-[#1E2536] hover:scale-105 active:scale-95 shadow-sm';
     }
 
     return classes;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 flex items-center justify-center px-4">
-      <div className="max-w-3xl w-full text-center">
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
-          <h2 className="text-5xl font-black text-white mb-4">Mines Game</h2>
-          <p className="text-xl text-red-300 mb-8">Find all the gems and avoid the mines!</p>
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+      <div className="max-w-md sm:max-w-lg w-full bg-[#12151E] border border-[#232938] rounded-2xl p-4 sm:p-6 text-center shadow-2xl my-auto">
+        {/* Header */}
+        <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-rose-500/30 text-rose-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
+          <span>Side Action // High Stakes</span>
+        </div>
 
-          {/* Instructions */}
-          <div className="bg-red-900/30 border border-red-400/30 rounded-xl p-6 mb-8">
-            <h3 className="text-2xl font-bold text-white mb-3">How to Play:</h3>
-            <div className="text-red-200 space-y-2 text-left">
-              <p>1. Select your bet amount ($10, $20, or $30)</p>
-              <p>2. Click on squares to reveal diamonds or mines</p>
-              <p>3. Each diamond gives you 0.5x your bet instantly!</p>
-              <p>4. Hit a mine and lose all your chips</p>
-              <p>5. Cash out anytime to keep your winnings</p>
+        <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
+          Vault Grid Mines
+        </h2>
+        <p className="text-slate-400 text-xs font-sans mb-3">
+          Uncover hidden diamonds in a 5x5 security grid. Each diamond pays +0.5x. Cash out anytime before hitting a mine.
+        </p>
+
+        {/* Wager Selection */}
+        {!hasDeductedBet && (
+          <div className="mb-6 p-4 bg-[#181D2A] border border-[#283248] rounded-xl">
+            <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block mb-3">
+              Step 1: Choose Wager Amount
+            </span>
+            <div className="flex justify-center gap-3">
+              {[10, 20, 30].map((amt) => {
+                const canAfford = currentChips >= amt;
+                const isSelected = selectedBet === amt;
+                return (
+                  <button
+                    key={amt}
+                    onClick={() => canAfford && handleBetSelect(amt)}
+                    disabled={!canAfford}
+                    className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center transition-all cursor-pointer ${
+                      isSelected
+                        ? 'ring-4 ring-amber-400 scale-105 shadow-chip'
+                        : 'border-2 border-dashed border-[#2E384D] hover:border-amber-400/60'
+                    } ${
+                      amt === 10
+                        ? 'bg-emerald-950/80 text-emerald-300'
+                        : amt === 20
+                          ? 'bg-blue-950/80 text-blue-300'
+                          : 'bg-purple-950/80 text-purple-300'
+                    } ${!canAfford ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
+                  >
+                    <span className="text-[10px] font-mono uppercase text-slate-400">CHIP</span>
+                    <span className="text-lg font-mono font-black">${amt}</span>
+                  </button>
+                );
+              })}
             </div>
+            {currentChips < 10 && (
+              <p className="text-xs font-mono text-rose-400 mt-2">Insufficient chips to enter this vault.</p>
+            )}
           </div>
+        )}
 
-          {/* Betting Options */}
-          {!hasDeductedBet && (
-            <div className="mb-8">
-              <h3 className="text-2xl font-bold text-white mb-4">Select Your Bet</h3>
-              <div className="flex gap-4 justify-center">
-                <button
-                  className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                    selectedBet === 10
-                      ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                      : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                  } ${currentChips < 10 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => currentChips >= 10 && handleBetSelect(10)}
-                  disabled={currentChips < 10}
-                >
-                  $10
-                </button>
-                <button
-                  className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                    selectedBet === 20
-                      ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                      : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                  } ${currentChips < 20 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => currentChips >= 20 && handleBetSelect(20)}
-                  disabled={currentChips < 20}
-                >
-                  $20
-                </button>
-                <button
-                  className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                    selectedBet === 30
-                      ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                      : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                  } ${currentChips < 30 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => currentChips >= 30 && handleBetSelect(30)}
-                  disabled={currentChips < 30}
-                >
-                  $30
-                </button>
-              </div>
+        {/* Active Grid Control Header */}
+        {hasDeductedBet && (
+          <div className="flex items-center justify-between p-3.5 bg-[#181D2A] border border-[#283248] rounded-xl mb-5">
+            <div className="text-left font-mono">
+              <span className="text-[10px] uppercase text-slate-400 block">Diamonds Found</span>
+              <span className="text-base font-black text-emerald-400 flex items-center gap-1">
+                💎 {diamondsFound}
+              </span>
             </div>
-          )}
 
-          {/* Game Area */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-white">
-                Progress: {diamondsFound} diamonds found
-              </h3>
-              {canCashOut && !gameOver && !gameWon && (
-                <button
-                  onClick={handleCashOut}
-                  className="px-6 py-3 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-full hover:scale-110 transition-all duration-300 shadow-lg hover:shadow-green-500/30"
-                >
-                  CASH OUT ({Math.floor((selectedBet || 0) * 0.5 * diamondsFound)} chips)
-                </button>
+            {canCashOut && !gameOver && !gameWon && (
+              <button
+                onClick={handleCashOut}
+                className="py-2 px-5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 text-slate-950 font-display font-black text-xs uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all cursor-pointer"
+              >
+                Cash Out (+{Math.floor((selectedBet || 0) * 0.5 * diamondsFound)} Chips)
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 5x5 Vault Grid */}
+        <div className="grid grid-cols-5 gap-2 sm:gap-2.5 max-w-fit mx-auto mb-6 p-3 sm:p-4 bg-[#0E1118] border border-[#232938] rounded-2xl shadow-inner">
+          {minesGrid.map((cell) => (
+            <div
+              key={cell.index}
+              className={getCellClass(cell)}
+              onClick={() => handleCellClick(cell.index)}
+            >
+              {cell.revealed ? (
+                <span className={cell.isMine ? 'animate-pulse' : ''}>
+                  {cell.content}
+                </span>
+              ) : (
+                <span className="text-xs font-mono text-slate-600 select-none">#</span>
               )}
             </div>
+          ))}
+        </div>
 
-            <div className="mines-grid grid grid-cols-5 gap-3 max-w-sm mx-auto mb-6 p-4 bg-slate-800/30 rounded-2xl border-2 border-slate-600/50 backdrop-blur-sm">
-              {minesGrid.map((cell) => (
-                <div
-                  key={cell.index}
-                  className={getCellClass(cell)}
-                  onClick={() => handleCellClick(cell.index)}
-                >
-                  {cell.revealed ? (
-                    <span className={`text-2xl ${cell.isMine ? 'animate-pulse' : 'drop-shadow-lg'}`}>
-                      {cell.content}
-                    </span>
-                  ) : (
-                    <span className="text-slate-300 text-xl font-bold">?</span>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Game Status */}
-            {gameOver && (
-              <div className="bg-red-900/50 border-2 border-red-400 text-red-300 text-2xl font-bold mb-6 p-6 rounded-xl">
-                💥 Game Over! You hit a mine and lost all your chips! 💥
-              </div>
-            )}
-
-            {gameWon && (
-              <div className="bg-green-900/50 border-2 border-green-400 text-green-300 text-2xl font-bold mb-6 p-6 rounded-xl">
-                <h3 className="text-3xl font-bold text-center">Congratulations!</h3>
-                <div className="text-xl mt-2">
-                  You secured {Math.floor((selectedBet || 0) * 0.5 * diamondsFound)} chips!
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={onBack}
-                className="px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-gray-500 to-gray-600 rounded-full hover:scale-110 transition-all duration-300"
-              >
-                BACK TO MENU
-              </button>
-            </div>
+        {/* Game Status Messages */}
+        {gameOver && (
+          <div className="p-4 rounded-xl border border-rose-500/40 bg-rose-950/40 text-rose-300 mb-6 animate-in fade-in zoom-in-95 duration-200">
+            <span className="text-[10px] font-mono uppercase tracking-widest block mb-0.5 text-rose-400">
+              Security Breach Triggered
+            </span>
+            <p className="text-xl font-display font-black uppercase mb-1">
+              Mine Detonated!
+            </p>
+            <p className="text-xs font-mono">
+              You uncovered a mine in the security vault. Bankroll cleared to 0.
+            </p>
           </div>
+        )}
+
+        {gameWon && (
+          <div className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/40 text-emerald-300 mb-6 animate-in fade-in zoom-in-95 duration-200">
+            <span className="text-[10px] font-mono uppercase tracking-widest block mb-0.5 text-emerald-400">
+              Vault Evacuated Safely
+            </span>
+            <p className="text-xl font-display font-black uppercase mb-1">
+              Chips Secured!
+            </p>
+            <p className="text-xs font-mono">
+              Successfully cashed out with +{Math.floor((selectedBet || 0) * 0.5 * diamondsFound)} chips added to bankroll.
+            </p>
+          </div>
+        )}
+
+        {/* Action Controls */}
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={onBack}
+            className="py-3 px-6 bg-[#181D2A] hover:bg-[#202738] border border-[#283248] hover:border-slate-500 text-slate-300 font-mono text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+          >
+            Back To Tables
+          </button>
         </div>
       </div>
     </div>

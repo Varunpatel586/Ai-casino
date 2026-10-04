@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, ShieldAlert, Clock } from 'lucide-react';
 import { network_manager } from '../../services/network';
 import { get_ai_response } from '../../services/gemini_chat';
 
@@ -8,7 +8,7 @@ type NetworkMessage = {
   type: 'chat' | 'connect' | 'connected' | 'disconnect' | 'error' |
         'player-joined' | 'player-left' | 'player-list' |
         'host-registered' | 'host-available' | 'host-disconnected' |
-        'register-host' | 'player-join';
+        'register-host' | 'player-join' | 'private-message' | 'player-private-message';
   content?: string;
   message?: string;
   timestamp: number;
@@ -19,6 +19,7 @@ type NetworkMessage = {
   recipientId?: string;
   isPrivate?: boolean;
   players?: string[];
+  targetPlayerId?: string;
 };
 
 type Message = {
@@ -153,19 +154,7 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
         }
       };
 
-      // Connect to the host
-      const hostUrl = window.location.hostname;
-      console.log(`Connecting to host at: ${hostUrl}`);
-
-      network_manager.connect_to_host(hostUrl).catch((error: Error) => {
-        console.error('Failed to connect to host:', error);
-        setMessages(prev => [...prev, {
-          id: generateMessageId(),
-          text: `Failed to connect to host: ${error.message}`,
-          sender: 'system',
-          timestamp: new Date()
-        }]);
-      });
+      // We are already connected via Round3.tsx, so no need to call connect_to_host again here!
     }
 
     // Clean up
@@ -238,8 +227,8 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
         }]);
       }
     } else {
-      // Send to human chat
-      network_manager.send_chat_message(input);
+      // Send to human chat (privately to host)
+      network_manager.send_private_message_to_host(input);
     }
   };
 
@@ -250,100 +239,147 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
     }
   };
 
+  const remainingMessages = typeof messageLimit === 'number' && typeof messagesSent === 'number'
+    ? Math.max(0, messageLimit - messagesSent)
+    : null;
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Chat header */}
-      <div className="bg-slate-800 p-4 border-b border-slate-700">
-        <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold text-white">
-            Chat Partner
-          </h2>
-          <div className="text-sm text-slate-400">
-            Time left: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+    <div className="flex flex-col h-full bg-[#0E1118]">
+      {/* Terminal Comms Header */}
+      <div className="bg-[#12151E] px-4 py-3 border-b border-[#232938] flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-[#181D2A] border border-amber-500/20 text-amber-400">
+            <ShieldAlert size={16} />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-[#12151E] animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-black uppercase tracking-wider text-white">
+                SUBJECT #402
+              </span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-emerald-400">
+                LIVE COMMS
+              </span>
+            </div>
+            <p className="text-[11px] font-mono text-slate-400">Encrypted Blind Interrogation Channel</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-[#181D2A] border border-[#232938] px-3 py-1 rounded-lg">
+            <Clock size={13} className="text-amber-400" />
+            <span className={`text-xs font-mono font-bold ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-amber-400'}`}>
+              {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Show messages left if limit is set */}
-        {typeof messageLimit === 'number' && typeof messagesSent === 'number' && (
-          <div className="mb-2 text-sm text-slate-300 text-center">
-            Messages left: {Math.max(0, messageLimit - messagesSent)}
+      {/* Query quota status banner */}
+      {remainingMessages !== null && (
+        <div className="bg-[#151922] px-4 py-2 border-b border-[#232938] flex items-center justify-between text-xs font-mono">
+          <span className="text-slate-400">Queries Remaining:</span>
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: messageLimit || 3 }).map((_, i) => (
+              <span
+                key={i}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  i < (messageLimit! - remainingMessages)
+                    ? 'bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]'
+                    : 'bg-[#232938]'
+                }`}
+              />
+            ))}
+            <span className="text-amber-400 font-bold ml-1">{remainingMessages} of {messageLimit}</span>
           </div>
-        )}
+        </div>
+      )}
 
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.sender === 'you' ? 'justify-end' : 'justify-start'}`}
-          >
+      {/* Messages Feed */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        {messages.map((message) => {
+          const isYou = message.sender === 'you';
+          return (
             <div
-              className={`max-w-[80%] rounded-lg p-3 ${
-                message.sender === 'you'
-                  ? 'bg-blue-600 text-white rounded-br-none'
-                  : 'bg-slate-700 text-white rounded-bl-none'
-              }`}
+              key={message.id}
+              className={`flex ${isYou ? 'justify-end' : 'justify-start'}`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-semibold">
-                  {message.sender === 'you' 
-                    ? 'You' 
-                    : 'Chat Partner'}
-                </span>
-                <span className="text-xs opacity-70 ml-2">
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+              <div
+                className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-3.5 shadow-md ${
+                  isYou
+                    ? 'bg-[#181D2A] border border-amber-500/30 text-white rounded-tr-sm'
+                    : 'bg-[#121622] border border-[#263045] text-slate-200 rounded-tl-sm'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3 mb-1.5 pb-1 border-b border-white/5">
+                  <span className={`text-[10px] font-mono font-black uppercase tracking-wider ${isYou ? 'text-amber-400' : 'text-blue-400'}`}>
+                    {isYou ? 'Investigator (You)' : 'Target Response'}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap break-words text-sm font-sans leading-relaxed text-slate-200">
+                  {message.text}
+                </p>
               </div>
-              <p className="whitespace-pre-wrap break-words">{message.text}</p>
             </div>
-          </div>
-        ))}
+          );
+        })}
+
         {isTyping && (
-          <div className="flex items-center gap-2 p-2">
-            <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" />
-            <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
-            <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.4s' }} />
+          <div className="flex items-center gap-2 p-3 bg-[#121622] border border-[#263045] rounded-xl w-fit">
+            <span className="text-xs font-mono text-slate-400 mr-1">Subject transmitting</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" />
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.4s' }} />
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input area */}
-      <div className="p-4 border-t border-slate-700">
+      <div className="p-3.5 sm:p-4 bg-[#12151E] border-t border-[#232938]">
         <div className="flex gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message your chat partner..."
-            className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={timeLeft <= 0 || disableInput}
+            placeholder={
+              disableInput || (remainingMessages !== null && remainingMessages <= 0)
+                ? "Interrogation limit reached. Submit your verdict above."
+                : "Type interrogation query..."
+            }
+            className="flex-1 bg-[#181D2A] border border-[#283248] rounded-xl px-4 py-2.5 text-white placeholder-slate-500 font-sans text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={timeLeft <= 0 || disableInput || (remainingMessages !== null && remainingMessages <= 0)}
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || timeLeft <= 0}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={!input.trim() || timeLeft <= 0 || disableInput || (remainingMessages !== null && remainingMessages <= 0)}
+            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold rounded-xl px-4 py-2.5 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center"
           >
-            <Send size={20} />
+            <Send size={18} />
           </button>
         </div>
-        
+
         {timeLeft <= 0 && (
-          <div className="mt-4 flex justify-center gap-4">
-            <button
-              onClick={() => onComplete('ai')}
-              className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
-            >
-              AI
-            </button>
-            <button
-              onClick={() => onComplete('human')}
-              className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
-            >
-              Human
-            </button>
+          <div className="mt-4 p-3 bg-[#181D2A] border border-[#232938] rounded-xl text-center">
+            <span className="text-xs font-mono uppercase text-slate-400 block mb-3">Time Expired — Declare Verdict</span>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => onComplete('ai')}
+                className="px-6 py-2 bg-gradient-to-b from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-display font-bold uppercase tracking-wide text-xs rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 cursor-pointer"
+              >
+                Artificial
+              </button>
+              <button
+                onClick={() => onComplete('human')}
+                className="px-6 py-2 bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-display font-bold uppercase tracking-wide text-xs rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 cursor-pointer"
+              >
+                Human
+              </button>
+            </div>
           </div>
         )}
       </div>

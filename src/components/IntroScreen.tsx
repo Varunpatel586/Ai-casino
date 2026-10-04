@@ -1,4 +1,4 @@
-// import { Sparkles } from 'lucide-react';
+import { Trophy, Coins, Brain, ChevronRight, Sparkles } from 'lucide-react';
 
 interface IntroScreenProps {
   onStart: () => void;
@@ -6,68 +6,81 @@ interface IntroScreenProps {
 
 export default function IntroScreen({ onStart }: IntroScreenProps) {
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center overflow-hidden relative"
-      style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #0f172a 100%)',
-        minHeight: '100vh'
-      }}
-    >
-      <div 
-        className="absolute inset-0"
-        style={{
-          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.5) 0%, rgba(88, 28, 135, 0.5) 50%, rgba(15, 23, 42, 0.5) 100%)',
-          backdropFilter: 'blur(4px)'
-        }}
-      ></div>
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-6 relative overflow-hidden select-none">
+      {/* Background Decorative Rings & Ambient Lighting */}
+      <div className="absolute w-[450px] h-[450px] rounded-full bg-amber-500/10 blur-[90px] pointer-events-none -top-16 -right-16" />
+      <div className="absolute w-[500px] h-[500px] rounded-full bg-emerald-500/10 blur-[100px] pointer-events-none top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute w-[400px] h-[400px] rounded-full bg-blue-600/10 blur-[90px] pointer-events-none -bottom-16 -left-16" />
+      <div className="absolute w-[350px] h-[350px] rounded-full bg-purple-600/10 blur-[90px] pointer-events-none bottom-10 right-10" />
+      <div className="absolute w-[500px] h-[500px] rounded-full border border-amber-500/15 pointer-events-none -top-32 -right-32" />
+      <div className="absolute w-[600px] h-[600px] rounded-full border border-emerald-500/10 pointer-events-none -bottom-48 -left-48" />
 
-      <div className="relative z-10 text-center px-4 max-w-4xl">
-        <div className="mb-8 animate-bounce">
-          <div className="inline-flex items-center gap-4 text-8xl font-black">
-            <span className="text-white text-8xl font-black drop-shadow-[0_0_20px_rgba(255,215,0,0.8)]">
-              AI
-            </span>
-            <span className="text-6xl">🎰</span>
-            <span className="text-white text-8xl font-black drop-shadow-[0_0_20px_rgba(0,255,255,0.8)]">
-              CASINO
-            </span>
+      <div className="relative z-10 text-center max-w-4xl mx-auto w-full h-full flex flex-col justify-between items-center py-2 sm:py-4">
+        {/* Top Header & Title */}
+        <div className="flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-[11px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-2 shadow-sm">
+            <Sparkles size={13} className="text-amber-400" />
+            <span>The Ultimate AI Casino Tournament</span>
           </div>
-        </div>
 
-        <div className="mb-12 space-y-4">
-          <p className="text-2xl text-white font-light tracking-wide animate-fade-in">
-            Where Human Instinct Meets Artificial Intelligence
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-display font-black tracking-tight uppercase text-white leading-none">
+            THE AI
+          </h1>
+          <span className="text-3xl sm:text-5xl md:text-6xl font-display font-black tracking-widest uppercase bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600 bg-clip-text text-transparent block mt-0.5">
+            CASINO
+          </span>
+
+          <p className="text-sm sm:text-base md:text-lg text-slate-200 font-light tracking-wide mt-2">
+            Where Human Intuition Bets Against Artificial Intellect
           </p>
-          <p className="text-xl text-white font-medium animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            High Stakes • Perception • Creativity • Chance
+          <p className="text-[11px] sm:text-xs font-mono text-slate-400 uppercase tracking-widest mt-0.5">
+            Perception • Deduction • High-Stakes Wagering
           </p>
         </div>
 
-        <div className="mb-8 flex justify-center gap-8 text-white/70">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-yellow-400">$50</div>
-            <div className="text-sm">Starting Chips</div>
+        {/* Tournament Specs / Plaques */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 max-w-2xl w-full my-auto">
+          <div className="bg-[#12151E] border border-[#232938] rounded-xl p-3 sm:p-4 text-left shadow-md">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">Buy-In Bankroll</span>
+              <Coins className="text-amber-400" size={16} />
+            </div>
+            <div className="text-2xl sm:text-3xl font-mono font-black text-white">$50</div>
+            <div className="text-[10px] sm:text-xs text-slate-500 mt-0.5">Virtual starting chips</div>
           </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-cyan-400">3</div>
-            <div className="text-sm">Main Rounds</div>
+
+          <div className="bg-[#12151E] border border-[#232938] rounded-xl p-3 sm:p-4 text-left shadow-md">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">Tournament Stages</span>
+              <Brain className="text-blue-400" size={16} />
+            </div>
+            <div className="text-2xl sm:text-3xl font-mono font-black text-white">3 Rounds</div>
+            <div className="text-[10px] sm:text-xs text-slate-500 mt-0.5">Vision, Video & Live Chat</div>
           </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-pink-400">40-45</div>
-            <div className="text-sm">Minutes</div>
+
+          <div className="bg-[#12151E] border border-[#232938] rounded-xl p-3 sm:p-4 text-left shadow-md">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">High-Roller Vault</span>
+              <Trophy className="text-emerald-400" size={16} />
+            </div>
+            <div className="text-2xl sm:text-3xl font-mono font-black text-white">Bonus Games</div>
+            <div className="text-[10px] sm:text-xs text-slate-500 mt-0.5">Wheel, Cards, Dice & Mines</div>
           </div>
         </div>
 
-        <button
-          onClick={onStart}
-          className="group relative px-12 py-5 text-2xl font-bold text-white bg-gradient-to-r from-yellow-500 via-red-500 to-pink-500 rounded-full overflow-hidden transition-all duration-300 hover:scale-110 hover:shadow-[0_0_50px_rgba(255,215,0,0.8)] animate-pulse"
-        >
-          <span className="relative z-10">ENTER THE CASINO</span>
-          <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        </button>
+        {/* Primary CTA Button & Protocol footer */}
+        <div className="flex flex-col items-center">
+          <button
+            onClick={onStart}
+            className="group relative inline-flex items-center justify-center gap-2 sm:gap-3 px-8 sm:px-10 py-3 sm:py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
+          >
+            <span>ENTER CASINO FLOOR</span>
+            <ChevronRight className="transition-transform group-hover:translate-x-1" size={20} />
+          </button>
 
-        <div className="mt-8 text-sm text-white/50">
-          <p>Can you outsmart the machine?</p>
+          <div className="mt-2.5 text-[10px] sm:text-xs font-mono text-slate-500">
+            SECURE PROTOCOL • 100% PROVABLY COMPETITIVE • GLOBAL LEADERBOARD
+          </div>
         </div>
       </div>
     </div>

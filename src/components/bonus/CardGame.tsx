@@ -9,7 +9,7 @@ interface CardGameProps {
   currentChips: number;
 }
 
-const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, result, currentChips }) => {
+const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, currentChips }) => {
   const [winningCard, setWinningCard] = useState('');
   const [selectedCard, setSelectedCard] = useState('');
   const [showResult, setShowResult] = useState(false);
@@ -50,137 +50,170 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
     if (cardType === winningCard) {
       const winnings = selectedBet * 2;
       console.log('CardGame: Player won! Awarding', winnings, 'chips');
-      onChipUpdate(currentChips + winnings - selectedBet); // Current chips minus bet plus winnings
+      onChipUpdate(currentChips + winnings); // Current chips already had bet deducted
     }
-  };
-
-  const getCardClass = (cardType: string) => {
-    let classes = 'w-32 h-48 flex items-center justify-center text-6xl rounded-xl m-4 transition-all duration-300 cursor-pointer border-4';
-    if (showResult) {
-      if (cardType === 'spade') {
-        classes += ' bg-black text-white border-gray-800';
-      } else {
-        classes += ' bg-red-600 text-white border-red-800';
-      }
-      if (cardType === selectedCard) {
-        classes += selectedCard === winningCard
-          ? ' ring-4 ring-green-400 shadow-lg shadow-green-400/50'
-          : ' ring-4 ring-red-400 shadow-lg shadow-red-400/50';
-      }
-    } else {
-      classes += ' bg-gradient-to-br from-gray-800 to-gray-900 text-gray-400 hover:from-gray-700 hover:to-gray-800 border-gray-600 hover:border-gray-400';
-    }
-    return classes;
-  };
-
-  const getCardContent = (cardType: string) => {
-    if (!showResult) return '?';
-    return cardType === 'spade' ? '♠' : '♥';
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center px-4">
-      <div className="max-w-2xl w-full text-center">
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
-          <h2 className="text-5xl font-black text-white mb-4">Card Flip</h2>
-          <p className="text-xl text-purple-300 mb-8">Choose a card and try to match the winning card!</p>
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+      <div className="max-w-md sm:max-w-lg w-full bg-[#12151E] border border-[#232938] rounded-2xl p-4 sm:p-6 text-center shadow-2xl my-auto">
+        {/* Header */}
+        <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-blue-500/30 text-blue-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
+          <span>Side Action // 2.0x Payout</span>
+        </div>
 
-          {/* Instructions */}
-          <div className="bg-purple-900/30 border border-purple-400/30 rounded-xl p-6 mb-8">
-            <h3 className="text-2xl font-bold text-white mb-3">How to Play:</h3>
-            <div className="text-purple-200 space-y-2 text-left">
-              <p>1. Select your bet amount ($10, $20, or $30)</p>
-              <p>2. Click on one of the cards to flip it</p>
-              <p>3. If your card matches the winning card, you win 2x your bet!</p>
-              <p>4. The winning card is randomly chosen each game</p>
+        <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
+          High-Card Duel
+        </h2>
+        <p className="text-slate-400 text-xs font-sans mb-3">
+          Wager your chips on the house card. If your selected card matches the hidden dealer card, you double your wager.
+        </p>
+
+        {/* Wager Selection */}
+        {!hasDeductedBet && (
+          <div className="mb-6 p-4 bg-[#181D2A] border border-[#283248] rounded-xl">
+            <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block mb-3">
+              Step 1: Choose Wager Amount
+            </span>
+            <div className="flex justify-center gap-3">
+              {[10, 20, 30].map((amt) => {
+                const canAfford = currentChips >= amt;
+                const isSelected = selectedBet === amt;
+                return (
+                  <button
+                    key={amt}
+                    onClick={() => canAfford && handleBetSelect(amt)}
+                    disabled={!canAfford}
+                    className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center transition-all cursor-pointer ${
+                      isSelected
+                        ? 'ring-4 ring-amber-400 scale-105 shadow-chip'
+                        : 'border-2 border-dashed border-[#2E384D] hover:border-amber-400/60'
+                    } ${
+                      amt === 10
+                        ? 'bg-emerald-950/80 text-emerald-300'
+                        : amt === 20
+                          ? 'bg-blue-950/80 text-blue-300'
+                          : 'bg-purple-950/80 text-purple-300'
+                    } ${!canAfford ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
+                  >
+                    <span className="text-[10px] font-mono uppercase text-slate-400">CHIP</span>
+                    <span className="text-lg font-mono font-black">${amt}</span>
+                  </button>
+                );
+              })}
             </div>
+            {currentChips < 10 && (
+              <p className="text-xs font-mono text-rose-400 mt-2">Insufficient chips to enter this duel.</p>
+            )}
           </div>
+        )}
 
-          {/* Betting Options */}
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold text-white mb-4">Select Your Bet</h3>
-            <div className="flex gap-4 justify-center">
-              <button
-                className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                  selectedBet === 10
-                    ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                    : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                } ${currentChips < 10 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => currentChips >= 10 && handleBetSelect(10)}
-                disabled={currentChips < 10}
-              >
-                $10
-              </button>
-              <button
-                className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                  selectedBet === 20
-                    ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                    : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                } ${currentChips < 20 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => currentChips >= 20 && handleBetSelect(20)}
-                disabled={currentChips < 20}
-              >
-                $20
-              </button>
-              <button
-                className={`px-8 py-4 rounded-xl font-bold text-xl transition-all ${
-                  selectedBet === 30
-                    ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-white shadow-lg scale-105'
-                    : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:scale-105'
-                } ${currentChips < 30 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => currentChips >= 30 && handleBetSelect(30)}
-                disabled={currentChips < 30}
-              >
-                $30
-              </button>
-            </div>
+        {/* Active Bet Notice */}
+        {hasDeductedBet && !showResult && (
+          <div className="mb-4 inline-flex items-center gap-2 bg-[#181D2A] border border-amber-500/30 px-3 py-1.5 rounded-full text-xs font-mono text-amber-400">
+            <span>Wager Locked: <strong>${selectedBet}</strong> (Potential Payout: <strong>${selectedBet ? selectedBet * 2 : 0}</strong>)</span>
           </div>
+        )}
 
-          {/* Game Area */}
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold text-white mb-6">Flip a Card!</h3>
-            <div className="flex justify-center items-center">
-              <div
-                className={getCardClass('spade')}
-                onClick={() => handleCardSelect('spade')}
-              >
-                {getCardContent('spade')}
-              </div>
-              <div
-                className={getCardClass('heart')}
-                onClick={() => handleCardSelect('heart')}
-              >
-                {getCardContent('heart')}
-              </div>
-            </div>
-          </div>
-
-          {/* Result Display */}
-          {showResult && (
-            <div className={`text-3xl font-bold mb-6 p-6 rounded-xl ${
-              selectedCard === winningCard
-                ? 'bg-green-900/50 border-2 border-green-400 text-green-300'
-                : 'bg-red-900/50 border-2 border-red-400 text-red-300'
-            }`}>
-              {selectedCard === winningCard ? '🎉 You Won! 🎉' : '😔 You Lost! 😔'}
-              <div className="text-xl mt-2">
-                {selectedCard === winningCard
-                  ? `You won $${selectedBet ? selectedBet * 2 : 0} chips!`
-                  : 'Better luck next time!'}
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-4 justify-center">
-
-            <button
-              onClick={onBack}
-              className="px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-gray-500 to-gray-600 rounded-full hover:scale-110 transition-all duration-300"
+        {/* Card Arena */}
+        <div className="mb-6">
+          <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block mb-4">
+            {hasDeductedBet && !showResult ? 'Step 2: Choose Your Suit' : 'Duel Deck'}
+          </span>
+          <div className="flex justify-center items-center gap-6">
+            {/* Spade Card */}
+            <div
+              onClick={() => handleCardSelect('spade')}
+              className={`w-32 h-44 rounded-xl transition-all duration-300 relative select-none flex flex-col justify-between p-3 cursor-pointer ${
+                showResult
+                  ? selectedCard === 'spade'
+                    ? selectedCard === winningCard
+                      ? 'bg-white text-slate-900 border-2 border-emerald-400 ring-4 ring-emerald-400/50 shadow-2xl scale-105'
+                      : 'bg-white text-slate-900 border-2 border-rose-500 ring-4 ring-rose-500/50 shadow-2xl scale-95'
+                    : winningCard === 'spade'
+                      ? 'bg-white text-slate-900 border-2 border-amber-400 shadow-xl opacity-90'
+                      : 'bg-white text-slate-900 border-2 border-slate-300 opacity-60'
+                  : hasDeductedBet
+                    ? 'bg-gradient-to-b from-[#181D2A] to-[#0E1118] border-2 border-amber-500/40 hover:border-amber-400 hover:scale-105 shadow-tactile'
+                    : 'bg-[#151922] border-2 border-[#232938] opacity-60 cursor-not-allowed'
+              }`}
             >
-              BACK TO MENU
-            </button>
+              {showResult ? (
+                <>
+                  <div className="text-left font-mono font-black text-sm text-slate-900 leading-none">A<br/>♠</div>
+                  <div className="text-4xl text-slate-900 text-center my-auto">♠</div>
+                  <div className="text-right font-mono font-black text-sm text-slate-900 leading-none rotate-180">A<br/>♠</div>
+                </>
+              ) : (
+                <div className="w-full h-full border border-amber-500/20 rounded-lg flex flex-col items-center justify-center">
+                  <span className="text-2xl text-amber-500/60 mb-1">♠</span>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-bold">SPADE</span>
+                </div>
+              )}
+            </div>
+
+            {/* Heart Card */}
+            <div
+              onClick={() => handleCardSelect('heart')}
+              className={`w-32 h-44 rounded-xl transition-all duration-300 relative select-none flex flex-col justify-between p-3 cursor-pointer ${
+                showResult
+                  ? selectedCard === 'heart'
+                    ? selectedCard === winningCard
+                      ? 'bg-white text-rose-600 border-2 border-emerald-400 ring-4 ring-emerald-400/50 shadow-2xl scale-105'
+                      : 'bg-white text-rose-600 border-2 border-rose-500 ring-4 ring-rose-500/50 shadow-2xl scale-95'
+                    : winningCard === 'heart'
+                      ? 'bg-white text-rose-600 border-2 border-amber-400 shadow-xl opacity-90'
+                      : 'bg-white text-rose-600 border-2 border-slate-300 opacity-60'
+                  : hasDeductedBet
+                    ? 'bg-gradient-to-b from-[#181D2A] to-[#0E1118] border-2 border-amber-500/40 hover:border-amber-400 hover:scale-105 shadow-tactile'
+                    : 'bg-[#151922] border-2 border-[#232938] opacity-60 cursor-not-allowed'
+              }`}
+            >
+              {showResult ? (
+                <>
+                  <div className="text-left font-mono font-black text-sm text-rose-600 leading-none">A<br/>♥</div>
+                  <div className="text-4xl text-rose-600 text-center my-auto">♥</div>
+                  <div className="text-right font-mono font-black text-sm text-rose-600 leading-none rotate-180">A<br/>♥</div>
+                </>
+              ) : (
+                <div className="w-full h-full border border-amber-500/20 rounded-lg flex flex-col items-center justify-center">
+                  <span className="text-2xl text-rose-500/60 mb-1">♥</span>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-bold">HEART</span>
+                </div>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Result Settlement Display */}
+        {showResult && (
+          <div className={`p-4 rounded-xl border mb-6 animate-in fade-in zoom-in-95 duration-200 ${
+            selectedCard === winningCard
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+              : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+          }`}>
+            <span className="text-[10px] font-mono uppercase tracking-widest block mb-0.5">
+              Settlement Verdict
+            </span>
+            <p className="text-xl font-display font-black uppercase mb-1">
+              {selectedCard === winningCard ? 'Victory — Suit Matched!' : 'Defeat — Dealer Prevailed'}
+            </p>
+            <p className="text-xs font-mono">
+              {selectedCard === winningCard
+                ? `+${selectedBet ? selectedBet * 2 : 0} Chips Added To Stack (2x Payout)`
+                : `Dealer held ${winningCard === 'spade' ? 'Ace of Spades' : 'Ace of Hearts'}. Wager forfeited.`}
+            </p>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={onBack}
+            className="py-3 px-6 bg-[#181D2A] hover:bg-[#202738] border border-[#283248] hover:border-slate-500 text-slate-300 font-mono text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+          >
+            Back To Tables
+          </button>
         </div>
       </div>
     </div>

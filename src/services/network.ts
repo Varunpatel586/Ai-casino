@@ -4,7 +4,7 @@ interface NetworkMessage {
   type: 'chat' | 'connect' | 'connected' | 'disconnect' | 'error' | 
         'player-joined' | 'player-left' | 'player-list' |
         'host-registered' | 'host-available' | 'host-disconnected' |
-        'register-host' | 'player-join';
+        'register-host' | 'player-join' | 'private-message' | 'player-private-message';
   content?: string;
   message?: string;
   timestamp: number;
@@ -15,6 +15,7 @@ interface NetworkMessage {
   recipientId?: string;
   isPrivate?: boolean;
   players?: string[];
+  targetPlayerId?: string;
 }
 
 type MessageCallback = (message: NetworkMessage) => void;
@@ -25,6 +26,7 @@ class NetworkManager {
   private connectionUrl: string | null = null;
   private localId: string = '';
   private isHost: boolean = false;
+  private username: string = ''; // FIX BUG-008: declare before methods that use it
   private messageCallback: MessageCallback | null = null;
   private connectionCallback: ConnectionCallback | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
@@ -90,12 +92,14 @@ class NetworkManager {
         this.ws = new WebSocket(this.connectionUrl);
         
         this.ws.onopen = () => {
-          console.log('[Network] WebSocket connected successfully');
+          console.log('[Network] WebSocket connected successfully to:', this.connectionUrl);
+          console.log('[Network] isHost:', this.isHost, '| username:', this.username || '(none)');
           this.reconnectAttempts = 0;
           this.isReconnecting = false;
           
           // If this is a player (not host), send player-join message with username
           if (!this.isHost && this.ws?.readyState === WebSocket.OPEN) {
+            console.log('[Network] Sending player-join as:', this.username || '(unnamed)');
             this.ws.send(JSON.stringify({
               type: 'player-join',
               clientId: this.localId,
@@ -195,11 +199,12 @@ class NetworkManager {
     }, delay);
   }
 
-  private username: string = '';
-
+  // FIX BUG-008: username was originally declared here (after methods using it)
+  // Moved to top of class fields above. This method remains unchanged.
   // Set the username for the player
   public set_username(username: string) {
     this.username = username;
+    console.log('[Network] Username set to:', username);
   }
 
   // Connect to a host (for players)
@@ -212,12 +217,13 @@ class NetworkManager {
     return this.attemptConnection();
   }
   
-  // Connect as host`
-  public async connect_as_host(port: number = 8080): Promise<void> {
+  // Connect as host
+  public async connect_as_host(url: string): Promise<void> {
     this.isHost = true;
-    this.connectionUrl = `ws://localhost:${port}`;
+    let finalUrl = this.normalizeWebSocketUrl(url, this.DEFAULT_PORT);
+    this.connectionUrl = finalUrl;
     
-    console.log(`[Network] Starting as host at ${this.connectionUrl}`);
+    console.log(`[Network] Connecting as host at ${finalUrl}`);
     return this.attemptConnection();
   }
   
@@ -232,6 +238,13 @@ class NetworkManager {
     
     // Parse URL to handle port
     const urlObj = new URL(finalUrl);
+    
+    // If it's a secure websocket (wss), don't force a port unless specified
+    if (urlObj.protocol === 'wss:' || urlObj.hostname !== 'localhost') {
+       return urlObj.toString();
+    }
+    
+    // For localhost testing, default to 8080
     if (!urlObj.port) {
       urlObj.port = defaultPort.toString();
     }
@@ -241,7 +254,7 @@ class NetworkManager {
 
   // Start a server (for hosting) - KEEP THIS METHOD
   public async start_server(port: number = this.DEFAULT_PORT, success?: (id: string) => void): Promise<void> {
-    this.connectionUrl = `ws://localhost:${port}`;
+    this.connectionUrl = `ws://${window.location.hostname}:${port}`;
     this.isHost = true;
     
     console.log(`[Network] Starting server on: ${this.connectionUrl}`);
@@ -287,6 +300,43 @@ class NetworkManager {
     };
     
     console.log('[Network] Sending message:', message);
+    this.ws.send(JSON.stringify(message));
+  }
+
+  // Send a private message to the host
+  public send_private_message_to_host(content: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.error('[Network] Cannot send private message to host: WebSocket not connected');
+      return;
+    }
+    
+    const message: NetworkMessage = {
+      type: 'player-private-message',
+      content,
+      timestamp: Date.now(),
+      senderId: this.localId
+    };
+    
+    console.log('[Network] Sending private message to host:', message);
+    this.ws.send(JSON.stringify(message));
+  }
+
+  // Send a private message to a specific player (host only)
+  public send_private_message_to_player(targetPlayerId: string, content: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.error('[Network] Cannot send private message: WebSocket not connected');
+      return;
+    }
+    
+    const message: NetworkMessage = {
+      type: 'private-message',
+      targetPlayerId: targetPlayerId,
+      content,
+      timestamp: Date.now(),
+      senderId: this.localId
+    };
+    
+    console.log(`[Network] Sending private message to ${targetPlayerId}:`, message);
     this.ws.send(JSON.stringify(message));
   }
 

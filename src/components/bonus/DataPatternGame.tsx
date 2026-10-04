@@ -9,7 +9,7 @@ interface DataPatternGameProps {
   currentChips: number;
 }
 
-const DataPatternGame: React.FC<DataPatternGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, result, currentChips }) => {
+const DataPatternGame: React.FC<DataPatternGameProps> = ({ onBack, onChipUpdate, currentChips }) => {
   const [pattern, setPattern] = useState('');
   const [answer, setAnswer] = useState('');
   const [userInput, setUserInput] = useState('');
@@ -65,82 +65,96 @@ const DataPatternGame: React.FC<DataPatternGameProps> = ({ onBack, onSelectBonus
   const isCorrect = userInput === answer;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-cyan-900 to-slate-900 flex items-center justify-center px-4">
-      <div className="max-w-2xl w-full text-center">
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
-          <h2 className="text-5xl font-black text-white mb-4">Data Dash</h2>
-          <p className="text-xl text-cyan-300 mb-8">Complete the binary pattern!</p>
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
+      <div className="max-w-md sm:max-w-lg w-full bg-[#12151E] border border-[#232938] rounded-2xl p-4 sm:p-6 text-center shadow-2xl my-auto">
+        {/* Header */}
+        <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-emerald-500/30 text-emerald-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
+          <span>Free Side Action // +10 Chip Reward</span>
+        </div>
 
-          {/* Instructions */}
-          <div className="bg-cyan-900/30 border border-cyan-400/30 rounded-xl p-6 mb-8">
-            <h3 className="text-2xl font-bold text-white mb-3">How to Play:</h3>
-            <div className="text-cyan-200 space-y-2 text-left">
-              <p>1. Look at the binary pattern with a missing digit (?)</p>
-              <p>2. Figure out what digit (0 or 1) completes the pattern</p>
-              <p>3. Enter your answer and submit</p>
-              <p>4. Correct answer wins 10 chips!</p>
-            </div>
+        <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
+          Binary Decryption
+        </h2>
+        <p className="text-slate-400 text-xs font-sans mb-3">
+          Deduce the missing bit in the algorithmic sequence. Successful decryption credits 10 chips with zero risk.
+        </p>
+
+        {/* Cryptographic Sequence Display */}
+        <div className="mb-6 p-6 bg-[#0E1118] border border-[#283248] rounded-2xl">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500 block mb-2">
+            Target Bit Sequence
+          </span>
+          <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-emerald-400 select-none">
+            {getPatternDisplay().split('').map((char, idx) => (
+              <span
+                key={idx}
+                className={char === '?' ? 'text-amber-400 animate-pulse underline decoration-amber-400 underline-offset-8' : ''}
+              >
+                {char}
+              </span>
+            ))}
           </div>
+        </div>
 
-          {/* Game Area */}
-          <div className="mb-8">
-            <h3 className="text-2xl font-bold text-white mb-6">Complete the Pattern</h3>
-
-            <div className="text-6xl font-mono mb-8 text-cyan-400 bg-black/30 rounded-xl p-6">
-              {getPatternDisplay()}
-            </div>
-
-            <div className="flex flex-col items-center">
-              <label htmlFor="patternInput" className="block text-xl mb-4 text-white">
-                Enter the missing digit (0 or 1):
-              </label>
-              <input
-                id="patternInput"
-                type="text"
-                className="w-24 text-4xl p-4 text-center rounded-xl border-2 border-cyan-400 focus:border-cyan-300 focus:outline-none bg-white/10 text-white font-mono"
-                maxLength={1}
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value.replace(/[^01]/g, ''))}
-                placeholder="?"
-                disabled={showResult}
-              />
-
-              {!showResult && (
+        {/* Input Interface */}
+        {!showResult && (
+          <div className="mb-6 p-4 bg-[#181D2A] border border-[#283248] rounded-xl">
+            <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block mb-3">
+              Select Completing Bit
+            </span>
+            <div className="flex justify-center gap-4 mb-4">
+              {['0', '1'].map((bit) => (
                 <button
-                  onClick={handleSubmit}
-                  disabled={!userInput || hasPlayed}
-                  className="mt-6 px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full hover:scale-110 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  key={bit}
+                  onClick={() => setUserInput(bit)}
+                  className={`w-20 h-16 rounded-xl font-mono text-2xl font-black transition-all cursor-pointer ${
+                    userInput === bit
+                      ? 'bg-emerald-600 text-white ring-4 ring-emerald-400/50 scale-105 shadow-tactile'
+                      : 'bg-[#12151E] hover:bg-[#202738] text-slate-300 border border-[#283248]'
+                  }`}
                 >
-                  SUBMIT ANSWER
+                  {bit}
                 </button>
-              )}
+              ))}
             </div>
-
-            {/* Result Display */}
-            {showResult && (
-              <div className={`text-3xl font-bold mb-6 p-6 rounded-xl mt-8 ${
-                isCorrect
-                  ? 'bg-green-900/50 border-2 border-green-400 text-green-300'
-                  : 'bg-red-900/50 border-2 border-red-400 text-red-300'
-              }`}>
-                {isCorrect ? '🎉 Correct! 🎉' : '❌ Incorrect! ❌'}
-                <div className="text-xl mt-2">
-                  {getRewardMessage()}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-4 justify-center">
 
             <button
-              onClick={onBack}
-              className="px-8 py-4 text-xl font-bold text-white bg-gradient-to-r from-gray-500 to-gray-600 rounded-full hover:scale-110 transition-all duration-300"
+              onClick={handleSubmit}
+              disabled={!userInput || hasPlayed}
+              className="py-3 px-8 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 text-slate-950 font-display font-black text-sm uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              BACK TO MENU
+              Confirm Decryption
             </button>
           </div>
+        )}
+
+        {/* Settlement Results */}
+        {showResult && (
+          <div className={`p-4 rounded-xl border mb-6 animate-in fade-in zoom-in-95 duration-200 ${
+            isCorrect
+              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+              : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+          }`}>
+            <span className="text-[10px] font-mono uppercase tracking-widest block mb-0.5">
+              Sequence Verification
+            </span>
+            <p className="text-xl font-display font-black uppercase mb-1">
+              {isCorrect ? 'Decryption Verified!' : 'Parity Mismatch'}
+            </p>
+            <p className="text-xs font-mono">
+              {getRewardMessage()}
+            </p>
+          </div>
+        )}
+
+        {/* Action Controls */}
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={onBack}
+            className="py-3 px-6 bg-[#181D2A] hover:bg-[#202738] border border-[#283248] hover:border-slate-500 text-slate-300 font-mono text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+          >
+            Back To Tables
+          </button>
         </div>
       </div>
     </div>
