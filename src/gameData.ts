@@ -26,39 +26,6 @@ export const round1Images = [
   },
 ];
 
-export const round2Videos = [
-  {
-    id: 1,
-    title: 'Person walking in park',
-    isAI: false,
-    thumbnail: 'https://images.pexels.com/photos/1054289/pexels-photo-1054289.jpeg?auto=compress&cs=tinysrgb&w=400',
-  },
-  {
-    id: 2,
-    title: 'Dancing animation',
-    isAI: true,
-    thumbnail: 'https://images.pexels.com/photos/416676/pexels-photo-416676.jpeg?auto=compress&cs=tinysrgb&w=400',
-  },
-  {
-    id: 3,
-    title: 'Nature landscape',
-    isAI: false,
-    thumbnail: 'https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=400',
-  },
-  {
-    id: 4,
-    title: 'Abstract motion',
-    isAI: true,
-    thumbnail: 'https://images.pexels.com/photos/1194713/pexels-photo-1194713.jpeg?auto=compress&cs=tinysrgb&w=400',
-  },
-  {
-    id: 5,
-    title: 'Street interview',
-    isAI: false,
-    thumbnail: 'https://images.pexels.com/photos/3184295/pexels-photo-3184295.jpeg?auto=compress&cs=tinysrgb&w=400',
-  },
-];
-
 export const round3Conversations = [
   {
     id: 1,

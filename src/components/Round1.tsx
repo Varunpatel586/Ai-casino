@@ -3,10 +3,18 @@ import { Image as ImageIcon, Sparkles, Send } from 'lucide-react';
 import { BetAmount } from '../types';
 import BettingPanel from './BettingPanel';
 import { generateImage, GeneratedImage } from '../services/huggingFaceService';
+import { compareImages, SimilarityResult } from '../services/imageSimilarity';
 
 interface Round1Props {
   currentChips: number;
-  onComplete: (score: number, bet: number) => void;
+  onComplete: (net: number) => void;
+}
+
+interface Appraisal {
+  similarity: number;
+  multiplier: number;
+  net: number;
+  method: SimilarityResult['method'];
 }
 
 // Original images for the challenge
@@ -51,7 +59,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
   const [generatedImage, setGeneratedImage] = useState<GeneratedImage | null>(null);
   const [currentOriginalImage, setCurrentOriginalImage] = useState(originalImages[0]);
   const [promptTimeLeft, setPromptTimeLeft] = useState(60); // 1 minute for prompt phase
-  const [totalScore, setTotalScore] = useState(0);
+  const [appraisals, setAppraisals] = useState<Appraisal[]>([]);
+  const [isAppraising, setIsAppraising] = useState(false);
 
   // Timer for prompt phase
   useEffect(() => {
@@ -93,26 +102,34 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
     try {
       const image = await generateImage(userPrompt, currentOriginalImage.id);
       setGeneratedImage(image);
+
+      // Appraise the generated canvas against the original target artwork.
+      setIsAppraising(true);
+      const result = await compareImages(currentOriginalImage.url, image.data);
+      setIsAppraising(false);
+
+      const net = Math.round(currentBet * (result.multiplier - 1));
+      setAppraisals((prev) => {
+        const next = [...prev];
+        next[currentImageIndex] = {
+          similarity: result.similarity,
+          multiplier: result.multiplier,
+          net,
+          method: result.method,
+        };
+        return next;
+      });
+
       setPhase('comparison');
     } catch (error) {
       console.error('Failed to generate image:', error);
-      // For now, just move to comparison with null generated image
+      setIsAppraising(false);
+      // Move to comparison with a null generated image so the round can continue.
       setPhase('comparison');
     }
   };
 
   const handleNextRound = () => {
-    // Calculate programmatic score based on keywords
-    const promptWords = userPrompt.toLowerCase().split(/\s+/);
-    const keywords = currentOriginalImage.keywords || [];
-    let matches = 0;
-    keywords.forEach(kw => {
-      if (promptWords.some(word => word.includes(kw))) matches++;
-    });
-    const accuracy = Math.min(100, Math.round((matches / Math.max(3, keywords.length / 2)) * 100));
-    const pointsGained = accuracy >= 50 ? 1 : 0;
-    setTotalScore(prev => prev + pointsGained);
-
     if (currentImageIndex < originalImages.length - 1) {
       setCurrentImageIndex(currentImageIndex + 1);
       setCurrentOriginalImage(originalImages[currentImageIndex + 1]);
@@ -125,7 +142,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
   };
 
   const handleFinishRound = () => {
-    onComplete(totalScore, currentBet); // Give actual calculated score based on prompt accuracy
+    const netTotal = appraisals.reduce((sum, appraisal) => sum + (appraisal?.net ?? 0), 0);
+    onComplete(netTotal);
   };
 
   if (phase === 'intro') {
@@ -324,7 +342,9 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
             Synthesizing Canvas
           </h2>
           <p className="text-slate-400 text-sm font-mono mb-4">
-            Routing through AI generation cascade...
+            {isAppraising
+              ? 'Appraising similarity against the target specimen...'
+              : 'Routing through AI generation cascade...'}
           </p>
           <div className="w-full bg-[#181D2A] rounded-full h-1.5 overflow-hidden">
             <div className="bg-amber-400 h-full w-2/3 animate-pulse rounded-full" />
@@ -335,6 +355,8 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
   }
 
   if (phase === 'comparison') {
+    const appraisal = appraisals[currentImageIndex];
+
     return (
       <div className="w-full h-full flex-1 min-h-0 casino-table-bg p-3 sm:p-5 flex flex-col justify-between max-w-4xl mx-auto overflow-hidden select-none">
         <div className="w-full">
@@ -350,6 +372,28 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
               Verify how closely your prompt directed the AI to match the original piece.
             </p>
           </div>
+
+          {/* Appraisal Result */}
+          {appraisal && (
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-5 mb-6 bg-[#12151E] border border-amber-500/30 rounded-xl px-5 py-4">
+              <div className="text-center">
+                <span className="text-[11px] font-mono uppercase text-slate-500 block">Similarity</span>
+                <span className="text-2xl font-mono font-black text-emerald-400">{appraisal.similarity}%</span>
+              </div>
+              <div className="w-px h-10 bg-[#232938] hidden sm:block" />
+              <div className="text-center">
+                <span className="text-[11px] font-mono uppercase text-slate-500 block">Multiplier</span>
+                <span className="text-2xl font-mono font-black text-amber-400">{appraisal.multiplier}x</span>
+              </div>
+              <div className="w-px h-10 bg-[#232938] hidden sm:block" />
+              <div className="text-center">
+                <span className="text-[11px] font-mono uppercase text-slate-500 block">Payout</span>
+                <span className={`text-2xl font-mono font-black ${appraisal.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {appraisal.net >= 0 ? `+$${appraisal.net}` : `-$${Math.abs(appraisal.net)}`}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Dual Gallery Easels */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -407,6 +451,9 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
   }
 
   if (phase === 'results') {
+    const netTotal = appraisals.reduce((sum, appraisal) => sum + (appraisal?.net ?? 0), 0);
+    const scoredCount = appraisals.filter(Boolean).length;
+
     return (
       <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-3 sm:p-5 overflow-hidden select-none">
         <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl my-auto">
@@ -421,14 +468,36 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
             Valuation Settled
           </h2>
 
-          <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-5 mb-6 text-left">
+          <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4 mb-6 text-left">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-xs font-mono text-slate-400">Recreation Score:</span>
-              <span className="text-xl font-mono font-bold text-amber-400">{totalScore} / 5</span>
+              <span className="text-xs font-mono text-slate-400">Artworks Appraised:</span>
+              <span className="text-sm font-mono text-white font-bold">{scoredCount} / {originalImages.length}</span>
             </div>
-            <div className="flex justify-between items-center pt-3 border-t border-[#232938]">
-              <span className="text-xs font-mono text-slate-400">Active Wager:</span>
-              <span className="text-sm font-mono text-white font-bold">${currentBet}</span>
+
+            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              {originalImages.map((image, idx) => {
+                const appraisal = appraisals[idx];
+                return (
+                  <div
+                    key={image.id}
+                    className="flex items-center justify-between bg-[#12151E] rounded-lg px-2.5 py-1.5 border border-[#232938] text-[11px] font-mono"
+                  >
+                    <span className="text-slate-300 truncate max-w-[110px]">Art #{idx + 1}</span>
+                    <span className="text-slate-400">{appraisal ? `${appraisal.similarity}%` : '—'}</span>
+                    <span className="text-amber-400 font-bold">{appraisal ? `${appraisal.multiplier}x` : '—'}</span>
+                    <span className={appraisal && appraisal.net < 0 ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                      {appraisal ? (appraisal.net >= 0 ? `+$${appraisal.net}` : `-$${Math.abs(appraisal.net)}`) : '—'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-between items-center pt-3 mt-3 border-t border-[#232938]">
+              <span className="text-xs font-mono text-slate-400">Total Payout:</span>
+              <span className={`text-xl font-mono font-black ${netTotal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {netTotal >= 0 ? `+$${netTotal}` : `-$${Math.abs(netTotal)}`}
+              </span>
             </div>
           </div>
 

@@ -12,6 +12,24 @@ This document outlines proposed architecture, feature plans, file modifications,
 
 ## 📋 Active Implementation Plan
 
+### Plan 9: Round 2 Image Similarity Scoring — Perceptual Multiplier Payouts
+- **Status:** ✅ **Completed & Verified**
+- **Date Completed:** 2026-10-04
+- **Objective:**
+  The Round 2 Reverse Prompt Engineering Duel generated an AI canvas from the contestant's prompt but never used it — scoring was a crude keyword match against the target image. Replace that with a real perceptual comparison of the ORIGINAL artwork vs the AI-GENERATED canvas, yielding a similarity percentage and a casino multiplier (100% => 5x, 90% => 4x, ... lower similarity => lower payout).
+- **Architectural & Design Changes:**
+  1. **New comparison service ([`src/services/imageSimilarity.ts`](src/services/imageSimilarity.ts)):** Client-side, dependency-free engine blending an average/difference perceptual hash (structure) with a normalized 3D RGB colour histogram (palette). Exposes `compareImages(originalUrl, generatedUrl)` and `similarityToMultiplier(score)`. Never throws — returns a neutral 1x fallback on any failure.
+  2. **Multiplier tiers:** >=95% => 5x, 85-94% => 4x, 75-84% => 3x, 65-74% => 2x, 50-64% => 1x, <50% => 0x (wager lost). Net per artwork = `bet * (multiplier - 1)`.
+  3. **Round 2 integration ([`src/components/Round1.tsx`](src/components/Round1.tsx)):** After generation, the canvas is appraised; the `comparison` phase now shows Similarity %, Multiplier and Payout, and the `results` phase shows a per-artwork breakdown plus the total payout.
+  4. **Settlement ([`src/App.tsx`](src/App.tsx)):** `handleRound2Complete` now applies the summed net earnings from the appraisals.
+- **Checklist Executed & Verified:**
+  - [x] Step 1: `imageSimilarity.ts` service (hash + histogram blend + tier mapping)
+  - [x] Step 2: Round 2 appraisal flow + UI (comparison + results phases)
+  - [x] Step 3: `App.tsx` settlement update
+  - [x] Step 4: Removed dead `Round2.tsx` component and unused `round2Videos`
+- **Verification:** `npm run typecheck` (0 errors) and `npm run build` (success).
+
+
 ### Plan 8: Puter Authentication & Contestant Free Credit Integration (Host Dashboard & Player Lobby)
 - **Status:** ✅ **Completed & Fully Verified**
 - **Date Completed:** 2026-10-01

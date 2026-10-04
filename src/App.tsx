@@ -160,16 +160,12 @@ function App() {
     setScreen('round2');
   };
 
-  const handleRound2Complete = (score: number, bet: number) => {
-    const correctCount = score;
-    const wrongCount = 5 - correctCount;
-    const earnings = correctCount * bet - wrongCount * bet;
-
-    const newChips = player.chips + earnings;
+  const handleRound2Complete = (net: number) => {
+    const newChips = player.chips + net;
     const updatedPlayer = {
       ...player,
       chips: newChips,
-      round2Score: earnings,
+      round2Score: net,
       currentRound: 2.5, // Going to bonus round
     };
     setPlayer(updatedPlayer);

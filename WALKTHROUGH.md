@@ -662,3 +662,23 @@ This document serves as the continuous project walkthrough and activity log. It 
   - Updated: [`IMPLEMENTATION.md`](IMPLEMENTATION.md)
   - Updated: [`WALKTHROUGH.md`](WALKTHROUGH.md)
 - **Status:** ✅ Complete, Fully Verified, and Production Ready.
+
+### Entry 28: Round 2 Image Similarity Scoring — Perceptual Multiplier Payouts
+- **Timestamp:** 2026-10-04
+- **User Request Summary:**
+  Round 2 generated an AI image but never used it for scoring. Build a comparison of the original vs generated image and award a score multiplier based on similarity % (100% => 5x, 90% => 4x, ... lower similarity => lower payout).
+- **Technical Decisions, Changes & Files Modified:**
+  - Created [`src/services/imageSimilarity.ts`](src/services/imageSimilarity.ts): client-side perceptual comparison blending an average/difference hash (structure) with a normalized 3D RGB histogram (palette); `compareImages()` returns `{ similarity, multiplier, method }` and never throws (neutral 1x fallback).
+  - Tier mapping: >=95% => 5x, 85-94% => 4x, 75-84% => 3x, 65-74% => 2x, 50-64% => 1x, <50% => 0x. Net per artwork = `bet * (multiplier - 1)`.
+  - Updated [`src/components/Round1.tsx`](src/components/Round1.tsx): replaced keyword scoring with visual appraisal; added Similarity/Multiplier/Payout badges in the comparison phase and a per-artwork breakdown + total payout in the results phase.
+  - Updated [`src/App.tsx`](src/App.tsx): `handleRound2Complete` now settles the summed net earnings.
+  - Removed dead [`src/components/Round2.tsx`](src/components/Round2.tsx) and the unused `round2Videos` export in [`src/gameData.ts`](src/gameData.ts).
+- **Verification & Test Status:**
+  - `npm run typecheck`: passed with **0 errors**.
+  - `npm run build` (vite): succeeded.
+  - `eslint` on touched files: 0 errors (1 pre-existing warning only).
+- **Next Steps / Tuning:**
+  - Play-test and, if needed, tune `W_STRUCTURAL` / `W_COLOR` and the tier thresholds in `imageSimilarity.ts`.
+  - Consider a Gemini-vision upgrade for semantic scoring, or a configurable bet cap for economy balance.
+- **Status:** ✅ Complete & Verified.
+
