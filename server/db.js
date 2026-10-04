@@ -6,6 +6,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const dbPath = path.join(__dirname, '..', 'casino_multiplayer.db');
 
+// Maximum players allowed per Round 1 table.
+// Keep 6 seats per table; overflow players auto-assign to table_02, table_03, ...
+export const MAX_TABLE_SEATS = 6;
+
+// Prefix used for auto-created overflow tables (table_01 is the default table).
+export const OVERFLOW_TABLE_PREFIX = 'table_';
+
 const db = new DatabaseSync(dbPath);
 try {
   db.exec('PRAGMA journal_mode = WAL;');
@@ -146,6 +153,102 @@ export function getPlayerBySocket(socketId) {
   return stmt.get(socketId);
 }
 
+export function countActiveSeats(roomId) {
+  const existing = getPlayersInRoom(roomId);
+  // Count connected humans + bots occupying seats; disconnected humans are reclaimable.
+  return existing.filter((p) => p.connected === 1 || String(p.player_id || '').startsWith('bot-')).length;
+}
+
+export function isRoomFull(roomId, maxSeats = MAX_TABLE_SEATS) {
+  const existing = getPlayersInRoom(roomId);
+  if (existing.length < maxSeats) return false;
+  // Table is full if every seat is taken by a connected human or a bot.
+  // Bots count as permanent seat occupants — they do NOT free up seats for incoming players.
+  // Only truly disconnected human seats (connected === 0) are reclaimable.
+  const reclaimable = existing.filter(
+    (p) => p.connected === 0 && !String(p.player_id || '').startsWith('bot-')
+  );
+  return reclaimable.length === 0;
+}
+
+function parseTableNumber(roomId) {
+  const match = String(roomId || '').match(/(\d+)\s*$/);
+  if (!match) return null;
+  const num = Number.parseInt(match[1], 10);
+  return Number.isFinite(num) ? num : null;
+}
+
+function formatTableId(prefix, num) {
+  return `${prefix}${String(num).padStart(2, '0')}`;
+}
+
+/**
+ * Find the first table with a free (or reclaimable) seat, starting at requestedRoomId.
+ * Overflow tables are auto-created as table_02, table_03, ... so table 1 stays capped at 6.
+ * Returns { roomId, created } — created is true when we moved past the requested table.
+ */
+export function findTableWithSpace(requestedRoomId = 'table_01', maxSeats = MAX_TABLE_SEATS, maxTables = 50) {
+  const requested = String(requestedRoomId || 'table_01').toLowerCase().replace(/\s+/g, '-');
+  if (!isRoomFull(requested, maxSeats)) {
+    getOrCreateRoom(requested);
+    return { roomId: requested, created: false, overflow: false };
+  }
+
+  const baseNum = parseTableNumber(requested);
+  // If the requested id isn't numeric (custom room code), fall back to table_02, table_03, ...
+  const prefix = baseNum === null ? OVERFLOW_TABLE_PREFIX : requested.replace(/\d+\s*$/, '');
+  const startNum = baseNum === null ? 2 : baseNum + 1;
+
+  for (let n = startNum; n < startNum + maxTables; n++) {
+    const candidate = formatTableId(prefix, n);
+    if (!isRoomFull(candidate, maxSeats)) {
+      getOrCreateRoom(candidate);
+      return { roomId: candidate, created: true, overflow: true };
+    }
+  }
+
+  // All overflow tables full — return requested so caller emits TABLE_FULL.
+  return { roomId: requested, created: false, overflow: false };
+}
+
+export function listRoomsWithCounts(minTables = 3) {
+  const rooms = db.prepare('SELECT * FROM rooms ORDER BY room_id ASC').all();
+  const byId = new Map(rooms.map((r) => [r.room_id, r]));
+
+  // Always include table_01..table_0N so the host sees every table even
+  // before any player/host has touched it (no DB row exists yet).
+  // Also include any custom (non table_NN) rooms that do exist.
+  const tableIds = new Set(rooms.map((r) => r.room_id));
+  let highest = 0;
+  for (const id of tableIds) {
+    const m = String(id).match(/^table_0*(\d+)$/i);
+    if (m) highest = Math.max(highest, Number.parseInt(m[1], 10));
+  }
+  const total = Math.max(minTables, highest);
+  for (let n = 1; n <= total; n++) {
+    tableIds.add(`table_${String(n).padStart(2, '0')}`);
+  }
+
+  return [...tableIds]
+    .sort()
+    .map((roomId) => {
+      const room = byId.get(roomId);
+      const players = getPlayersInRoom(roomId);
+      const activeSeats = players.filter((p) => p.connected === 1 || String(p.player_id || '').startsWith('bot-')).length;
+      return {
+        room_id: roomId,
+        room_code: room ? room.room_code : roomId,
+        status: room ? room.status : 'waiting',
+        current_feed_index: room ? room.current_feed_index : 0,
+        total_seats: MAX_TABLE_SEATS,
+        occupied_seats: players.length,
+        active_seats: activeSeats,
+        has_space: !isRoomFull(roomId),
+        updated_at: room ? room.updated_at : null,
+        exists: Boolean(room),
+      };
+    });
+}
 export function getPlayerByUsername(roomId, username) {
   const stmt = db.prepare('SELECT * FROM players WHERE room_id = ? AND username = ?');
   return stmt.get(roomId, username);
@@ -154,18 +257,19 @@ export function getPlayerByUsername(roomId, username) {
 export function findAvailableSeat(roomId) {
   const existing = getPlayersInRoom(roomId);
   const occupiedSeats = new Set(existing.map(p => p.seat_number));
-  for (let seat = 1; seat <= 6; seat++) {
+  for (let seat = 1; seat <= MAX_TABLE_SEATS; seat++) {
     if (!occupiedSeats.has(seat)) {
       return seat;
     }
   }
-  // If all 6 seats are taken, find the oldest disconnected player or bot to reclaim seat
-  const disconnectable = existing.find(p => p.connected === 0 || p.player_id.startsWith('bot-'));
-  if (disconnectable) {
-    db.prepare('DELETE FROM players WHERE room_id = ? AND player_id = ?').run(roomId, disconnectable.player_id);
-    return disconnectable.seat_number;
+  // If all seats are taken, only reclaim seats from disconnected humans (NOT bots).
+  // Bots are permanent occupants; the overflow system redirects new players to the next table.
+  const disconnectedHuman = existing.find(p => p.connected === 0 && !p.player_id.startsWith('bot-'));
+  if (disconnectedHuman) {
+    db.prepare('DELETE FROM players WHERE room_id = ? AND player_id = ?').run(roomId, disconnectedHuman.player_id);
+    return disconnectedHuman.seat_number;
   }
-  return null; // Room is full with 6 active humans
+  return null; // Room is full
 }
 
 export function movePlayerToSeat(roomId, playerId, newSeat) {
@@ -341,6 +445,8 @@ export function resetRoomSession(roomId) {
 }
 
 export default {
+  MAX_TABLE_SEATS,
+  OVERFLOW_TABLE_PREFIX,
   getOrCreateRoom,
   setRoomHost,
   setPlayerReady,
@@ -349,6 +455,10 @@ export default {
   getPlayer,
   getPlayerBySocket,
   getPlayerByUsername,
+  countActiveSeats,
+  isRoomFull,
+  findTableWithSpace,
+  listRoomsWithCounts,
   findAvailableSeat,
   movePlayerToSeat,
   upsertPlayer,

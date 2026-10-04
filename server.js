@@ -19,6 +19,12 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // Connect to Supabase
+// NOTE: Supabase is ONLY the global player-profile / leaderboard store
+// (table: `players` — username, chips, *_score, last_active).
+// Round 1 live tables/seats/answers/settlements are SQLite (server/db.js)
+// because they need per-second writes + relational constraints.
+// A `round1_tables` Supabase mirror is pushed best-effort below so the
+// host Tables bar survives restarts / multi-instance deploys.
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 let supabase = null;
@@ -256,6 +262,97 @@ const io = new SocketIOServer(server, {
   },
 });
 const multiplayerManager = new MultiplayerManager(io);
+
+// --- SUPABASE MIRROR: round1_tables (host Tables bar, best-effort) ---
+// Supabase `players` table CANNOT store live tables (wrong shape: global
+// profiles, no room/seat columns). So we keep a tiny mirror table:
+//
+//   round1_tables (room_id TEXT PK, room_code TEXT, status TEXT,
+//                  current_feed_index INT, occupied_seats INT,
+//                  active_seats INT, total_seats INT, has_space BOOL,
+//                  updated_at TIMESTAMPTZ)
+//
+// A SQL migration is in docs/DATABASE.md — run it once in the Supabase
+// SQL editor. If the table is missing, sync is skipped silently.
+let round1TablesMirrorOk = null; // null = unknown, true/false = checked
+async function syncRound1TablesToSupabase() {
+  if (!supabase) return;
+  try {
+    const db = await import('./server/db.js');
+    const tables = db.listRoomsWithCounts(3);
+    const rows = tables.map((t) => ({
+      room_id: t.room_id,
+      room_code: t.room_code || t.room_id,
+      status: t.status,
+      current_feed_index: t.current_feed_index,
+      occupied_seats: t.occupied_seats,
+      active_seats: t.active_seats,
+      total_seats: t.total_seats,
+      has_space: t.has_space,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase.from('round1_tables').upsert(rows, { onConflict: 'room_id' });
+    if (error) {
+      if (round1TablesMirrorOk !== false) {
+        console.warn('[Supabase] round1_tables mirror skipped (run docs/DATABASE.md migration):', error.message);
+        round1TablesMirrorOk = false;
+      }
+      return;
+    }
+    if (round1TablesMirrorOk !== true) {
+      console.log(`[Supabase] round1_tables mirror live (${rows.length} tables)`);
+      round1TablesMirrorOk = true;
+    }
+  } catch (e) {
+    if (round1TablesMirrorOk !== false) {
+      console.warn('[Supabase] round1_tables mirror error:', e.message);
+      round1TablesMirrorOk = false;
+    }
+  }
+}
+setInterval(syncRound1TablesToSupabase, 5000);
+setTimeout(syncRound1TablesToSupabase, 4000);
+
+// Host Tables bar fallback: merged SQLite + Supabase mirror.
+// SQLite is authoritative (live seats); Supabase fills gaps on restarts.
+app.get('/api/round1/tables', async (req, res) => {
+  try {
+    const db = await import('./server/db.js');
+    const local = db.listRoomsWithCounts(3);
+    if (!supabase) return res.json({ success: true, source: 'sqlite', tables: local });
+    try {
+      const { data, error } = await supabase
+        .from('round1_tables')
+        .select('*')
+        .order('room_id', { ascending: true });
+      if (error) throw error;
+      const byId = new Map(local.map((t) => [t.room_id, t]));
+      for (const row of data || []) {
+        if (!byId.has(row.room_id)) {
+          byId.set(row.room_id, {
+            room_id: row.room_id,
+            room_code: row.room_code || row.room_id,
+            status: row.status || 'waiting',
+            current_feed_index: row.current_feed_index ?? 0,
+            total_seats: row.total_seats ?? 6,
+            occupied_seats: row.occupied_seats ?? 0,
+            active_seats: row.active_seats ?? 0,
+            has_space: row.has_space ?? true,
+            updated_at: row.updated_at ? new Date(row.updated_at).getTime() : null,
+            exists: false,
+            source: 'supabase-mirror',
+          });
+        }
+      }
+      const merged = [...byId.values()].sort((a, b) => String(a.room_id).localeCompare(String(b.room_id)));
+      return res.json({ success: true, source: 'sqlite+supabase', tables: merged });
+    } catch (e) {
+      return res.json({ success: true, source: 'sqlite (mirror unavailable)', tables: local });
+    }
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 const wss = new WebSocketServer({ noServer: true });
 

@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
-  Video, 
-  Users, 
-  Clock, 
-  CheckCircle2, 
-  AlertCircle, 
-  Coins, 
+import {
+  Video,
+  Users,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Coins,
   Trophy,
   ArrowRight,
   RotateCcw,
@@ -15,11 +15,11 @@ import {
   Crown,
   Check
 } from 'lucide-react';
-import { 
-  multiplayerSocket, 
-  TableState, 
-  PlayerSeat, 
-  FeedRevealedData 
+import {
+  multiplayerSocket,
+  TableState,
+  PlayerSeat,
+  FeedRevealedData
 } from '../services/multiplayerSocket';
 import { Player, BetAmount } from '../types';
 import LiveLeaderboardSide from './LiveLeaderboardSide';
@@ -32,10 +32,14 @@ interface MultiplayerRound1Props {
 }
 
 export default function MultiplayerRound1({ player, onComplete, roomId: propRoomId, onChipUpdate }: MultiplayerRound1Props) {
-  // Read room code from prop, URL query param, or default to table_01
+  // Read room code from prop, URL query param, or default to table_01.
+  // If table_01 is full (6 seats), the server auto-moves the player to
+  // table_02 / table_03 / ... and reports the actual room via seat_assigned.
   const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const roomParam = propRoomId || urlParams.get('room');
-  const roomId = roomParam ? roomParam.toLowerCase().replace(/\s+/g, '-') : 'table_01';
+  const requestedRoomId = roomParam ? roomParam.toLowerCase().replace(/\s+/g, '-') : 'table_01';
+  const [roomId, setRoomId] = useState<string>(requestedRoomId);
+  const [redirectNotice, setRedirectNotice] = useState<string | null>(null);
 
   const [tableState, setTableState] = useState<TableState | null>(null);
   const [mySeatNumber, setMySeatNumber] = useState<number | null>(null);
@@ -51,6 +55,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   const [showMobileLeaderboard, setShowMobileLeaderboard] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastReportedChipsRef = useRef<number>(player.chips);
+  const roomIdRef = useRef<string>(requestedRoomId);
+  useEffect(() => {
+    roomIdRef.current = requestedRoomId;
+  }, [requestedRoomId]);
+  const tableStateRef = useRef<TableState | null>(null);
+  const finalizeRef = useRef<((finalChips?: number) => void) | null>(null);
 
   useEffect(() => {
     lastReportedChipsRef.current = player.chips;
@@ -94,6 +104,8 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     const socket = multiplayerSocket.connect();
 
     const handleTableState = (state: TableState) => {
+      // Ignore stale states from a previous table after auto-overflow redirect.
+      if (state.roomId && state.roomId !== roomIdRef.current) return;
       setTableState(state);
       setCountdown(state.roundTimer);
       const me = state.players?.find((p) => p.playerId === player.id);
@@ -103,17 +115,43 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
       }
     };
 
-    const handleSeatAssigned = ({ seatNumber, playerId }: { seatNumber: number; playerId: string }) => {
+    const handleSeatAssigned = ({ seatNumber, playerId, roomId: assignedRoomId, requestedRoom, redirected }: { seatNumber: number; playerId: string; roomId?: string; requestedRoom?: string; redirected?: boolean }) => {
       if (playerId === player.id) {
         setMySeatNumber(seatNumber);
+        if (assignedRoomId && assignedRoomId !== roomIdRef.current) {
+          roomIdRef.current = assignedRoomId;
+          setRoomId(assignedRoomId);
+        }
+        if (redirected && assignedRoomId) {
+          setRedirectNotice(`Table ${requestedRoom || 'table_01'} was full — you were auto-seated at ${assignedRoomId} (Seat ${seatNumber}).`);
+          setTimeout(() => setRedirectNotice(null), 6000);
+        }
       }
     };
 
-    const handleTimerTick = ({ secondsLeft }: { secondsLeft: number }) => {
+    const handleTableRedirected = ({ roomId: assignedRoomId, fromRoomId, seatNumber }: { roomId: string; fromRoomId: string; seatNumber: number }) => {
+      if (assignedRoomId && assignedRoomId !== roomIdRef.current) {
+        roomIdRef.current = assignedRoomId;
+        setRoomId(assignedRoomId);
+        setRedirectNotice(`Table ${fromRoomId} was full — you were auto-seated at ${assignedRoomId} (Seat ${seatNumber}).`);
+        setTimeout(() => setRedirectNotice(null), 6000);
+      }
+    };
+
+    const handleSkipToRound2 = ({ roomId: skippedRoomId }: { roomId: string }) => {
+      // Host pushed this table straight to Round 2 — finalize with current chips.
+      if (skippedRoomId && skippedRoomId !== roomIdRef.current) return;
+      const myChips = tableStateRef.current?.players?.find((p) => p.playerId === player.id)?.chips ?? lastReportedChipsRef.current;
+      finalizeRef.current?.(myChips);
+    };
+
+    const handleTimerTick = ({ secondsLeft, roomId: tickRoom }: { secondsLeft: number; roomId?: string }) => {
+      if (tickRoom && tickRoom !== roomIdRef.current) return;
       setCountdown(secondsLeft);
     };
 
-    const handleWagerPhaseStarted = (data?: { duration?: number }) => {
+    const handleWagerPhaseStarted = (data?: { duration?: number; roomId?: string }) => {
+      if (data?.roomId && data.roomId !== roomIdRef.current) return;
       setMyAnswer(null);
       setFeedReveal(null);
       setSelectedBet(null);
@@ -124,7 +162,8 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
       }
     };
 
-    const handleFeedStarted = (data?: { duration?: number }) => {
+    const handleFeedStarted = (data?: { duration?: number; roomId?: string }) => {
+      if (data?.roomId && data.roomId !== roomIdRef.current) return;
       setMyAnswer(null);
       setFeedReveal(null);
       setLockedTimeTaken(null);
@@ -135,11 +174,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
       if (videoRef.current) {
         videoRef.current.currentTime = 0;
         videoRef.current.load();
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
       }
     };
 
-    const handleFeedRevealed = (data: FeedRevealedData) => {
+    const handleFeedRevealed = (data: FeedRevealedData & { roomId?: string }) => {
+      if (data?.roomId && (data.roomId as string) !== roomIdRef.current) return;
       setFeedReveal(data);
       const meResult = data.playerResults?.find((pr) => pr.playerId === player.id);
       if (meResult && typeof meResult.newChips === 'number' && meResult.newChips !== lastReportedChipsRef.current) {
@@ -155,32 +195,36 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
     socket.on('table_state', handleTableState);
     socket.on('seat_assigned', handleSeatAssigned);
+    socket.on('table_redirected', handleTableRedirected);
+    socket.on('skip_to_round2', handleSkipToRound2);
     socket.on('timer_tick', handleTimerTick);
     socket.on('wager_phase_started', handleWagerPhaseStarted);
     socket.on('feed_started', handleFeedStarted);
     socket.on('feed_revealed', handleFeedRevealed);
     socket.on('error_message', handleErrorMessage);
 
-    // Join room as player
-    multiplayerSocket.joinTable(roomId, player.id, player.username, player.chips);
+    // Join room as player (server auto-overflows to table_02+ when full)
+    multiplayerSocket.joinTable(roomIdRef.current, player.id, player.username, player.chips);
 
     return () => {
       socket.off('table_state', handleTableState);
       socket.off('seat_assigned', handleSeatAssigned);
+      socket.off('table_redirected', handleTableRedirected);
+      socket.off('skip_to_round2', handleSkipToRound2);
       socket.off('timer_tick', handleTimerTick);
       socket.off('wager_phase_started', handleWagerPhaseStarted);
       socket.off('feed_started', handleFeedStarted);
       socket.off('feed_revealed', handleFeedRevealed);
       socket.off('error_message', handleErrorMessage);
     };
-  }, [roomId, player.id, player.username]);
+  }, [player.id, player.username]);
 
   // Video playback sync on feed change
   useEffect(() => {
     if (tableState?.status === 'playing' && videoRef.current) {
       videoRef.current.currentTime = 0;
       videoRef.current.load();
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
     }
   }, [tableState?.status, tableState?.currentFeedIndex]);
 
@@ -208,55 +252,40 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   const currentFeedIndex = tableState?.currentFeedIndex ?? 0;
   const isVideoRound = tableState?.currentVideo?.type === 'video' || currentFeedIndex >= 5;
   const totalFeeds = tableState?.totalFeeds || 10;
-  const challengeDuration = isVideoRound ? 45 : 30;
+  // Round 1 timer: ~30s per image (videos also 30s now).
+  const challengeDuration = 30;
 
-  // Active Multiplier calculation based on elapsed time:
-  // Images (30s): <=5s -> 5x, <=10s -> 4x, <=15s -> 3x, <=20s -> 2x, >20s -> 1x
-  // Videos (45s): <=5s -> 5x, <=10s -> 4x, <=20s -> 3x, <=30s -> 2x, >30s -> 1x
+  useEffect(() => {
+    tableStateRef.current = tableState;
+  }, [tableState]);
+
+  // Active Multiplier calculation based on elapsed time (30s rounds):
+  // <=5s -> 5x, <=10s -> 4x, <=15s -> 3x, <=20s -> 2x, >20s -> 1x
   const elapsed = Math.max(0, challengeDuration - countdown);
   let liveMultiplier = 1;
   let nextThresholdSecs = 0;
 
-  if (isVideoRound) {
-    if (elapsed <= 5) {
-      liveMultiplier = 5;
-      nextThresholdSecs = 5 - elapsed;
-    } else if (elapsed <= 10) {
-      liveMultiplier = 4;
-      nextThresholdSecs = 10 - elapsed;
-    } else if (elapsed <= 20) {
-      liveMultiplier = 3;
-      nextThresholdSecs = 20 - elapsed;
-    } else if (elapsed <= 30) {
-      liveMultiplier = 2;
-      nextThresholdSecs = 30 - elapsed;
-    } else {
-      liveMultiplier = 1;
-      nextThresholdSecs = 0;
-    }
+  if (elapsed <= 5) {
+    liveMultiplier = 5;
+    nextThresholdSecs = 5 - elapsed;
+  } else if (elapsed <= 10) {
+    liveMultiplier = 4;
+    nextThresholdSecs = 10 - elapsed;
+  } else if (elapsed <= 15) {
+    liveMultiplier = 3;
+    nextThresholdSecs = 15 - elapsed;
+  } else if (elapsed <= 20) {
+    liveMultiplier = 2;
+    nextThresholdSecs = 20 - elapsed;
   } else {
-    if (elapsed <= 5) {
-      liveMultiplier = 5;
-      nextThresholdSecs = 5 - elapsed;
-    } else if (elapsed <= 10) {
-      liveMultiplier = 4;
-      nextThresholdSecs = 10 - elapsed;
-    } else if (elapsed <= 15) {
-      liveMultiplier = 3;
-      nextThresholdSecs = 15 - elapsed;
-    } else if (elapsed <= 20) {
-      liveMultiplier = 2;
-      nextThresholdSecs = 20 - elapsed;
-    } else {
-      liveMultiplier = 1;
-      nextThresholdSecs = 0;
-    }
+    liveMultiplier = 1;
+    nextThresholdSecs = 0;
   }
 
   const handleToggleReady = () => {
     if (!mySeat) return;
     const newReady = !mySeat.isReady;
-    multiplayerSocket.toggleReady(roomId, player.id, newReady);
+    multiplayerSocket.toggleReady(roomIdRef.current, player.id, newReady);
   };
 
   const handlePlaceBet = (amount: BetAmount) => {
@@ -264,7 +293,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     setSelectedBet(amount);
     const numericBet = amount === 'ALL_IN' ? myCurrentChips : amount;
     if (numericBet <= 0) return;
-    multiplayerSocket.placeBet(roomId, player.id, numericBet);
+    multiplayerSocket.placeBet(roomIdRef.current, player.id, numericBet);
   };
 
   const handleSelectAnswer = (answer: 'real' | 'ai') => {
@@ -272,32 +301,34 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     setMyAnswer(answer);
     setLockedTimeTaken(elapsed);
     setLockedMultiplier(liveMultiplier);
-    multiplayerSocket.submitAnswer(roomId, player.id, currentFeedIndex, answer);
-  };
-
-  const handleQuickStart = () => {
-    multiplayerSocket.quickStart(roomId);
+    multiplayerSocket.submitAnswer(roomIdRef.current, player.id, currentFeedIndex, answer);
   };
 
   const handleSelectSeat = (seatNum: number) => {
-    multiplayerSocket.selectSeat(roomId, player.id, seatNum);
+    multiplayerSocket.selectSeat(roomIdRef.current, player.id, seatNum);
   };
 
   const handleResetTable = () => {
-    multiplayerSocket.resetTable(roomId);
+    multiplayerSocket.resetTable(roomIdRef.current);
     setTimeout(() => {
-      multiplayerSocket.joinTable(roomId, player.id, player.username, myCurrentChips);
+      multiplayerSocket.joinTable(roomIdRef.current, player.id, player.username, myCurrentChips);
     }, 250);
   };
 
-  const handleFinalizeAndProceed = () => {
-    const mySettlement = tableState?.settlements?.find((s) => s.playerId === player.id);
+  const finalizeAndProceed = (finalChipsOverride?: number) => {
+    const mySettlement = tableStateRef.current?.settlements?.find((s) => s.playerId === player.id);
     const score = mySettlement ? mySettlement.score : 0;
     const bet = mySettlement ? mySettlement.betAmount : (mySeat?.betAmount || 10);
-    const finalChips = mySettlement ? (mySettlement.finalChips ?? 0) : (myCurrentChips ?? 0);
+    const finalChips = mySettlement ? (mySettlement.finalChips ?? 0) : (finalChipsOverride ?? myCurrentChips ?? 0);
     onChipUpdate?.(finalChips);
     onComplete(score, bet, totalFeeds, finalChips);
   };
+
+  const handleFinalizeAndProceed = () => finalizeAndProceed();
+
+  useEffect(() => {
+    finalizeRef.current = finalizeAndProceed;
+  });
 
   // Helper to get player in seat 1..6
   const getPlayerInSeat = (seatNum: number): PlayerSeat | undefined => {
@@ -318,33 +349,29 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     const activeMultiplier = revealMatch ? revealMatch.multiplier : seatPlayer?.lastMultiplier;
 
     return (
-      <div 
+      <div
         key={seatNum}
-        className={`relative z-20 flex flex-col justify-between p-1.5 sm:p-2 rounded-xl border transition-all duration-300 select-none shadow-xl ${
-          isMe
-            ? 'bg-[#121826]/95 border-amber-400 ring-2 ring-amber-400/40 shadow-[0_0_20px_rgba(251,191,36,0.3)]'
-            : seatPlayer
+        className={`relative z-20 flex flex-col justify-between p-1.5 sm:p-2 rounded-xl border transition-all duration-300 select-none shadow-xl ${isMe
+          ? 'bg-[#121826]/95 border-amber-400 ring-2 ring-amber-400/40 shadow-[0_0_20px_rgba(251,191,36,0.3)]'
+          : seatPlayer
             ? 'bg-[#0B0F19]/90 border-[#222B3D]'
             : 'bg-[#07090F]/70 border-dashed border-[#1B2233] opacity-60'
-        }`}
+          }`}
         style={{ minWidth: '115px', maxWidth: '145px' }}
       >
         {/* Top Header: Seat Number & Status */}
         <div className="flex items-center justify-between gap-1 mb-1">
-          <span className={`text-[9px] font-mono font-black px-1.5 py-0.2 rounded ${
-            isMe ? 'bg-amber-400 text-slate-950 shadow-sm' : 'bg-[#181F2E] text-slate-400 border border-[#2B354D]'
-          }`}>
+          <span className={`text-[9px] font-mono font-black px-1.5 py-0.2 rounded ${isMe ? 'bg-amber-400 text-slate-950 shadow-sm' : 'bg-[#181F2E] text-slate-400 border border-[#2B354D]'
+            }`}>
             S{seatNum}
           </span>
 
           {seatPlayer ? (
             <div className="flex items-center gap-1">
-              <span className={`w-1.5 h-1.5 rounded-full ${
-                seatPlayer.connected ? 'bg-emerald-400' : 'bg-rose-500'
-              }`} />
-              <span className={`text-[8px] font-mono font-bold uppercase tracking-wider ${
-                isReady ? 'text-emerald-400' : 'text-amber-400'
-              }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${seatPlayer.connected ? 'bg-emerald-400' : 'bg-rose-500'
+                }`} />
+              <span className={`text-[8px] font-mono font-bold uppercase tracking-wider ${isReady ? 'text-emerald-400' : 'text-amber-400'
+                }`}>
                 {isReady ? 'READY' : 'WAIT'}
               </span>
             </div>
@@ -399,13 +426,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
             {/* Live Delta Badge (Shown during reveal) */}
             {(tableState?.status === 'revealing' || !!feedReveal) && activeDelta !== undefined && (
-              <div className={`mt-0.5 py-0.5 px-1.5 rounded text-[10px] font-sans font-bold text-center animate-fade-in ${
-                activeDelta > 0
-                  ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                  : activeDelta < 0
+              <div className={`mt-0.5 py-0.5 px-1.5 rounded text-[10px] font-sans font-bold text-center animate-fade-in ${activeDelta > 0
+                ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                : activeDelta < 0
                   ? 'bg-rose-500/20 border border-rose-500/50 text-rose-300'
                   : 'bg-slate-800/80 border border-slate-700 text-slate-400'
-              }`}>
+                }`}>
                 <span>{activeDelta > 0 ? `+$${activeDelta}` : activeDelta < 0 ? `-$${Math.abs(activeDelta)}` : '$0 (Watching)'}</span>
                 {(activeMultiplier ?? 0) > 1 && activeDelta > 0 ? (
                   <span className="ml-0.5 text-amber-300 font-mono">⚡{activeMultiplier}x</span>
@@ -486,7 +512,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
               <span>STAGE II: VIDEO SURVEILLANCE</span>
             </div>
             <h3 className="text-sm font-display font-black text-white uppercase tracking-tight">
-              📸 5 Image Challenges Done! Next: 5 Surveillance Feeds (45s • up to 5x multiplier)
+              📸 5 Image Challenges Done! Next: 5 Surveillance Feeds (30s • up to 5x multiplier)
             </h3>
           </div>
         )}
@@ -513,11 +539,10 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
               <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
                 <span>The Reality Bet</span>
                 {tableState.status === 'playing' && (
-                  <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border ${
-                    isVideoRound
-                      ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
-                      : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
-                  }`}>
+                  <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border ${isVideoRound
+                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                    : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                    }`}>
                     {isVideoRound ? '🎥 Video Challenge' : '📸 Image Challenge'}
                   </span>
                 )}
@@ -529,13 +554,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
           <div className="flex items-center gap-3 flex-wrap">
             {/* Speed Multiplier Badge during Playing Phase */}
             {tableState.status === 'playing' && (
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono text-xs font-black uppercase border transition-all duration-300 ${
-                liveMultiplier >= 4
-                  ? 'bg-amber-400/20 border-amber-400 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)] animate-pulse'
-                  : liveMultiplier >= 2
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-mono text-xs font-black uppercase border transition-all duration-300 ${liveMultiplier >= 4
+                ? 'bg-amber-400/20 border-amber-400 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)] animate-pulse'
+                : liveMultiplier >= 2
                   ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
                   : 'bg-slate-800 border-slate-700 text-slate-400'
-              }`}>
+                }`}>
                 <Zap size={14} className={liveMultiplier >= 4 ? 'text-amber-400' : liveMultiplier >= 2 ? 'text-cyan-400' : 'text-slate-400'} />
                 <span>
                   {liveMultiplier}x Speed Multiplier {liveMultiplier > 1 ? `(${nextThresholdSecs}s left)` : ''}
@@ -569,314 +593,306 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
           {/* 3D TABLE AS MAIN ENVIRONMENT */}
           <div className="flex-1 w-full min-w-0 h-full flex flex-col overflow-hidden">
             <div className="relative w-full h-full rounded-2xl overflow-hidden border border-[#1E2535] bg-[#07090E] shadow-[0_20px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between p-2 sm:p-3">
-          {/* STATIC HIGH-PERFORMANCE TABLE BACKGROUND */}
-          <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
-            <img
-              src="/images/blackjack-table-bg.jpg"
-              alt="Casino Blackjack Table"
-              className="w-full h-full object-cover select-none pointer-events-none brightness-95 contrast-105"
-            />
-            {/* Subtle table edge vignette & ambient shading */}
-            <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-[#07090E]/60 via-transparent to-[#07090E]/40" />
-            <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(7,9,14,0.85)]" />
-          </div>
+              {/* STATIC HIGH-PERFORMANCE TABLE BACKGROUND */}
+              <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
+                <img
+                  src="/images/blackjack-table-bg.jpg"
+                  alt="Casino Blackjack Table"
+                  className="w-full h-full object-cover select-none pointer-events-none brightness-95 contrast-105"
+                />
+                {/* Subtle table edge vignette & ambient shading */}
+                <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-[#07090E]/60 via-transparent to-[#07090E]/40" />
+                <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(7,9,14,0.85)]" />
+              </div>
 
-          {/* TOP ROW: PLAYER 1 (Left) & PLAYER 2 (Right) */}
-          <div className="relative z-20 flex items-center justify-between gap-2 sm:gap-4 w-full shrink-0">
-            <div>{renderSeatPod(1)}</div>
-            <div>{renderSeatPod(2)}</div>
-          </div>
+              {/* TOP ROW: PLAYER 1 (Left) & PLAYER 2 (Right) */}
+              <div className="relative z-20 flex items-center justify-between gap-2 sm:gap-4 w-full shrink-0">
+                <div>{renderSeatPod(1)}</div>
+                <div>{renderSeatPod(2)}</div>
+              </div>
 
-          {/* MIDDLE ROW: PLAYER 6 (Left), CENTER STAGE (Covers 'WHITE BLACKJACK'), PLAYER 3 (Right) */}
-          <div className="relative z-20 flex-1 min-h-0 flex items-center justify-between gap-2 sm:gap-4 my-1 w-full overflow-hidden">
-            {/* Left: Player 6 */}
-            <div className="shrink-0">{renderSeatPod(6)}</div>
+              {/* MIDDLE ROW: PLAYER 6 (Left), CENTER STAGE (Covers 'WHITE BLACKJACK'), PLAYER 3 (Right) */}
+              <div className="relative z-20 flex-1 min-h-0 flex items-center justify-between gap-2 sm:gap-4 my-1 w-full overflow-hidden">
+                {/* Left: Player 6 */}
+                <div className="shrink-0">{renderSeatPod(6)}</div>
 
-            {/* CENTER TABLE STAGE: Conceals 'WHITE BLACKJACK' */}
-            <div className="flex-1 min-h-0 h-full max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto flex items-center justify-center pointer-events-auto px-1 sm:px-2">
-              {tableState.status === 'waiting' ? (
-                /* LOBBY FELT CREST */
-                <div className="bg-[#0B1713]/92 backdrop-blur-sm border border-amber-500/40 rounded-3xl px-6 py-5 sm:px-8 sm:py-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(11,23,19,0.9)] max-w-md w-full animate-fade-in">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-3 shadow-inner">
-                    <ShieldCheck size={24} />
-                  </div>
-                  <div className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold mb-1">
-                    Event I • The Reality Protocol
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1.5">
-                    Multiplayer Table Lobby
-                  </h3>
-                  <p className="text-slate-400 text-xs font-mono mb-4">
-                    {totalOccupied} of 6 Seats Occupied • {readyCount} Players Ready
-                  </p>
-
-                  <div className="flex items-center justify-center gap-2.5">
-                    {mySeat && (
-                      <button
-                        onClick={handleToggleReady}
-                        className={`py-2 px-4 rounded-xl font-mono text-xs font-black uppercase tracking-wider transition-all cursor-pointer border ${
-                          mySeat.isReady
-                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
-                            : 'bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300 shadow-tactile'
-                        }`}
-                      >
-                        {mySeat.isReady ? 'YOU ARE READY ✓' : 'CLICK TO BECOME READY'}
-                      </button>
-                    )}
-                    <button
-                      onClick={handleQuickStart}
-                      className="py-2 px-3.5 bg-[#171E2D] hover:bg-[#222B3E] border border-[#2D3950] text-slate-200 font-mono text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
-                      title="Fill remaining seats with AI Bots and start immediately"
-                    >
-                      <Sparkles size={13} className="text-amber-400" />
-                      <span>Quick Demo</span>
-                    </button>
-                  </div>
-                  <div className="mt-3 text-[10px] font-mono">
-                    {tableState.hostConnected ? (
-                      <span className="text-emerald-400 font-bold flex items-center justify-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        Host Connected (Pit Boss) • Awaiting Host Start
-                      </span>
-                    ) : (
-                      <span className="text-slate-500">
-                        Waiting for Host to start Round 1...
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : tableState.status === 'betting' ? (
-                /* PER-CHALLENGE WAGER PHASE CONSOLE */
-                <div className="bg-[#0B1019]/95 backdrop-blur-md border border-amber-500/50 rounded-3xl p-5 sm:p-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.9)] max-w-lg w-full animate-fade-in">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-2 animate-pulse">
-                    <Coins size={24} />
-                  </div>
-                  <div className="text-[10px] font-mono uppercase text-amber-400 font-bold mb-1 tracking-wider">
-                    CHALLENGE {currentFeedIndex + 1} OF {totalFeeds} • {isVideoRound ? '🎥 VIDEO ROUND' : '📸 IMAGE ROUND'}
-                  </div>
-                  <h4 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
-                    {isMyBetPlaced ? `Wager Placed: $${mySeat?.betAmount ?? 0}` : 'Select Wager for this Challenge'}
-                  </h4>
-                  <p className="text-slate-400 text-xs font-mono mb-4">
-                    {isVideoRound ? '45s Video • Speed Multipliers: ≤5s 5x, ≤10s 4x, ≤20s 3x, ≤30s 2x, >30s 1x' : '30s Image • Speed Multipliers: ≤5s 5x, ≤10s 4x, ≤15s 3x, ≤20s 2x, >20s 1x'}
-                  </p>
-
-                  <div className="text-3xl font-mono font-black text-amber-400 mb-4">
-                    {countdown}s REMAINING
-                  </div>
-
-                  {/* Inline Quick Bet Selectors for Center Felt */}
-                  <div className="flex items-center justify-center gap-2">
-                    {([10, 30, 'ALL_IN'] as BetAmount[]).map((amount) => {
-                      const betVal = amount === 'ALL_IN' ? Math.max(0, myCurrentChips) : amount;
-                      const canAfford = myCurrentChips >= betVal && betVal > 0;
-                      const isSelected = selectedBet === amount || (mySeat?.betAmount === betVal && betVal > 0);
-
-                      return (
-                        <button
-                          key={amount}
-                          onClick={() => handlePlaceBet(amount)}
-                          disabled={!canAfford || isMyBetPlaced || myCurrentChips <= 0}
-                          className={`px-4 py-2 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 border ${
-                            isSelected
-                              ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
-                              : canAfford && !isMyBetPlaced && myCurrentChips > 0
-                              ? 'bg-[#181D2A] text-slate-200 border-[#2E374D] hover:border-amber-400/60 cursor-pointer'
-                              : 'bg-[#10131B] text-slate-600 border-[#1C2230] opacity-40 cursor-not-allowed'
-                          }`}
-                          title={myCurrentChips <= 0 ? 'Unable to wager with $0 chips' : undefined}
-                        >
-                          {amount === 'ALL_IN' ? `ALL-IN ($${betVal})` : `$${amount}`}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (tableState.status === 'playing' || tableState.status === 'revealing') ? (
-                /* LIVE MEDIA CHALLENGE FEED (IMAGES & VIDEOS) */
-                <div className="bg-[#0A0D15]/95 backdrop-blur-md border border-[#2B354D] rounded-2xl p-2 sm:p-2.5 shadow-2xl w-full h-full max-h-[52vh] sm:max-h-[56vh] flex flex-col justify-between overflow-hidden">
-                  <div className="flex justify-between items-center mb-1 px-1 text-xs font-mono shrink-0">
-                    <span className="text-slate-400 uppercase font-bold flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                      Feed {currentFeedIndex + 1} of {totalFeeds} • {isVideoRound ? '🎥 Video Surveillance' : '📸 Intelligence Image'}
-                    </span>
-                    <span className="text-amber-400 font-bold">
-                      {countdown}s left
-                    </span>
-                  </div>
-
-                  <div className="w-full flex-1 min-h-[260px] sm:min-h-[320px] bg-black/95 rounded-xl overflow-hidden border border-[#242C3E] relative flex items-center justify-center shadow-inner mx-auto">
-                    {tableState.currentVideo?.type === 'image' || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc || '') ? (
-                      <img
-                        key={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
-                        src={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
-                        alt={tableState.currentVideo?.title || 'Reality Feed'}
-                        className="max-w-full max-h-full w-auto h-auto object-contain select-none animate-fade-in transition-opacity duration-200 shadow-2xl"
-                        loading="eager"
-                        decoding="async"
-                      />
-                    ) : (
-                      <video
-                        key={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
-                        ref={videoRef}
-                        src={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
-                        className="max-w-full max-h-full w-auto h-auto object-contain shadow-2xl"
-                        preload="auto"
-                        playsInline
-                        autoPlay
-                        muted
-                        loop={false}
-                        onPlay={() => setIsPlayingVideo(true)}
-                        onPause={() => setIsPlayingVideo(false)}
-                        onEnded={() => setIsPlayingVideo(false)}
-                      />
-                    )}
-
-                    {/* Speed Multiplier Watermark Badge */}
-                    {tableState.status === 'playing' && (
-                      <div className="absolute top-2.5 right-2.5 z-10">
-                        <div className={`px-2.5 py-1 rounded-lg backdrop-blur-md font-mono text-[11px] font-black uppercase flex items-center gap-1 shadow-lg border ${
-                          liveMultiplier >= 4
-                            ? 'bg-amber-500/30 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.5)]'
-                            : liveMultiplier >= 2
-                            ? 'bg-cyan-500/30 border-cyan-400 text-cyan-300'
-                            : 'bg-black/60 border-slate-700 text-slate-400'
-                        }`}>
-                          <Zap size={12} className={liveMultiplier >= 4 ? 'text-amber-400' : liveMultiplier >= 2 ? 'text-cyan-400' : 'text-slate-400'} />
-                          <span>{liveMultiplier}x MULTIPLIER</span>
-                        </div>
+                {/* CENTER TABLE STAGE: Conceals 'WHITE BLACKJACK' */}
+                <div className="flex-1 min-h-0 h-full max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto flex items-center justify-center pointer-events-auto px-1 sm:px-2">
+                  {tableState.status === 'waiting' ? (
+                    /* LOBBY FELT CREST */
+                    <div className="bg-[#0B1713]/92 backdrop-blur-sm border border-amber-500/40 rounded-3xl px-6 py-5 sm:px-8 sm:py-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(11,23,19,0.9)] max-w-md w-full animate-fade-in">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-3 shadow-inner">
+                        <ShieldCheck size={24} />
                       </div>
-                    )}
-
-                    {/* Lock-in Notification Badge */}
-                    {myAnswer && !feedReveal && (
-                      <div className="absolute bottom-2.5 left-2.5 z-10 bg-slate-950/80 backdrop-blur-md border border-emerald-500/60 text-emerald-300 px-3 py-1 rounded-lg font-mono text-xs flex items-center gap-1.5 shadow-lg">
-                        <CheckCircle2 size={13} className="text-emerald-400" />
-                        <span>Locked in: {myAnswer.toUpperCase()} (⚡{lockedMultiplier}x at {lockedTimeTaken?.toFixed(1)}s)</span>
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold mb-1">
+                        Event I • The Reality Protocol
                       </div>
-                    )}
+                      <h3 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1.5">
+                        Multiplayer Table Lobby
+                      </h3>
+                      <p className="text-slate-400 text-xs font-mono mb-4">
+                        {totalOccupied} of 6 Seats Occupied • {readyCount} Players Ready • {roomId.toUpperCase()}
+                      </p>
 
-                    {/* Instant Reveal Overlay (4.5s) */}
-                    {feedReveal && (
-                      <div className="absolute inset-0 bg-[#090A0F]/95 backdrop-blur-sm flex flex-col items-center justify-center p-3 text-center animate-fade-in z-20 overflow-y-auto">
-                        <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-1.5 border shadow-lg shrink-0 ${
-                          feedReveal.isAI 
-                            ? 'bg-rose-500/20 border-rose-500/60 text-rose-400' 
-                            : 'bg-emerald-500/20 border-emerald-500/60 text-emerald-400'
-                        }`}>
-                          {feedReveal.isAI ? <Video size={22} /> : <CheckCircle2 size={22} />}
+                      {redirectNotice && (
+                        <div className="mb-3 p-2.5 rounded-xl border border-sky-500/50 bg-sky-500/10 text-sky-300 text-[11px] font-mono">
+                          {redirectNotice}
                         </div>
-                        <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-400 tracking-wider shrink-0">Verified Reality Classification:</span>
-                        <h4 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-wider my-1 shrink-0">
-                          {feedReveal.classification}
-                        </h4>
+                      )}
 
-                        {/* Local Player Payout Banner */}
-                        {myRevealResult && (
-                          <div className={`my-1.5 py-1 px-4 rounded-xl font-mono text-xs sm:text-sm font-black border shrink-0 ${
-                            (myRevealResult.netDelta ?? 0) === 0
-                              ? 'bg-slate-800/80 border-slate-700 text-slate-300'
-                              : myRevealResult.isCorrect
-                              ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                              : 'bg-rose-500/20 border-rose-500 text-rose-300'
-                          }`}>
-                            {(myRevealResult.netDelta ?? 0) === 0
-                              ? '👁️ Watching Feed ($0 at risk)'
-                              : myRevealResult.isCorrect
-                              ? `🎉 CORRECT! +$${myRevealResult.netDelta} (⚡${myRevealResult.multiplier}x Multiplier Applied)`
-                              : `❌ INCORRECT (-$${Math.abs(myRevealResult.netDelta ?? (mySeat?.betAmount || 10))})`}
+                      <div className="flex items-center justify-center gap-2.5">
+                        {mySeat && (
+                          <button
+                            onClick={handleToggleReady}
+                            className={`py-2 px-4 rounded-xl font-mono text-xs font-black uppercase tracking-wider transition-all cursor-pointer border ${mySeat.isReady
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
+                              : 'bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300 shadow-tactile'
+                              }`}
+                          >
+                            {mySeat.isReady ? 'YOU ARE READY ✓' : 'CLICK TO BECOME READY'}
+                          </button>
+                        )}
+                      </div>
+                      <div className="mt-3 text-[10px] font-mono">
+                        {tableState.hostConnected ? (
+                          <span className="text-emerald-400 font-bold flex items-center justify-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            Host Connected (Pit Boss) • Awaiting Host Start
+                          </span>
+                        ) : (
+                          <span className="text-slate-500">
+                            Waiting for Host to start Round 1...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : tableState.status === 'betting' ? (
+                    /* PER-CHALLENGE WAGER PHASE CONSOLE */
+                    <div className="bg-[#0B1019]/95 backdrop-blur-md border border-amber-500/50 rounded-3xl p-5 sm:p-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.9)] max-w-lg w-full animate-fade-in">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-2 animate-pulse">
+                        <Coins size={24} />
+                      </div>
+                      <div className="text-[10px] font-mono uppercase text-amber-400 font-bold mb-1 tracking-wider">
+                        CHALLENGE {currentFeedIndex + 1} OF {totalFeeds} • {isVideoRound ? '🎥 VIDEO ROUND' : '📸 IMAGE ROUND'}
+                      </div>
+                      <h4 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
+                        {isMyBetPlaced ? `Wager Placed: $${mySeat?.betAmount ?? 0}` : 'Select Wager for this Challenge'}
+                      </h4>
+                      <p className="text-slate-400 text-xs font-mono mb-4">
+                        30s Challenge • Speed Multipliers: ≤5s 5x, ≤10s 4x, ≤15s 3x, ≤20s 2x, &gt;20s 1x
+                      </p>
+
+                      <div className="text-3xl font-mono font-black text-amber-400 mb-4">
+                        {countdown}s REMAINING
+                      </div>
+
+                      {/* Inline Quick Bet Selectors for Center Felt */}
+                      <div className="flex items-center justify-center gap-2">
+                        {([10, 30, 'ALL_IN'] as BetAmount[]).map((amount) => {
+                          const betVal = amount === 'ALL_IN' ? Math.max(0, myCurrentChips) : amount;
+                          const canAfford = myCurrentChips >= betVal && betVal > 0;
+                          const isSelected = selectedBet === amount || (mySeat?.betAmount === betVal && betVal > 0);
+
+                          return (
+                            <button
+                              key={amount}
+                              onClick={() => handlePlaceBet(amount)}
+                              disabled={!canAfford || isMyBetPlaced || myCurrentChips <= 0}
+                              className={`px-4 py-2 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 border ${isSelected
+                                ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
+                                : canAfford && !isMyBetPlaced && myCurrentChips > 0
+                                  ? 'bg-[#181D2A] text-slate-200 border-[#2E374D] hover:border-amber-400/60 cursor-pointer'
+                                  : 'bg-[#10131B] text-slate-600 border-[#1C2230] opacity-40 cursor-not-allowed'
+                                }`}
+                              title={myCurrentChips <= 0 ? 'Unable to wager with $0 chips' : undefined}
+                            >
+                              {amount === 'ALL_IN' ? `ALL-IN ($${betVal})` : `$${amount}`}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (tableState.status === 'playing' || tableState.status === 'revealing') ? (
+                    /* LIVE MEDIA CHALLENGE FEED (IMAGES & VIDEOS) */
+                    <div className="bg-[#0A0D15]/95 backdrop-blur-md border border-[#2B354D] rounded-2xl p-2 sm:p-2.5 shadow-2xl w-full h-full max-h-[52vh] sm:max-h-[56vh] flex flex-col justify-between overflow-hidden">
+                      <div className="flex justify-between items-center mb-1 px-1 text-xs font-mono shrink-0">
+                        <span className="text-slate-400 uppercase font-bold flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                          Feed {currentFeedIndex + 1} of {totalFeeds} • {isVideoRound ? '🎥 Video Surveillance' : '📸 Intelligence Image'}
+                        </span>
+                        <span className="text-amber-400 font-bold">
+                          {countdown}s left
+                        </span>
+                      </div>
+
+                      <div className="w-full flex-1 min-h-[260px] sm:min-h-[320px] bg-black/95 rounded-xl overflow-hidden border border-[#242C3E] relative flex items-center justify-center shadow-inner mx-auto">
+                        {tableState.currentVideo?.type === 'image' || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc || '') ? (
+                          <img
+                            key={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
+                            src={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
+                            alt={tableState.currentVideo?.title || 'Reality Feed'}
+                            className="max-w-full max-h-full w-auto h-auto object-contain select-none animate-fade-in transition-opacity duration-200 shadow-2xl"
+                            loading="eager"
+                            decoding="async"
+                          />
+                        ) : (
+                          <video
+                            key={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
+                            ref={videoRef}
+                            src={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
+                            className="max-w-full max-h-full w-auto h-auto object-contain shadow-2xl"
+                            preload="auto"
+                            playsInline
+                            autoPlay
+                            muted
+                            loop={false}
+                            onPlay={() => setIsPlayingVideo(true)}
+                            onPause={() => setIsPlayingVideo(false)}
+                            onEnded={() => setIsPlayingVideo(false)}
+                          />
+                        )}
+
+                        {/* Speed Multiplier Watermark Badge */}
+                        {tableState.status === 'playing' && (
+                          <div className="absolute top-2.5 right-2.5 z-10">
+                            <div className={`px-2.5 py-1 rounded-lg backdrop-blur-md font-mono text-[11px] font-black uppercase flex items-center gap-1 shadow-lg border ${liveMultiplier >= 4
+                              ? 'bg-amber-500/30 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.5)]'
+                              : liveMultiplier >= 2
+                                ? 'bg-cyan-500/30 border-cyan-400 text-cyan-300'
+                                : 'bg-black/60 border-slate-700 text-slate-400'
+                              }`}>
+                              <Zap size={12} className={liveMultiplier >= 4 ? 'text-amber-400' : liveMultiplier >= 2 ? 'text-cyan-400' : 'text-slate-400'} />
+                              <span>{liveMultiplier}x MULTIPLIER</span>
+                            </div>
                           </div>
                         )}
 
-                        {/* Compact Table Seat Chip Ledger */}
-                        <div className="mt-1 flex flex-wrap gap-1.5 justify-center max-w-lg shrink-0">
-                          {feedReveal?.playerResults?.map((pr) => (
-                            <span 
-                              key={pr.playerId}
-                              className={`text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded border ${
-                                (pr.netDelta ?? 0) === 0
-                                  ? 'bg-slate-800/50 border-slate-700 text-slate-400'
-                                  : pr.isCorrect 
-                                  ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' 
-                                  : 'bg-rose-500/10 border-rose-500/40 text-rose-400'
-                              }`}
-                            >
-                              S{pr.seatNumber}: {(pr.netDelta ?? 0) === 0 ? '$0 (Watching)' : pr.isCorrect ? `+$${pr.netDelta} (⚡${pr.multiplier}x)` : `-$${Math.abs(pr.netDelta ?? 10)}`}
-                            </span>
-                          ))}
-                        </div>
+                        {/* Lock-in Notification Badge */}
+                        {myAnswer && !feedReveal && (
+                          <div className="absolute bottom-2.5 left-2.5 z-10 bg-slate-950/80 backdrop-blur-md border border-emerald-500/60 text-emerald-300 px-3 py-1 rounded-lg font-mono text-xs flex items-center gap-1.5 shadow-lg">
+                            <CheckCircle2 size={13} className="text-emerald-400" />
+                            <span>Locked in: {myAnswer.toUpperCase()} (⚡{lockedMultiplier}x at {lockedTimeTaken?.toFixed(1)}s)</span>
+                          </div>
+                        )}
+
+                        {/* Instant Reveal Overlay (4.5s) */}
+                        {feedReveal && (
+                          <div className="absolute inset-0 bg-[#090A0F]/95 backdrop-blur-sm flex flex-col items-center justify-center p-3 text-center animate-fade-in z-20 overflow-y-auto">
+                            <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-1.5 border shadow-lg shrink-0 ${feedReveal.isAI
+                              ? 'bg-rose-500/20 border-rose-500/60 text-rose-400'
+                              : 'bg-emerald-500/20 border-emerald-500/60 text-emerald-400'
+                              }`}>
+                              {feedReveal.isAI ? <Video size={22} /> : <CheckCircle2 size={22} />}
+                            </div>
+                            <span className="text-[10px] sm:text-xs font-mono uppercase text-slate-400 tracking-wider shrink-0">Verified Reality Classification:</span>
+                            <h4 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-wider my-1 shrink-0">
+                              {feedReveal.classification}
+                            </h4>
+
+                            {/* Local Player Payout Banner */}
+                            {myRevealResult && (
+                              <div className={`my-1.5 py-1 px-4 rounded-xl font-mono text-xs sm:text-sm font-black border shrink-0 ${(myRevealResult.netDelta ?? 0) === 0
+                                ? 'bg-slate-800/80 border-slate-700 text-slate-300'
+                                : myRevealResult.isCorrect
+                                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                                  : 'bg-rose-500/20 border-rose-500 text-rose-300'
+                                }`}>
+                                {(myRevealResult.netDelta ?? 0) === 0
+                                  ? '👁️ Watching Feed ($0 at risk)'
+                                  : myRevealResult.isCorrect
+                                    ? `🎉 CORRECT! +$${myRevealResult.netDelta} (⚡${myRevealResult.multiplier}x Multiplier Applied)`
+                                    : `❌ INCORRECT (-$${Math.abs(myRevealResult.netDelta ?? (mySeat?.betAmount || 10))})`}
+                              </div>
+                            )}
+
+                            {/* Compact Table Seat Chip Ledger */}
+                            <div className="mt-1 flex flex-wrap gap-1.5 justify-center max-w-lg shrink-0">
+                              {feedReveal?.playerResults?.map((pr) => (
+                                <span
+                                  key={pr.playerId}
+                                  className={`text-[9px] sm:text-[10px] font-mono px-2 py-0.5 rounded border ${(pr.netDelta ?? 0) === 0
+                                    ? 'bg-slate-800/50 border-slate-700 text-slate-400'
+                                    : pr.isCorrect
+                                      ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400'
+                                      : 'bg-rose-500/10 border-rose-500/40 text-rose-400'
+                                    }`}
+                                >
+                                  S{pr.seatNumber}: {(pr.netDelta ?? 0) === 0 ? '$0 (Watching)' : pr.isCorrect ? `+$${pr.netDelta} (⚡${pr.multiplier}x)` : `-$${Math.abs(pr.netDelta ?? 10)}`}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  <p className="text-slate-400 text-xs font-mono text-center mt-1.5 shrink-0 truncate">
-                    {isVideoRound 
-                      ? (isPlayingVideo ? '▶ Surveillance stream active (45s) • Guess under 5s for 5x speed multiplier' : '▶ Surveillance stream ready (45s) • Guess under 5s for 5x speed multiplier') 
-                      : '📸 Image challenge (30s) • Guess under 5s for 5x speed multiplier'}
-                  </p>
+                      <p className="text-slate-400 text-xs font-mono text-center mt-1.5 shrink-0 truncate">
+                        {isVideoRound
+                          ? (isPlayingVideo ? '▶ Surveillance stream active (30s) • Guess under 5s for 5x speed multiplier' : '▶ Surveillance stream ready (30s) • Guess under 5s for 5x speed multiplier')
+                          : '📸 Image challenge (30s) • Guess under 5s for 5x speed multiplier'}
+                      </p>
+                    </div>
+                  ) : (
+                    /* ROUND 1 COMPLETED LOBBY */
+                    <div className="bg-[#0B1019]/95 backdrop-blur-md border border-amber-500/40 rounded-3xl p-6 text-center shadow-2xl max-w-md w-full">
+                      <Trophy size={36} className="text-amber-400 mb-2 mx-auto" />
+                      <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight mb-2">
+                        Round 1 Completed
+                      </h4>
+                      <button
+                        onClick={handleFinalizeAndProceed}
+                        className="py-2.5 px-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-xs uppercase tracking-wider rounded-xl shadow-tactile cursor-pointer"
+                      >
+                        CONTINUE TO NEXT ROUND
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                /* ROUND 1 COMPLETED LOBBY */
-                <div className="bg-[#0B1019]/95 backdrop-blur-md border border-amber-500/40 rounded-3xl p-6 text-center shadow-2xl max-w-md w-full">
-                  <Trophy size={36} className="text-amber-400 mb-2 mx-auto" />
-                  <h4 className="text-2xl font-display font-black text-white uppercase tracking-tight mb-2">
-                    Round 1 Completed
-                  </h4>
-                  <button
-                    onClick={handleFinalizeAndProceed}
-                    className="py-2.5 px-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-xs uppercase tracking-wider rounded-xl shadow-tactile cursor-pointer"
-                  >
-                    CONTINUE TO NEXT ROUND
-                  </button>
-                </div>
-              )}
+
+                {/* Right: Player 3 */}
+                <div className="shrink-0">{renderSeatPod(3)}</div>
+              </div>
+
+              {/* BOTTOM ROW: PLAYER 5 (Left) & PLAYER 4 (Right) */}
+              <div className="relative z-20 flex items-center justify-between gap-2 sm:gap-4 w-full shrink-0">
+                <div>{renderSeatPod(5)}</div>
+                <div>{renderSeatPod(4)}</div>
+              </div>
             </div>
-
-            {/* Right: Player 3 */}
-            <div className="shrink-0">{renderSeatPod(3)}</div>
           </div>
 
-          {/* BOTTOM ROW: PLAYER 5 (Left) & PLAYER 4 (Right) */}
-          <div className="relative z-20 flex items-center justify-between gap-2 sm:gap-4 w-full shrink-0">
-            <div>{renderSeatPod(5)}</div>
-            <div>{renderSeatPod(4)}</div>
+          {/* DEDICATED RIGHT-SIDE LIVE LEADERBOARD (Desktop) */}
+          <div className="hidden lg:flex flex-col w-[260px] xl:w-[280px] h-full shrink-0 overflow-hidden">
+            <LiveLeaderboardSide
+              players={tableState?.players || []}
+              currentFeedIndex={currentFeedIndex}
+              totalFeeds={totalFeeds}
+              status={tableState?.status}
+              currentPlayerId={player.id}
+              feedReveal={feedReveal}
+            />
           </div>
         </div>
-      </div>
 
-      {/* DEDICATED RIGHT-SIDE LIVE LEADERBOARD (Desktop) */}
-      <div className="hidden lg:flex flex-col w-[260px] xl:w-[280px] h-full shrink-0 overflow-hidden">
-        <LiveLeaderboardSide
-          players={tableState?.players || []}
-          currentFeedIndex={currentFeedIndex}
-          totalFeeds={totalFeeds}
-          status={tableState?.status}
-          currentPlayerId={player.id}
-          feedReveal={feedReveal}
-        />
-      </div>
-    </div>
+        {/* MOBILE STANDINGS DRAWER MODAL */}
+        {showMobileLeaderboard && (
+          <div className="fixed inset-0 z-50 bg-[#07090E]/90 backdrop-blur-md flex items-center justify-center p-4 lg:hidden animate-fade-in">
+            <div className="w-full max-w-sm">
+              <LiveLeaderboardSide
+                players={tableState?.players || []}
+                currentFeedIndex={currentFeedIndex}
+                totalFeeds={totalFeeds}
+                status={tableState?.status}
+                currentPlayerId={player.id}
+                feedReveal={feedReveal}
+                isMobileDrawer
+                onClose={() => setShowMobileLeaderboard(false)}
+              />
+            </div>
+          </div>
+        )}
 
-    {/* MOBILE STANDINGS DRAWER MODAL */}
-    {showMobileLeaderboard && (
-      <div className="fixed inset-0 z-50 bg-[#07090E]/90 backdrop-blur-md flex items-center justify-center p-4 lg:hidden animate-fade-in">
-        <div className="w-full max-w-sm">
-          <LiveLeaderboardSide
-            players={tableState?.players || []}
-            currentFeedIndex={currentFeedIndex}
-            totalFeeds={totalFeeds}
-            status={tableState?.status}
-            currentPlayerId={player.id}
-            feedReveal={feedReveal}
-            isMobileDrawer
-            onClose={() => setShowMobileLeaderboard(false)}
-          />
-        </div>
-      </div>
-    )}
-
-    {/* GRAND END-OF-ROUND 1 WINNERS SHOWCASE & LIVE LEADERBOARD */}
-    {tableState?.status === 'settled' && (
+        {/* GRAND END-OF-ROUND 1 WINNERS SHOWCASE & LIVE LEADERBOARD */}
+        {tableState?.status === 'settled' && (
           <div className="fixed inset-0 z-50 bg-[#06080E]/95 backdrop-blur-lg flex items-center justify-center p-4 overflow-y-auto">
             <div className="max-w-3xl w-full bg-[#0F1420] border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 shadow-[0_0_80px_rgba(251,191,36,0.35)] text-center my-8 animate-fade-in">
               {/* Grand Trophy & Crown Header */}
@@ -983,18 +999,16 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                     const isPositive = (s.netEarnings ?? 0) >= 0;
 
                     return (
-                      <div 
+                      <div
                         key={s.playerId}
-                        className={`flex items-center justify-between p-3 text-xs font-mono transition-colors ${
-                          isMe 
-                            ? 'bg-[#182135] font-bold' 
-                            : 'hover:bg-[#101624]'
-                        }`}
+                        className={`flex items-center justify-between p-3 text-xs font-mono transition-colors ${isMe
+                          ? 'bg-[#182135] font-bold'
+                          : 'hover:bg-[#101624]'
+                          }`}
                       >
                         <div className="flex items-center gap-3">
-                          <span className={`w-5 text-center font-bold ${
-                            idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-600' : 'text-slate-500'
-                          }`}>
+                          <span className={`w-5 text-center font-bold ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-600' : 'text-slate-500'
+                            }`}>
                             #{idx + 1}
                           </span>
                           <div>
@@ -1081,13 +1095,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                       key={amount}
                       onClick={() => handlePlaceBet(amount)}
                       disabled={!canAfford || isMyBetPlaced || myCurrentChips <= 0}
-                      className={`px-4 sm:px-5 py-2.5 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 border ${
-                        isSelected
-                          ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
-                          : canAfford && !isMyBetPlaced && myCurrentChips > 0
+                      className={`px-4 sm:px-5 py-2.5 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 border ${isSelected
+                        ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
+                        : canAfford && !isMyBetPlaced && myCurrentChips > 0
                           ? 'bg-[#181D2A] text-slate-200 border-[#2E374D] hover:border-amber-400/60 cursor-pointer'
                           : 'bg-[#10131B] text-slate-600 border-[#1C2230] opacity-40 cursor-not-allowed'
-                      }`}
+                        }`}
                       title={myCurrentChips <= 0 ? 'Unable to wager with $0 chips' : undefined}
                     >
                       {amount === 'ALL_IN' ? `ALL-IN ($${betVal})` : `$${amount}`}
@@ -1101,13 +1114,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 <button
                   onClick={() => handleSelectAnswer('real')}
                   disabled={myAnswer !== null || !!feedReveal}
-                  className={`flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-display font-black text-sm uppercase tracking-wider transition-all duration-150 cursor-pointer border-2 ${
-                    myAnswer === 'real'
-                      ? 'bg-emerald-600 border-emerald-400 text-white shadow-tactile'
-                      : myAnswer === null && !feedReveal
+                  className={`flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-display font-black text-sm uppercase tracking-wider transition-all duration-150 cursor-pointer border-2 ${myAnswer === 'real'
+                    ? 'bg-emerald-600 border-emerald-400 text-white shadow-tactile'
+                    : myAnswer === null && !feedReveal
                       ? 'bg-gradient-to-b from-[#163826] to-[#0D2418] hover:from-[#1E4D34] hover:to-[#123322] border-emerald-500/40 text-emerald-300'
                       : 'bg-[#10131B] border-[#1C2230] text-slate-600 opacity-40 cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   <CheckCircle2 size={18} />
                   <span>REAL</span>
@@ -1121,13 +1133,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 <button
                   onClick={() => handleSelectAnswer('ai')}
                   disabled={myAnswer !== null || !!feedReveal}
-                  className={`flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-display font-black text-sm uppercase tracking-wider transition-all duration-150 cursor-pointer border-2 ${
-                    myAnswer === 'ai'
-                      ? 'bg-rose-600 border-rose-400 text-white shadow-tactile'
-                      : myAnswer === null && !feedReveal
+                  className={`flex items-center gap-2 px-5 sm:px-6 py-3 rounded-xl font-display font-black text-sm uppercase tracking-wider transition-all duration-150 cursor-pointer border-2 ${myAnswer === 'ai'
+                    ? 'bg-rose-600 border-rose-400 text-white shadow-tactile'
+                    : myAnswer === null && !feedReveal
                       ? 'bg-gradient-to-b from-[#3D141E] to-[#260B12] hover:from-[#521B29] hover:to-[#330F19] border-rose-500/40 text-rose-300'
                       : 'bg-[#10131B] border-[#1C2230] text-slate-600 opacity-40 cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   <Video size={18} />
                   <span>AI</span>
@@ -1148,11 +1159,10 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 {tableState.status === 'waiting' && mySeat && (
                   <button
                     onClick={handleToggleReady}
-                    className={`px-3 py-1.5 font-mono font-black text-xs rounded-lg shadow-sm cursor-pointer border ${
-                      mySeat.isReady
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                        : 'bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300'
-                    }`}
+                    className={`px-3 py-1.5 font-mono font-black text-xs rounded-lg shadow-sm cursor-pointer border ${mySeat.isReady
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : 'bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300'
+                      }`}
                   >
                     {mySeat.isReady ? 'Mark Not Ready' : 'Set Ready'}
                   </button>
@@ -1163,14 +1173,6 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                     className="px-3 py-1.5 bg-amber-400 text-slate-950 font-mono font-black text-xs rounded-lg shadow-sm cursor-pointer hover:bg-amber-300"
                   >
                     Take Seat 1
-                  </button>
-                )}
-                {tableState.status === 'waiting' && (
-                  <button
-                    onClick={handleQuickStart}
-                    className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-xs uppercase tracking-wider rounded-lg shadow-sm cursor-pointer"
-                  >
-                    Quick Demo
                   </button>
                 )}
                 <button

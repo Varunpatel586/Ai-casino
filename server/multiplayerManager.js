@@ -1,4 +1,14 @@
-import db from './db.js';
+import db, { MAX_TABLE_SEATS } from './db.js';
+
+// Maximum players per Round 1 table — 6 seats; overflow auto-creates table_02, table_03, ...
+export const MAX_PLAYERS_PER_TABLE = MAX_TABLE_SEATS || 6;
+
+// Phase timers (seconds). Round 1: ~30s per challenge (images and videos).
+// Wager window stays short (15s) so lobbies move fast; feed display is 30s.
+export const WAGER_DURATION = 15;
+export const FEED_DURATION = 30;
+export const IMAGE_FEED_DURATION = 30;
+export const VIDEO_FEED_DURATION = 30;
 
 // Master Pool of 10 Visual Challenges (Exact labels & classification logic preserved)
 export const allRound1Images = [
@@ -96,6 +106,8 @@ export class MultiplayerManager {
 
       // Player Events
       socket.on('join_table', (data) => this.handleJoinTable(socket, data));
+      socket.on('join_table_auto', (data) => this.handleJoinTableAuto(socket, data));
+      socket.on('get_tables', () => this.handleGetTables(socket));
       socket.on('toggle_ready', (data) => this.handleToggleReady(socket, data));
       socket.on('reconnect_table', (data) => this.handleReconnectTable(socket, data));
       socket.on('select_seat', (data) => this.handleSelectSeat(socket, data));
@@ -105,6 +117,8 @@ export class MultiplayerManager {
       socket.on('add_bots', (data) => this.handleAddBots(socket, data));
       socket.on('submit_answer', (data) => this.handleSubmitAnswer(socket, data));
       socket.on('reset_table', (data) => this.handleResetTable(socket, data));
+      socket.on('skip_to_round2', (data) => this.handleSkipToRound2(socket, data));
+      socket.on('host_get_tables', () => this.handleGetTables(socket));
 
       socket.on('disconnect', () => {
         console.log(`[Multiplayer] Socket disconnected: ${socket.id}`);
@@ -172,6 +186,21 @@ export class MultiplayerManager {
   }
 
   handleHostJoin(socket, { roomId = 'table_01', hostId = `host-${Date.now()}` }) {
+    roomId = String(roomId || 'table_01').toLowerCase().replace(/\s+/g, '-');
+
+    // Leave previous room(s) so the host socket is only in ONE table room at a time.
+    // Clean up any stale hostSockets entries pointing to this socket.
+    if (socket.roomId && socket.roomId !== roomId) {
+      socket.leave(socket.roomId);
+      console.log(`[Multiplayer] Host left old room ${socket.roomId}, joining ${roomId}`);
+    }
+    // Remove any hostSockets entries for this socket from other rooms
+    for (const [existingRoomId, socketId] of this.hostSockets.entries()) {
+      if (socketId === socket.id && existingRoomId !== roomId) {
+        this.hostSockets.delete(existingRoomId);
+      }
+    }
+
     const room = db.getOrCreateRoom(roomId);
     socket.join(roomId);
     socket.roomId = roomId;
@@ -184,6 +213,10 @@ export class MultiplayerManager {
     console.log(`[Multiplayer] Host ${hostId} registered for room ${roomId}`);
     socket.emit('host_registered', { roomId, hostId });
     this.broadcastTableState(roomId);
+    // Push the full tables overview so the host Tables bar shows ALL tables.
+    try {
+      socket.emit('tables_list', { tables: db.listRoomsWithCounts(), maxSeats: MAX_PLAYERS_PER_TABLE });
+    } catch (_) {}
   }
 
   handleToggleReady(socket, { roomId = 'table_01', playerId, isReady }) {
@@ -203,6 +236,23 @@ export class MultiplayerManager {
       socket.emit('error_message', { message: 'Player ID and Username are required' });
       return;
     }
+
+    const requestedRoom = String(roomId || 'table_01').toLowerCase().replace(/\s+/g, '-');
+
+    // Auto-overflow: keep max 6 seats per table. If the requested table is full,
+    // seat the player at table_02, table_03, ... and tell the client where it landed.
+    const requestedExisting = db.getPlayer(requestedRoom, playerId) || db.getPlayerByUsername(requestedRoom, username);
+    let targetRoom = requestedRoom;
+    let wasRedirected = false;
+    if (!requestedExisting) {
+      const placement = db.findTableWithSpace(requestedRoom, MAX_PLAYERS_PER_TABLE);
+      targetRoom = placement.roomId;
+      wasRedirected = placement.roomId !== requestedRoom;
+      if (wasRedirected) {
+        console.log(`[Multiplayer] Table ${requestedRoom} full — auto-assigned ${username} to ${targetRoom}`);
+      }
+    }
+    roomId = targetRoom;
 
     let room = db.getOrCreateRoom(roomId);
     // If room was settled from past round and has no active players, auto-reset session
@@ -236,13 +286,56 @@ export class MultiplayerManager {
     }
 
     console.log(`[Multiplayer] ${username} seated at Seat ${seatNumber} in ${roomId}`);
-    socket.emit('seat_assigned', { seatNumber, playerId });
+    socket.emit('seat_assigned', { seatNumber, playerId, roomId, requestedRoom, redirected: wasRedirected });
+    if (wasRedirected) {
+      socket.emit('table_redirected', { fromRoomId: requestedRoom, roomId, seatNumber, playerId });
+    }
+    this.broadcastTableState(roomId);
+    // Also refresh the requested table view (counts) for any host watching it.
+    if (wasRedirected) this.broadcastTableState(requestedRoom);
+    // Push updated tables list to ALL connected sockets (hosts need to see new overflow tables immediately).
+    this.broadcastTablesListToAll();
+  }
+
+  // Explicit auto-join entry: client asks for "any table with space" starting at roomId.
+  handleJoinTableAuto(socket, data = {}) {
+    return this.handleJoinTable(socket, data);
+  }
+
+  // Host overview: list all tables with seat counts so host can pick table_01/02/...
+  handleGetTables(socket) {
+    try {
+      const tables = db.listRoomsWithCounts();
+      socket.emit('tables_list', { tables, maxSeats: MAX_PLAYERS_PER_TABLE });
+    } catch (e) {
+      console.warn('[Multiplayer] get_tables failed:', e.message);
+      socket.emit('tables_list', { tables: [], maxSeats: MAX_PLAYERS_PER_TABLE });
+    }
+  }
+
+  // Broadcast updated tables list to ALL sockets in the namespace (e.g. after overflow creates a new table).
+  broadcastTablesListToAll() {
+    try {
+      const tables = db.listRoomsWithCounts();
+      this.io.emit('tables_list', { tables, maxSeats: MAX_PLAYERS_PER_TABLE });
+      console.log(`[Multiplayer] Broadcasted tables_list to all sockets (${tables.length} tables)`);
+    } catch (e) {
+      console.warn('[Multiplayer] broadcastTablesListToAll failed:', e.message);
+    }
+  }
+
+  // Host action: push every player in a table straight to Round 2 (image-duel stage).
+  handleSkipToRound2(socket, { roomId = 'table_01' } = {}) {
+    roomId = String(roomId || 'table_01').toLowerCase().replace(/\s+/g, '-');
+    console.log(`[Multiplayer] Host skipped table ${roomId} to Round 2`);
+    this.clearRoomTimer(roomId);
+    this.io.to(roomId).emit('skip_to_round2', { roomId, timestamp: Date.now() });
     this.broadcastTableState(roomId);
   }
 
   handleSelectSeat(socket, { roomId = 'table_01', playerId, desiredSeat }) {
     const seat = Number(desiredSeat);
-    if (seat < 1 || seat > 6) return;
+    if (seat < 1 || seat > MAX_PLAYERS_PER_TABLE) return;
 
     const room = db.getOrCreateRoom(roomId);
     if (room.status !== 'waiting') {
@@ -268,7 +361,29 @@ export class MultiplayerManager {
   }
 
   handleReconnectTable(socket, { roomId = 'table_01', playerId }) {
-    const existingPlayer = db.getPlayer(roomId, playerId);
+    const normalizedRoom = String(roomId || 'table_01').toLowerCase().replace(/\s+/g, '-');
+    // Player may have been auto-moved to an overflow table — search siblings too.
+    const candidateRooms = [normalizedRoom];
+    const match = normalizedRoom.match(/^(.*?)(\d+)$/);
+    if (match) {
+      const prefix = match[1];
+      const baseNum = Number.parseInt(match[2], 10);
+      for (let n = 1; n <= 50; n++) {
+        if (n === baseNum) continue;
+        candidateRooms.push(`${prefix}${String(n).padStart(match[2].length, '0')}`);
+      }
+    }
+    let existingPlayer = null;
+    let foundRoom = normalizedRoom;
+    for (const candidate of candidateRooms) {
+      const found = db.getPlayer(candidate, playerId);
+      if (found) {
+        existingPlayer = found;
+        foundRoom = candidate;
+        break;
+      }
+    }
+    roomId = foundRoom;
     if (!existingPlayer) {
       socket.emit('reconnect_failed', { message: 'Session expired or not found' });
       return;
@@ -279,8 +394,8 @@ export class MultiplayerManager {
     socket.playerId = playerId;
     db.updatePlayerConnection(roomId, playerId, 1, socket.id);
 
-    console.log(`[Multiplayer] Player ${existingPlayer.username} reconnected to Seat ${existingPlayer.seat_number}`);
-    socket.emit('seat_assigned', { seatNumber: existingPlayer.seat_number, playerId });
+    console.log(`[Multiplayer] Player ${existingPlayer.username} reconnected to Seat ${existingPlayer.seat_number} in ${roomId}`);
+    socket.emit('seat_assigned', { seatNumber: existingPlayer.seat_number, playerId, roomId });
     this.broadcastTableState(roomId);
   }
 
@@ -322,7 +437,7 @@ export class MultiplayerManager {
     const players = db.getPlayersInRoom(roomId);
     const occupiedSeats = new Set(players.map((p) => p.seat_number));
 
-    for (let seat = 1; seat <= 6; seat++) {
+    for (let seat = 1; seat <= MAX_PLAYERS_PER_TABLE; seat++) {
       if (!occupiedSeats.has(seat)) {
         const botName = botNames[seat - 1] || `AI Bot ${seat}`;
         const botId = `bot-${roomId}-${seat}`;
@@ -358,9 +473,10 @@ export class MultiplayerManager {
 
     const currentItem = challenges[feedIndex];
     this.io.to(roomId).emit('wager_phase_started', {
+      roomId,
       feedIndex,
       totalFeeds: challenges.length,
-      duration: 15,
+      duration: WAGER_DURATION,
       video: {
         id: currentItem.id,
         title: currentItem.title,
@@ -368,11 +484,11 @@ export class MultiplayerManager {
       },
     });
 
-    let secondsLeft = 15;
+    let secondsLeft = WAGER_DURATION;
     const timerInterval = setInterval(() => {
       secondsLeft -= 1;
       db.updateRoomStatus(roomId, 'betting', feedIndex, Math.max(0, secondsLeft));
-      this.io.to(roomId).emit('timer_tick', { phase: 'betting', feedIndex, secondsLeft });
+      this.io.to(roomId).emit('timer_tick', { roomId, phase: 'betting', feedIndex, secondsLeft });
 
       // Automatically place default bets for bots
       const players = db.getPlayersInRoom(roomId);
@@ -445,7 +561,7 @@ export class MultiplayerManager {
     }, 1200);
   }
 
-  // --- CHALLENGE DISPLAY PHASE (30s Images / 45s Videos) ---
+  // --- CHALLENGE DISPLAY PHASE (30s Images / 30s Videos) ---
   startFeed(roomId, feedIndex) {
     this.clearRoomTimer(roomId);
     const challenges = this.getRoomChallenges(roomId);
@@ -455,7 +571,7 @@ export class MultiplayerManager {
     }
 
     const currentVideo = challenges[feedIndex];
-    const duration = currentVideo?.type === 'video' ? 45 : 30;
+    const duration = currentVideo?.type === 'video' ? VIDEO_FEED_DURATION : IMAGE_FEED_DURATION;
     const feedStartTime = Date.now();
 
     db.resetPlayerAnswerStatuses(roomId);
@@ -465,6 +581,7 @@ export class MultiplayerManager {
     this.broadcastTableState(roomId);
 
     this.io.to(roomId).emit('feed_started', {
+      roomId,
       feedIndex,
       totalFeeds: challenges.length,
       duration,
@@ -489,23 +606,14 @@ export class MultiplayerManager {
           if (roomNow.status === 'playing' && roomNow.current_feed_index === feedIndex) {
             const timeTaken = Number((delay / 1000).toFixed(1));
             
-            // Calculate bot speed multiplier:
-            // Images: <=5s: 5x, <=10s: 4x, <=15s: 3x, <=20s: 2x, >20s: 1x
-            // Videos: <=5s: 5x, <=10s: 4x, <=20s: 3x, <=30s: 2x, >30s: 1x
+            // Calculate bot speed multiplier (30s rounds):
+            // <=5s: 5x, <=10s: 4x, <=15s: 3x, <=20s: 2x, >20s: 1x
             let multiplier = 1;
-            if (currentVideo.type === 'video') {
-              if (timeTaken <= 5) multiplier = 5;
-              else if (timeTaken <= 10) multiplier = 4;
-              else if (timeTaken <= 20) multiplier = 3;
-              else if (timeTaken <= 30) multiplier = 2;
-              else multiplier = 1;
-            } else {
-              if (timeTaken <= 5) multiplier = 5;
-              else if (timeTaken <= 10) multiplier = 4;
-              else if (timeTaken <= 15) multiplier = 3;
-              else if (timeTaken <= 20) multiplier = 2;
-              else multiplier = 1;
-            }
+            if (timeTaken <= 5) multiplier = 5;
+            else if (timeTaken <= 10) multiplier = 4;
+            else if (timeTaken <= 15) multiplier = 3;
+            else if (timeTaken <= 20) multiplier = 2;
+            else multiplier = 1;
 
             // 65% chance bot guesses correctly
             const isCorrect = Math.random() < 0.65;
@@ -534,7 +642,7 @@ export class MultiplayerManager {
     const timerInterval = setInterval(() => {
       secondsLeft -= 1;
       db.updateRoomStatus(roomId, 'playing', feedIndex, Math.max(0, secondsLeft));
-      this.io.to(roomId).emit('timer_tick', { phase: 'playing', feedIndex, secondsLeft });
+      this.io.to(roomId).emit('timer_tick', { roomId, phase: 'playing', feedIndex, secondsLeft });
 
       if (secondsLeft <= 0) {
         this.clearRoomTimer(roomId);
@@ -562,23 +670,14 @@ export class MultiplayerManager {
     const feedStartTime = room.feed_start_time || Date.now();
     const timeTaken = Math.max(0.1, Number(((Date.now() - feedStartTime) / 1000).toFixed(1)));
 
-    // Calculate Speed Multiplier:
-    // Images: <=5s: 5x, <=10s: 4x, <=15s: 3x, <=20s: 2x, >20s: 1x
-    // Videos: <=5s: 5x, <=10s: 4x, <=20s: 3x, <=30s: 2x, >30s: 1x
+    // Calculate Speed Multiplier (30s rounds):
+    // <=5s: 5x, <=10s: 4x, <=15s: 3x, <=20s: 2x, >20s: 1x
     let multiplier = 1;
-    if (currentVideo.type === 'video') {
-      if (timeTaken <= 5) multiplier = 5;
-      else if (timeTaken <= 10) multiplier = 4;
-      else if (timeTaken <= 20) multiplier = 3;
-      else if (timeTaken <= 30) multiplier = 2;
-      else multiplier = 1;
-    } else {
-      if (timeTaken <= 5) multiplier = 5;
-      else if (timeTaken <= 10) multiplier = 4;
-      else if (timeTaken <= 15) multiplier = 3;
-      else if (timeTaken <= 20) multiplier = 2;
-      else multiplier = 1;
-    }
+    if (timeTaken <= 5) multiplier = 5;
+    else if (timeTaken <= 10) multiplier = 4;
+    else if (timeTaken <= 15) multiplier = 3;
+    else if (timeTaken <= 20) multiplier = 2;
+    else multiplier = 1;
 
     const isCorrect = (answer === 'ai' && currentVideo.isAI) || (answer === 'real' && !currentVideo.isAI);
     const rawBet = player.bet_amount && player.bet_amount > 0 ? player.bet_amount : (player.chips > 0 ? 10 : 0);
@@ -674,6 +773,7 @@ export class MultiplayerManager {
     });
 
     this.io.to(roomId).emit('feed_revealed', {
+      roomId,
       feedIndex,
       totalFeeds: challenges.length,
       isAI: currentVideo.isAI,
@@ -716,6 +816,7 @@ export class MultiplayerManager {
     console.log(`[Multiplayer] Round 1 Settled for ${roomId}:`, settlements);
 
     this.io.to(roomId).emit('round_settled', {
+      roomId,
       settlements: settlements.map((s) => ({
         playerId: s.player_id,
         username: s.username,

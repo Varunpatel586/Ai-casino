@@ -44,6 +44,19 @@ export interface FeedRevealedData {
   }>;
 }
 
+export interface TableSummary {
+  room_id: string;
+  room_code?: string;
+  status: string;
+  current_feed_index: number;
+  total_seats: number;
+  occupied_seats: number;
+  active_seats: number;
+  has_space: boolean;
+  exists?: boolean;
+  updated_at?: number | null;
+}
+
 export interface TableState {
   roomId: string;
   roomCode?: string;
@@ -171,6 +184,34 @@ class MultiplayerSocketService {
 
   public resetTable(roomId: string) {
     this.connect().emit('reset_table', { roomId });
+  }
+
+  public skipToRound2(roomId: string) {
+    this.connect().emit('skip_to_round2', { roomId });
+  }
+
+  public getTables() {
+    this.connect().emit('get_tables', {});
+  }
+
+  public hostGetTables() {
+    this.connect().emit('host_get_tables', {});
+  }
+
+  public fetchTablesRest(): Promise<{ tables: TableSummary[]; source: string } | null> {
+    return fetch(`${getBackendUrl()}/api/round1/tables`)
+      .then((r) => r.json())
+      .then((data) => (data?.success && Array.isArray(data.tables) ? data : null))
+      .catch(() => null);
+  }
+
+  public joinTableAuto(roomId: string, playerId: string, username: string, currentChips: number) {
+    this.currentRoomId = roomId;
+    this.lastJoinData = { roomId, playerId, username, currentChips };
+    const socket = this.connect();
+    if (socket.connected) {
+      socket.emit('join_table_auto', this.lastJoinData);
+    }
   }
 }
 

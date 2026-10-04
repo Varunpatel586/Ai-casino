@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   ShieldAlert, 
   Clock, 
@@ -16,18 +17,24 @@ import {
   ShieldCheck,
   Zap
 } from 'lucide-react';
-import { 
-  multiplayerSocket, 
-  TableState, 
-  PlayerSeat, 
-  FeedRevealedData 
+import {
+  multiplayerSocket,
+  TableState,
+  TableSummary,
+  PlayerSeat,
+  FeedRevealedData
 } from '../services/multiplayerSocket';
 import LiveLeaderboardSide from '../components/LiveLeaderboardSide';
 
 export default function HostRound1Controller() {
-  const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-  const roomParam = urlParams.get('room');
-  const [roomId] = useState<string>(roomParam ? roomParam.toLowerCase().replace(/\s+/g, '-') : 'table_01');
+  // ?room=table_02 only SELECTS which table is active — it never filters
+  // which tables appear in the Tables bar (that list always comes from
+  // socket `tables_list` + REST /api/round1/tables).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const roomParam = searchParams.get('room');
+  const requestedRoom = roomParam ? roomParam.toLowerCase().replace(/\s+/g, '-') : 'table_01';
+  const [roomId, setRoomId] = useState<string>(requestedRoom);
+  const [tables, setTables] = useState<TableSummary[]>([]);
   const [tableState, setTableState] = useState<TableState | null>(null);
   const [feedReveal, setFeedReveal] = useState<FeedRevealedData | null>(null);
   const [countdown, setCountdown] = useState<number>(30);
@@ -70,31 +77,58 @@ export default function HostRound1Controller() {
   }, []);
 
   const hostId = useRef(`host-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`).current;
+  const roomIdRef = useRef<string>(requestedRoom);
 
   // Connect socket as Host
   useEffect(() => {
-    console.log('[HostRound1] Connecting as host to room:', roomId, 'hostId:', hostId);
+    console.log('[HostRound1] Connecting as host to room:', roomIdRef.current, 'hostId:', hostId);
     const socket = multiplayerSocket.connect();
 
-    socket.on('table_state', (state: TableState) => {
+    const handleTableState = (state: TableState) => {
+      // Only render the selected table; ignore sibling overflow tables.
+      if (state.roomId && state.roomId !== roomIdRef.current) return;
       console.log('[HostRound1] table_state received: status=', state.status, 'feed=', state.currentFeedIndex, 'players=', state.players.length);
       setTableState(state);
       setCountdown(state.roundTimer);
-    });
+    };
 
-    socket.on('timer_tick', ({ secondsLeft }) => {
+    const mergeTables = (list: TableSummary[]) => {
+      if (!Array.isArray(list) || list.length === 0) return;
+      setTables((prev) => {
+        // Union socket + REST so no table ever disappears from the bar.
+        const byId = new Map(prev.map((t) => [t.room_id, t]));
+        for (const t of list) byId.set(t.room_id, t);
+        return [...byId.values()].sort((a, b) => a.room_id.localeCompare(b.room_id));
+      });
+    };
+
+    const handleTablesList = ({ tables: list }: { tables: TableSummary[] }) => {
+      mergeTables(list || []);
+    };
+
+    // REST fallback: merged SQLite + Supabase mirror (survives restarts).
+    const refreshTablesRest = () => {
+      multiplayerSocket.fetchTablesRest().then((data) => {
+        if (data?.tables) mergeTables(data.tables);
+      });
+    };
+
+    const handleTimerTick = ({ secondsLeft, roomId: tickRoom }: { secondsLeft: number; roomId?: string }) => {
+      if (tickRoom && tickRoom !== roomIdRef.current) return;
       setCountdown(secondsLeft);
-    });
+    };
 
-    socket.on('wager_phase_started', (data?: { duration?: number }) => {
+    const handleWagerStarted = (data?: { duration?: number; roomId?: string }) => {
+      if (data?.roomId && data.roomId !== roomIdRef.current) return;
       console.log('[HostRound1] wager_phase_started - duration:', data?.duration);
       setFeedReveal(null);
       if (data?.duration) {
         setCountdown(data.duration);
       }
-    });
+    };
 
-    socket.on('feed_started', (data?: { duration?: number }) => {
+    const handleFeedStarted = (data?: { duration?: number; roomId?: string }) => {
+      if (data?.roomId && data.roomId !== roomIdRef.current) return;
       console.log('[HostRound1] feed_started - duration:', data?.duration);
       setFeedReveal(null);
       if (data?.duration) {
@@ -105,46 +139,79 @@ export default function HostRound1Controller() {
         videoRef.current.load();
         videoRef.current.play().catch(() => {});
       }
-    });
+    };
 
-    socket.on('feed_revealed', (data: FeedRevealedData) => {
+    const handleFeedRevealed = (data: FeedRevealedData & { roomId?: string }) => {
+      if (data?.roomId && (data.roomId as string) !== roomIdRef.current) return;
       console.log('[HostRound1] feed_revealed - isAI:', data.isAI, 'results:', data.playerResults.length);
       setFeedReveal(data);
-    });
+    };
 
-    socket.on('error_message', ({ message }) => {
+    const handleErrorMessage = ({ message }: { message: string }) => {
       console.warn('[HostRound1] error_message:', message);
       setErrorMessage(message);
       setTimeout(() => setErrorMessage(null), 4000);
-    });
+    };
 
-    socket.on('connect', () => {
+    const handleConnect = () => {
       console.log('[HostRound1] Socket connected, joining as host...');
-      multiplayerSocket.joinAsHost(roomId, hostId);
-    });
+      multiplayerSocket.joinAsHost(roomIdRef.current, hostId);
+      multiplayerSocket.hostGetTables();
+      // Also REST-refresh on reconnect so host always sees accurate table counts.
+      refreshTablesRest();
+    };
 
-    socket.on('disconnect', (reason) => {
+    const handleDisconnect = (reason: string) => {
       console.warn('[HostRound1] Socket disconnected:', reason);
-    });
+    };
+
+    socket.on('table_state', handleTableState);
+    socket.on('tables_list', handleTablesList);
+    socket.on('timer_tick', handleTimerTick);
+    socket.on('wager_phase_started', handleWagerStarted);
+    socket.on('feed_started', handleFeedStarted);
+    socket.on('feed_revealed', handleFeedRevealed);
+    socket.on('error_message', handleErrorMessage);
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
 
     // Register this client as Host (in case already connected)
+    refreshTablesRest(); // immediate REST fetch so ALL tables render instantly
     if (socket.connected) {
-      multiplayerSocket.joinAsHost(roomId, hostId);
+      multiplayerSocket.joinAsHost(roomIdRef.current, hostId);
+      multiplayerSocket.hostGetTables();
+    } else {
+      // Poll briefly until connected so the tables list still loads.
+      const poll = setInterval(() => {
+        if (socket.connected) {
+          multiplayerSocket.joinAsHost(roomIdRef.current, hostId);
+          multiplayerSocket.hostGetTables();
+          clearInterval(poll);
+        }
+      }, 500);
+      setTimeout(() => clearInterval(poll), 5000);
     }
+
+    const tablesPoll = setInterval(() => {
+      multiplayerSocket.hostGetTables();
+      refreshTablesRest();
+    }, 2000);
 
     // FIX BUG-012: Remove all listeners on cleanup to prevent accumulation
     return () => {
       console.log('[HostRound1] Cleaning up socket listeners');
-      socket.off('table_state');
-      socket.off('timer_tick');
-      socket.off('wager_phase_started');
-      socket.off('feed_started');
-      socket.off('feed_revealed');
-      socket.off('error_message');
-      socket.off('connect');
-      socket.off('disconnect');
+      clearInterval(tablesPoll);
+      socket.off('table_state', handleTableState);
+      socket.off('tables_list', handleTablesList);
+      socket.off('timer_tick', handleTimerTick);
+      socket.off('wager_phase_started', handleWagerStarted);
+      socket.off('feed_started', handleFeedStarted);
+      socket.off('feed_revealed', handleFeedRevealed);
+      socket.off('error_message', handleErrorMessage);
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
     };
-  }, [roomId, hostId]);
+  }, [hostId]);
 
 
   // Sync video on feed change
@@ -156,26 +223,74 @@ export default function HostRound1Controller() {
     }
   }, [tableState?.status, tableState?.currentFeedIndex]);
 
+  const switchTable = (nextRoom: string) => {
+    const clean = nextRoom.toLowerCase().replace(/\s+/g, '-');
+    roomIdRef.current = clean;
+    setRoomId(clean);
+    setTableState(null);
+    setFeedReveal(null);
+    multiplayerSocket.joinAsHost(clean, hostId);
+    multiplayerSocket.hostGetTables();
+    multiplayerSocket.fetchTablesRest().then((data) => {
+      if (data?.tables) setTables((prev) => {
+        const byId = new Map(prev.map((t) => [t.room_id, t]));
+        for (const t of data.tables) byId.set(t.room_id, t);
+        return [...byId.values()].sort((a, b) => a.room_id.localeCompare(b.room_id));
+      });
+    });
+    // Update ?room= via React Router so router state stays in sync.
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('room', clean);
+      return next;
+    }, { replace: true });
+  };
+
+  // Sync when ?room= changes externally (browser back/forward, links, etc.)
+  useEffect(() => {
+    if (!roomParam) return;
+    const clean = roomParam.toLowerCase().replace(/\s+/g, '-');
+    if (clean === roomIdRef.current) return;
+    roomIdRef.current = clean;
+    setRoomId(clean);
+    setTableState(null);
+    setFeedReveal(null);
+    multiplayerSocket.joinAsHost(clean, hostId);
+    multiplayerSocket.hostGetTables();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomParam]);
+
   const handleStartGame = () => {
-    multiplayerSocket.hostStartGame(roomId);
+    multiplayerSocket.hostStartGame(roomIdRef.current);
   };
 
   const handleAddBots = () => {
-    multiplayerSocket.addBots(roomId);
+    multiplayerSocket.addBots(roomIdRef.current);
   };
 
   const handleResetTable = () => {
-    multiplayerSocket.resetTable(roomId);
+    multiplayerSocket.resetTable(roomIdRef.current);
+  };
+
+  const [skipConfirm, setSkipConfirm] = useState(false);
+  const handleSkipToRound2 = () => {
+    if (!skipConfirm) {
+      setSkipConfirm(true);
+      setTimeout(() => setSkipConfirm(false), 4000);
+      return;
+    }
+    setSkipConfirm(false);
+    multiplayerSocket.skipToRound2(roomIdRef.current);
   };
 
   const copyRoomCode = () => {
-    navigator.clipboard.writeText(tableState?.roomCode || roomId);
+    navigator.clipboard.writeText(tableState?.roomCode || roomIdRef.current);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2500);
   };
 
   const copyPlayerInvite = () => {
-    const inviteUrl = `${window.location.origin}/?room=${tableState?.roomCode || roomId}`;
+    const inviteUrl = `${window.location.origin}/?room=${tableState?.roomCode || roomIdRef.current}`;
     navigator.clipboard.writeText(inviteUrl);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2500);
@@ -185,52 +300,45 @@ export default function HostRound1Controller() {
   const readyCount = players.filter((p) => p.isReady).length;
   const occupiedCount = players.length;
 
+  // Tables bar IDs: ALWAYS show the default pair (table_01, table_02) plus
+  // every server-reported table plus the currently active one — regardless of
+  // what ?room= says in the URL. The URL only selects the ACTIVE table.
+  const tableIds: string[] = (() => {
+    // Always seed at least table_01, table_02, table_03 in the bar.
+    // Additional tables come from server reports and the active roomId.
+    const ids = new Set<string>(['table_01', 'table_02', 'table_03']);
+    for (const t of tables) ids.add(t.room_id);
+    ids.add(roomId); // brand-new table (e.g. "+ New Table") before server reports it
+    return [...ids].sort();
+  })();
+
   const currentFeedIndex = tableState?.currentFeedIndex ?? 0;
   const isVideoRound = tableState?.currentVideo?.type === 'video' || currentFeedIndex >= 5;
   const totalFeeds = tableState?.totalFeeds || 10;
-  const challengeDuration = isVideoRound ? 45 : 30;
+  // Round 1 timer: ~30s per challenge (images and videos).
+  const challengeDuration = 30;
 
-  // Active Multiplier calculation based on elapsed time:
-  // Images (30s): <=5s -> 5x, <=10s -> 4x, <=15s -> 3x, <=20s -> 2x, >20s -> 1x
-  // Videos (45s): <=5s -> 5x, <=10s -> 4x, <=20s -> 3x, <=30s -> 2x, >30s -> 1x
+  // Active Multiplier calculation based on elapsed time (30s rounds):
+  // <=5s -> 5x, <=10s -> 4x, <=15s -> 3x, <=20s -> 2x, >20s -> 1x
   const elapsed = Math.max(0, challengeDuration - countdown);
   let liveMultiplier = 1;
   let nextThresholdSecs = 0;
 
-  if (isVideoRound) {
-    if (elapsed <= 5) {
-      liveMultiplier = 5;
-      nextThresholdSecs = 5 - elapsed;
-    } else if (elapsed <= 10) {
-      liveMultiplier = 4;
-      nextThresholdSecs = 10 - elapsed;
-    } else if (elapsed <= 20) {
-      liveMultiplier = 3;
-      nextThresholdSecs = 20 - elapsed;
-    } else if (elapsed <= 30) {
-      liveMultiplier = 2;
-      nextThresholdSecs = 30 - elapsed;
-    } else {
-      liveMultiplier = 1;
-      nextThresholdSecs = 0;
-    }
+  if (elapsed <= 5) {
+    liveMultiplier = 5;
+    nextThresholdSecs = 5 - elapsed;
+  } else if (elapsed <= 10) {
+    liveMultiplier = 4;
+    nextThresholdSecs = 10 - elapsed;
+  } else if (elapsed <= 15) {
+    liveMultiplier = 3;
+    nextThresholdSecs = 15 - elapsed;
+  } else if (elapsed <= 20) {
+    liveMultiplier = 2;
+    nextThresholdSecs = 20 - elapsed;
   } else {
-    if (elapsed <= 5) {
-      liveMultiplier = 5;
-      nextThresholdSecs = 5 - elapsed;
-    } else if (elapsed <= 10) {
-      liveMultiplier = 4;
-      nextThresholdSecs = 10 - elapsed;
-    } else if (elapsed <= 15) {
-      liveMultiplier = 3;
-      nextThresholdSecs = 15 - elapsed;
-    } else if (elapsed <= 20) {
-      liveMultiplier = 2;
-      nextThresholdSecs = 20 - elapsed;
-    } else {
-      liveMultiplier = 1;
-      nextThresholdSecs = 0;
-    }
+    liveMultiplier = 1;
+    nextThresholdSecs = 0;
   }
 
   // Helper to get player in seat
@@ -414,6 +522,57 @@ export default function HostRound1Controller() {
           </div>
         </div>
 
+        {/* MULTI-TABLE SELECTOR (6 seats per table, overflow → table_02, table_03, ...) */}
+        <div className="bg-[#0E121B] border border-[#1E2536] rounded-xl px-4 py-2.5 mb-3 flex flex-wrap items-center gap-2 text-xs font-mono">
+          <span className="text-slate-400 uppercase text-[10px] font-bold tracking-wider">Tables:</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {tableIds.map((tableId) => {
+              const summary = tables.find((t) => t.room_id === tableId);
+              // Use occupied_seats (total players) not active_seats — active_seats drops to 0
+              // when players temporarily disconnect mid-game, making a full table look empty.
+              const occ = summary
+                ? summary.occupied_seats
+                : (tableId === roomId ? occupiedCount : 0);
+              const isFull = occ >= 6;
+              const isActive = tableId === roomId;
+              const statusLabel = summary ? `${summary.status}${summary.exists === false ? ' • new' : ''}` : 'Current table';
+              return (
+                <button
+                  key={tableId}
+                  onClick={() => switchTable(tableId)}
+                  className={`px-2.5 py-1 rounded-lg border font-mono text-[11px] font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
+                      : isFull
+                      ? 'bg-[#2A1418] border-rose-500/50 text-rose-300 hover:border-rose-400'
+                      : 'bg-[#171D2A] border-[#2B354D] text-slate-300 hover:border-amber-400/60 hover:text-white'
+                  }`}
+                  title={`${statusLabel} • feed ${summary?.current_feed_index ?? 0} • click to manage`}
+                >
+                  {tableId.replace(/_/g, ' ').toUpperCase()} ({occ}/6)
+                </button>
+              );
+            })}
+            <button
+              onClick={() => {
+                const existingNums = tableIds.map((id) => {
+                  const m = id.match(/(\d+)$/);
+                  return m ? parseInt(m[1], 10) : 0;
+                });
+                const nextNum = existingNums.length > 0 ? Math.max(...existingNums, 1) + 1 : 2;
+                switchTable(`table_${String(nextNum).padStart(2, '0')}`);
+              }}
+              className="px-2.5 py-1 rounded-lg border border-dashed border-[#2B354D] text-slate-400 hover:text-amber-400 hover:border-amber-400/60 font-mono text-[11px] font-bold transition-all cursor-pointer"
+              title="Open a new empty table"
+            >
+              + New Table
+            </button>
+          </div>
+          <span className="text-slate-500 text-[10px] ml-auto">
+            6 seats per table • extra players auto-seat to the next table
+          </span>
+        </div>
+
         {/* HOST ACTION BAR */}
         <div className="bg-[#0E121B] border border-[#1E2536] rounded-xl px-4 py-2 mb-3 flex flex-wrap items-center justify-between gap-2.5 text-xs font-mono">
           <div className="flex items-center gap-2 text-slate-400">
@@ -445,6 +604,21 @@ export default function HostRound1Controller() {
                 </button>
               </>
             )}
+
+            {/* Skip this table's players straight to Round 2 */}
+            <button
+              onClick={handleSkipToRound2}
+              disabled={occupiedCount === 0}
+              className={`px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                skipConfirm
+                  ? 'bg-sky-500 text-slate-950 border-sky-400 hover:bg-sky-400 shadow-tactile'
+                  : 'bg-[#14202E] hover:bg-[#1B2C3E] border-sky-500/50 text-sky-300 hover:text-sky-200'
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+              title={`Push all ${occupiedCount} player(s) in ${roomId} straight to Round 2`}
+            >
+              <Zap size={13} />
+              <span>{skipConfirm ? `CONFIRM SKIP ${roomId.toUpperCase()} → ROUND 2?` : `SKIP ${roomId.toUpperCase()} → ROUND 2`}</span>
+            </button>
 
             <button
               onClick={handleResetTable}
