@@ -47,7 +47,7 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
-  const aiGreetingSent = useRef(false);
+
 
   // Generate unique message ID
   const generateMessageId = () => {
@@ -56,42 +56,41 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
 
   // Initialize chat based on mode
   useEffect(() => {
-    // Reset greeting flag when mode changes
-    aiGreetingSent.current = false;
-
     // Clean up previous mode setup
     network_manager.message_callback = null;
     network_manager.connection_callback = null;
 
+    const GREETING = "Hi there! I'm your chat partner. Let's have a conversation!";
+    let greetingTimer: ReturnType<typeof setTimeout>;
+
     if (mode === 'ai') {
-      // Start with an AI greeting (only once per mode switch)
-      if (!aiGreetingSent.current) {
-        setTimeout(() => {
-          setMessages(prev => [...prev, {
-            id: generateMessageId(),
-            text: "Hi there! I'm your chat partner. Let's have a conversation!",
-            sender: 'ai',
-            timestamp: new Date()
-          }]);
-          aiGreetingSent.current = true;
-        }, 1000);
-      }
+      // Send greeting exactly once on mount / mode switch
+      greetingTimer = setTimeout(() => {
+        setMessages([{
+          id: generateMessageId(),
+          text: GREETING,
+          sender: 'ai',
+          timestamp: new Date()
+        }]);
+      }, 1000);
     } else {
       console.log('Setting up human chat mode');
 
-      // Set up connection callback
+      // Connection is already established by Round3.tsx before this component mounts,
+      // so connection_callback will never fire here. Send the greeting immediately.
+      greetingTimer = setTimeout(() => {
+        setMessages([{
+          id: generateMessageId(),
+          text: GREETING,
+          sender: 'host',
+          timestamp: new Date()
+        }]);
+      }, 1000);
+
+      // Set up connection callback only for disconnect handling
       network_manager.connection_callback = ((connected: boolean, message: string) => {
         console.log(`Connection status: ${connected ? 'Connected' : 'Disconnected'} - ${message}`);
-
-        if (connected) {
-          console.log('Successfully connected to host');
-          setMessages(prev => [...prev, {
-            id: generateMessageId(),
-            text: 'Connected to chat partner! Say hello!',
-            sender: 'human',
-            timestamp: new Date()
-          }]);
-        } else {
+        if (!connected) {
           setMessages(prev => [...prev, {
             id: generateMessageId(),
             text: `Connection lost: ${message}`,
@@ -159,10 +158,13 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
 
     // Clean up
     return () => {
+      clearTimeout(greetingTimer);
       network_manager.message_callback = null;
       network_manager.connection_callback = null;
     };
   }, [mode]);
+
+
 
   // Timer effect
   useEffect(() => {

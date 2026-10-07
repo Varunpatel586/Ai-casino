@@ -767,6 +767,24 @@ This document serves as the continuous project walkthrough and activity log. It 
   - PR link available: `https://github.com/Varunpatel586/Ai-casino/pull/new/pranav`.
 - **Status:** ✅ Successfully Pushed to `Varunpatel586/Ai-casino:pranav`.
 
+---
+
+### Entry 33: ChatInterface Greeting Timing Fix & Push to Upstream
+- **Date & Time:** 2026-10-07 22:52 IST
+- **User Prompt:**
+  > *"push again the changes"*
+- **Objective:**
+  - Commit ChatInterface greeting and connection lifecycle fix.
+  - Push the latest commits on branch `pranav` to `origin` (`https://github.com/Varunpatel586/Ai-casino`).
+- **Actions Taken:**
+  - Modified [`src/components/chat/ChatInterface.tsx`](src/components/chat/ChatInterface.tsx):
+    - Ensured initial greeting is sent on mount/mode switch for both AI and host modes.
+    - Added greeting cleanup timer on unmount.
+  - Verified TypeScript compilation: `npm run typecheck` passed with 0 errors.
+  - Committed and pushed changes to `origin pranav` and `pranav-fork pranav`.
+- **Status:** ✅ Committed & Pushed to `origin pranav`.
+
+
 
 
 
