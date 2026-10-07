@@ -65,30 +65,37 @@ const DataPatternGame: React.FC<DataPatternGameProps> = ({ onBack, onChipUpdate,
   const isCorrect = userInput === answer;
 
   return (
-    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
-      <div className="max-w-md sm:max-w-lg w-full bg-[#12151E] border border-[#232938] rounded-2xl p-4 sm:p-6 text-center shadow-2xl my-auto">
-        {/* Header */}
-        <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-emerald-500/30 text-emerald-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-2 sm:p-4 overflow-hidden select-none">
+      <div className="max-w-md sm:max-w-lg w-full casino-vip-card rounded-2xl p-4 sm:p-6 text-center relative border border-amber-500/30 shadow-[0_25px_70px_rgba(0,0,0,0.9)] my-auto">
+        <div className="card-neon-edge" />
+
+        {/* Header Badge */}
+        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-surface-lowest/90 border border-emerald-500/40 text-emerald-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-2 shadow-[0_0_15px_rgba(16,185,129,0.25)]">
+          <span className="text-amber-400">♦</span>
           <span>Free Side Action // +10 Chip Reward</span>
+          <span className="text-amber-400">♦</span>
         </div>
 
-        <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
+        <h2 className="text-xl sm:text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] uppercase tracking-wider mb-1 drop-shadow-[0_2px_12px_rgba(244,208,104,0.3)]">
           Binary Decryption
         </h2>
-        <p className="text-slate-400 text-xs font-sans mb-3">
+        <p className="text-amber-200/60 text-xs font-sans max-w-sm mx-auto mb-3.5">
           Deduce the missing bit in the algorithmic sequence. Successful decryption credits 10 chips with zero risk.
         </p>
 
         {/* Cryptographic Sequence Display */}
-        <div className="mb-6 p-6 bg-[#0E1118] border border-[#283248] rounded-2xl">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500 block mb-2">
+        <div className="mb-4 p-4 bg-surface-lowest/90 border border-amber-500/30 rounded-xl shadow-[inset_0_0_25px_rgba(0,0,0,0.85)] relative">
+          <div className="absolute top-1.5 left-3 text-[8px] font-mono uppercase tracking-widest text-amber-500/60">
+            SEQUENCE DECODER
+          </div>
+          <span className="text-[9px] font-mono uppercase tracking-widest text-slate-400 block mb-1 pt-1">
             Target Bit Sequence
           </span>
-          <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-emerald-400 select-none">
+          <div className="text-3xl sm:text-4xl font-mono font-black tracking-widest text-emerald-400 select-none drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]">
             {getPatternDisplay().split('').map((char, idx) => (
               <span
                 key={idx}
-                className={char === '?' ? 'text-amber-400 animate-pulse underline decoration-amber-400 underline-offset-8' : ''}
+                className={char === '?' ? 'text-amber-400 animate-pulse underline decoration-amber-400 underline-offset-8 drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]' : ''}
               >
                 {char}
               </span>
@@ -98,19 +105,19 @@ const DataPatternGame: React.FC<DataPatternGameProps> = ({ onBack, onChipUpdate,
 
         {/* Input Interface */}
         {!showResult && (
-          <div className="mb-6 p-4 bg-[#181D2A] border border-[#283248] rounded-xl">
-            <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block mb-3">
+          <div className="mb-4 p-3 sm:p-4 bg-surface-lowest/80 border border-amber-500/25 rounded-xl backdrop-blur-sm shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-amber-200/80 block mb-2.5">
               Select Completing Bit
             </span>
-            <div className="flex justify-center gap-4 mb-4">
+            <div className="flex justify-center gap-3 mb-3.5">
               {['0', '1'].map((bit) => (
                 <button
                   key={bit}
                   onClick={() => setUserInput(bit)}
-                  className={`w-20 h-16 rounded-xl font-mono text-2xl font-black transition-all cursor-pointer ${
+                  className={`w-16 h-12 rounded-xl font-mono text-xl font-black transition-all cursor-pointer ${
                     userInput === bit
-                      ? 'bg-emerald-600 text-white ring-4 ring-emerald-400/50 scale-105 shadow-tactile'
-                      : 'bg-[#12151E] hover:bg-[#202738] text-slate-300 border border-[#283248]'
+                      ? 'bg-gradient-to-b from-amber-300 via-amber-400 to-amber-600 text-slate-950 ring-4 ring-amber-400/50 scale-105 shadow-[0_0_25px_rgba(245,158,11,0.6)] font-bold'
+                      : 'bg-surface-lowest/90 hover:bg-[#1a1f2e] text-slate-200 border border-amber-500/25 hover:border-amber-400/60 shadow-inner'
                   }`}
                 >
                   {bit}
@@ -121,7 +128,7 @@ const DataPatternGame: React.FC<DataPatternGameProps> = ({ onBack, onChipUpdate,
             <button
               onClick={handleSubmit}
               disabled={!userInput || hasPlayed}
-              className="py-3 px-8 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 text-slate-950 font-display font-black text-sm uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-marquee-gold w-full py-2.5 px-6 font-display font-black text-xs sm:text-sm uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Confirm Decryption
             </button>
@@ -130,28 +137,28 @@ const DataPatternGame: React.FC<DataPatternGameProps> = ({ onBack, onChipUpdate,
 
         {/* Settlement Results */}
         {showResult && (
-          <div className={`p-4 rounded-xl border mb-6 animate-in fade-in zoom-in-95 duration-200 ${
+          <div className={`p-2.5 sm:p-3 rounded-xl border mb-3 animate-in fade-in zoom-in-95 duration-200 ${
             isCorrect
-              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-              : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+              ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-300 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
+              : 'bg-rose-950/60 border-rose-500/60 text-rose-300 shadow-[0_0_25px_rgba(244,63,94,0.3)]'
           }`}>
-            <span className="text-[10px] font-mono uppercase tracking-widest block mb-0.5">
+            <span className="text-[9px] font-mono uppercase tracking-widest block mb-0.5 opacity-80">
               Sequence Verification
             </span>
-            <p className="text-xl font-display font-black uppercase mb-1">
+            <p className="text-lg font-display font-black uppercase mb-0.5">
               {isCorrect ? 'Decryption Verified!' : 'Parity Mismatch'}
             </p>
-            <p className="text-xs font-mono">
+            <p className="text-xs font-mono font-medium">
               {getRewardMessage()}
             </p>
           </div>
         )}
 
         {/* Action Controls */}
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-2.5">
           <button
             onClick={onBack}
-            className="py-3 px-6 bg-[#181D2A] hover:bg-[#202738] border border-[#283248] hover:border-slate-500 text-slate-300 font-mono text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+            className="py-2.5 px-6 bg-surface-lowest/80 hover:bg-surface-lowest border border-amber-500/30 hover:border-amber-400/60 text-amber-200 font-mono text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-[0_4px_16px_rgba(0,0,0,0.4)]"
           >
             Back To Tables
           </button>

@@ -318,13 +318,13 @@ function App() {
   };
 
   return (
-    <div className="w-screen h-screen max-w-full max-h-full casino-table-bg text-slate-100 font-sans selection:bg-amber-500 selection:text-black antialiased overflow-hidden flex flex-col">
+    <div className="w-full h-full h-[100dvh] max-w-full max-h-full casino-table-bg text-slate-100 font-sans selection:bg-amber-500 selection:text-black antialiased overflow-hidden flex flex-col fixed inset-0">
       {/* Main game routes */}
       <Routes>
         <Route path="/" element={
-          <div className="w-full h-full flex flex-col overflow-hidden">
+          <div className="w-full h-full flex-1 min-h-0 flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            <div className="flex-1 min-h-0 w-full overflow-y-auto flex flex-col">
+            <div className="flex-1 min-h-0 w-full h-full overflow-hidden flex flex-col">
               <ErrorBoundary>
                 {renderGameScreen()}
               </ErrorBoundary>
@@ -332,9 +332,9 @@ function App() {
           </div>
         } />
         <Route path="/player" element={
-          <div className="w-full h-full flex flex-col overflow-hidden">
+          <div className="w-full h-full flex-1 min-h-0 flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            <div className="flex-1 min-h-0 w-full overflow-y-auto flex flex-col">
+            <div className="flex-1 min-h-0 w-full h-full overflow-hidden flex flex-col">
               <ErrorBoundary>
                 {renderGameScreen()}
               </ErrorBoundary>
@@ -342,9 +342,9 @@ function App() {
           </div>
         } />
         <Route path="/contestant" element={
-          <div className="w-full h-full flex flex-col overflow-hidden">
+          <div className="w-full h-full flex-1 min-h-0 flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            <div className="flex-1 min-h-0 w-full overflow-y-auto flex flex-col">
+            <div className="flex-1 min-h-0 w-full h-full overflow-hidden flex flex-col">
               <ErrorBoundary>
                 {renderGameScreen()}
               </ErrorBoundary>
@@ -352,9 +352,9 @@ function App() {
           </div>
         } />
         <Route path="/play" element={
-          <div className="w-full h-full flex flex-col overflow-hidden">
+          <div className="w-full h-full flex-1 min-h-0 flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            <div className="flex-1 min-h-0 w-full overflow-y-auto flex flex-col">
+            <div className="flex-1 min-h-0 w-full h-full overflow-hidden flex flex-col">
               <ErrorBoundary>
                 {renderGameScreen()}
               </ErrorBoundary>
@@ -369,9 +369,9 @@ function App() {
         <Route path="/round1-host" element={<HostRound1Controller />} />
         <Route path="/operator-setup" element={<OperatorSetup />} />
         <Route path="*" element={
-          <div className="w-full h-full flex flex-col overflow-hidden">
+          <div className="w-full h-full flex-1 min-h-0 flex flex-col overflow-hidden">
             {showChipDisplay && <ChipDisplay chips={player.chips} username={player.username} />}
-            <div className="flex-1 min-h-0 w-full overflow-y-auto flex flex-col">
+            <div className="flex-1 min-h-0 w-full h-full overflow-hidden flex flex-col">
               {renderGameScreen()}
             </div>
           </div>

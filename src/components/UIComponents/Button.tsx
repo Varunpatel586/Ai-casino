@@ -17,10 +17,10 @@ const Button: React.FC<ButtonProps> = ({
   const baseStyles = 'font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors';
   
   const variantStyles = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
-    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-400',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
+    primary: 'btn-marquee-gold text-slate-950 font-display font-black uppercase tracking-wider',
+    secondary: 'bg-surface-lowest/90 border border-amber-500/30 text-amber-200 hover:border-amber-400/60 focus:ring-amber-400',
+    danger: 'bg-gradient-to-r from-rose-600 to-rose-700 text-white hover:from-rose-500 hover:to-rose-600 focus:ring-rose-500 shadow-tactile',
+    success: 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white hover:from-emerald-500 hover:to-emerald-600 focus:ring-emerald-500 shadow-tactile',
   };
   
   const sizeStyles = {

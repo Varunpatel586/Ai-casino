@@ -244,29 +244,29 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
     : null;
 
   return (
-    <div className="flex flex-col h-full bg-[#0E1118]">
+    <div className="flex flex-col h-full bg-[#0B0E17]/95 relative">
       {/* Terminal Comms Header */}
-      <div className="bg-[#12151E] px-4 py-3 border-b border-[#232938] flex justify-between items-center">
+      <div className="bg-surface-lowest/95 px-4 py-3 border-b border-amber-500/20 flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-[#181D2A] border border-amber-500/20 text-amber-400">
+          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.3)]">
             <ShieldAlert size={16} />
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-[#12151E] animate-pulse" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-surface-lowest animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-black uppercase tracking-wider text-white">
+              <span className="text-xs font-mono font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#FFF2CE] to-[#F4D068]">
                 SUBJECT #402
               </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-emerald-400">
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
                 LIVE COMMS
               </span>
             </div>
-            <p className="text-[11px] font-mono text-slate-400">Encrypted Blind Interrogation Channel</p>
+            <p className="text-[11px] font-mono text-amber-200/50">Encrypted Blind Interrogation Channel</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-[#181D2A] border border-[#232938] px-3 py-1 rounded-lg">
+          <div className="flex items-center gap-1.5 bg-surface-lowest border border-amber-500/30 px-3 py-1 rounded-lg shadow-inner">
             <Clock size={13} className="text-amber-400" />
             <span className={`text-xs font-mono font-bold ${timeLeft <= 10 ? 'text-rose-400 animate-pulse' : 'text-amber-400'}`}>
               {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
@@ -277,16 +277,16 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
 
       {/* Query quota status banner */}
       {remainingMessages !== null && (
-        <div className="bg-[#151922] px-4 py-2 border-b border-[#232938] flex items-center justify-between text-xs font-mono">
-          <span className="text-slate-400">Queries Remaining:</span>
+        <div className="bg-surface-lowest/80 px-4 py-2 border-b border-amber-500/15 flex items-center justify-between text-xs font-mono">
+          <span className="text-amber-200/60">Queries Remaining:</span>
           <div className="flex items-center gap-1.5">
             {Array.from({ length: messageLimit || 3 }).map((_, i) => (
               <span
                 key={i}
                 className={`w-2 h-2 rounded-full transition-colors ${
                   i < (messageLimit! - remainingMessages)
-                    ? 'bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]'
-                    : 'bg-[#232938]'
+                    ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]'
+                    : 'bg-[#232938] border border-amber-500/20'
                 }`}
               />
             ))}
@@ -307,8 +307,8 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
               <div
                 className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-3.5 shadow-md ${
                   isYou
-                    ? 'bg-[#181D2A] border border-amber-500/30 text-white rounded-tr-sm'
-                    : 'bg-[#121622] border border-[#263045] text-slate-200 rounded-tl-sm'
+                    ? 'bg-gradient-to-r from-amber-500/15 via-[#181d2a] to-amber-500/10 border border-amber-500/40 text-white rounded-tr-sm shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
+                    : 'bg-surface-lowest/90 border border-blue-500/30 text-slate-200 rounded-tl-sm shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-3 mb-1.5 pb-1 border-b border-white/5">
@@ -328,7 +328,7 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
         })}
 
         {isTyping && (
-          <div className="flex items-center gap-2 p-3 bg-[#121622] border border-[#263045] rounded-xl w-fit">
+          <div className="flex items-center gap-2 p-3 bg-surface-lowest/90 border border-blue-500/30 rounded-xl w-fit shadow-md">
             <span className="text-xs font-mono text-slate-400 mr-1">Subject transmitting</span>
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" />
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
@@ -339,7 +339,7 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
       </div>
 
       {/* Input area */}
-      <div className="p-3.5 sm:p-4 bg-[#12151E] border-t border-[#232938]">
+      <div className="p-3.5 sm:p-4 bg-surface-lowest/95 border-t border-amber-500/20">
         <div className="flex gap-2">
           <input
             type="text"
@@ -351,31 +351,31 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
                 ? "Interrogation limit reached. Submit your verdict above."
                 : "Type interrogation query..."
             }
-            className="flex-1 bg-[#181D2A] border border-[#283248] rounded-xl px-4 py-2.5 text-white placeholder-slate-500 font-sans text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex-1 bg-surface-lowest border border-amber-500/25 rounded-xl px-4 py-2.5 text-white placeholder-amber-200/40 font-sans text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 disabled:opacity-40 disabled:cursor-not-allowed shadow-inner"
             disabled={timeLeft <= 0 || disableInput || (remainingMessages !== null && remainingMessages <= 0)}
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || timeLeft <= 0 || disableInput || (remainingMessages !== null && remainingMessages <= 0)}
-            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold rounded-xl px-4 py-2.5 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center"
+            className="btn-marquee-gold px-5 py-2.5 rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center text-black font-bold"
           >
             <Send size={18} />
           </button>
         </div>
 
         {timeLeft <= 0 && (
-          <div className="mt-4 p-3 bg-[#181D2A] border border-[#232938] rounded-xl text-center">
-            <span className="text-xs font-mono uppercase text-slate-400 block mb-3">Time Expired — Declare Verdict</span>
+          <div className="mt-4 p-3 bg-surface-lowest/90 border border-amber-500/30 rounded-xl text-center">
+            <span className="text-xs font-mono uppercase text-amber-200/70 block mb-3">Time Expired — Declare Verdict</span>
             <div className="flex justify-center gap-3">
               <button
                 onClick={() => onComplete('ai')}
-                className="px-6 py-2 bg-gradient-to-b from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-display font-bold uppercase tracking-wide text-xs rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 cursor-pointer"
+                className="px-6 py-2 bg-gradient-to-b from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-display font-bold uppercase tracking-wide text-xs rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 cursor-pointer border border-blue-400/40"
               >
                 Artificial
               </button>
               <button
                 onClick={() => onComplete('human')}
-                className="px-6 py-2 bg-gradient-to-b from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-display font-bold uppercase tracking-wide text-xs rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 cursor-pointer"
+                className="btn-marquee-gold px-6 py-2 text-black font-display font-bold uppercase tracking-wide text-xs rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 cursor-pointer"
               >
                 Human
               </button>

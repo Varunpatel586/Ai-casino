@@ -682,3 +682,52 @@ This document serves as the continuous project walkthrough and activity log. It 
   - Consider a Gemini-vision upgrade for semantic scoring, or a configurable bet cap for economy balance.
 - **Status:** ✅ Complete & Verified.
 
+---
+
+### Entry 29: Upstream Repository Switch & "pranav" Working Branch Configuration
+- **Date & Time:** 2026-10-05 13:25 IST
+- **User Prompt:**
+  > *"My repo has been pulled by the main repo and all the changes have to be made in https://github.com/Varunpatel586/Ai-casino So clone this repo and open it. All the changes being made have to be pushed to an new branch called "pranav" in https://github.com/Varunpatel586/Ai-casino this repo. Save this in your context locally."*
+- **Objective:**
+  - Connect current workspace directly to upstream main repository `https://github.com/Varunpatel586/Ai-casino.git`.
+  - Fast-forward to the latest upstream main commits (`c94984e`).
+  - Create and switch to local branch `pranav` tracking `origin/main`.
+  - Persist rules and instructions in local context (`.agents/rules/git-workflow.md`).
+- **Actions Taken:**
+  - Configured git remotes:
+    - `origin`: `https://github.com/Varunpatel586/Ai-casino.git` (Primary repo)
+    - `pranav-fork`: `https://github.com/pranavadva/ai-casino.git` (Personal fork backup)
+  - Fetched all branches from `origin`.
+  - Checked out clean working branch `pranav` aligned with `origin/main`.
+  - Verified project build integrity (`npm run build` completed successfully in 7.26s).
+  - Saved workspace configuration rule in [`.agents/rules/git-workflow.md`](.agents/rules/git-workflow.md).
+- **Files Modified / Created:**
+  - Created: [`.agents/rules/git-workflow.md`](.agents/rules/git-workflow.md)
+  - Updated: [`WALKTHROUGH.md`](WALKTHROUGH.md)
+- **Status:** ✅ Complete & Configured.
+
+---
+
+### Entry 30: Context Refresh & Git Remote / Branch Verification
+- **Date & Time:** 2026-10-07 19:45 IST
+- **User Prompt:**
+  > *"My repo has been pulled by the main repo and all the changes have to be made in https://github.com/Varunpatel586/Ai-casino So clone this repo and open it. All the changes being made have to be pushed to an new branch called "pranav" in https://github.com/Varunpatel586/Ai-casino this repo. Save this in your context locally."*
+- **Objective:**
+  - Verify and reaffirm current repository status and remote bindings.
+  - Ensure persistent context in `.agents/rules/git-workflow.md` targeting the `pranav` branch on `origin` (`https://github.com/Varunpatel586/Ai-casino`).
+  - Verify remote connectivity and permissions.
+- **Actions Taken:**
+  - Inspected local working directory: current open workspace is `c:\Users\PRANAV ADVA\OneDrive\Desktop\Ai-casino`.
+  - Verified git remotes:
+    - `origin`: `https://github.com/Varunpatel586/Ai-casino.git`
+    - `pranav-fork`: `https://github.com/pranavadva/ai-casino.git`
+  - Verified active branch: currently on branch `pranav`.
+  - Re-fetched latest changes from `origin`.
+  - Persistent context rules maintained in [`.agents/rules/git-workflow.md`](.agents/rules/git-workflow.md).
+  - Dry-run push check: reminded user regarding collaborator permissions on `Varunpatel586/Ai-casino`.
+- **Files Modified / Created:**
+  - Updated: [`WALKTHROUGH.md`](WALKTHROUGH.md)
+  - Maintained: [`.agents/rules/git-workflow.md`](.agents/rules/git-workflow.md)
+- **Status:** ✅ Fully Confirmed & Saved in Local Context.
+
+

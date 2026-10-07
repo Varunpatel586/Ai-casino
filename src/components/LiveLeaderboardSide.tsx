@@ -38,24 +38,25 @@ export default function LiveLeaderboardSide({
   return (
     <aside 
       aria-label="Live Arena Standings"
-      className={`flex flex-col bg-[#0B0F19]/95 backdrop-blur-md border border-[#222C3E] rounded-2xl overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.85)] ${
+      className={`flex flex-col casino-vip-card rounded-2xl overflow-hidden border border-amber-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.9)] relative ${
         isMobileDrawer ? 'w-full max-w-sm mx-auto' : 'w-full h-full max-h-full'
       }`}
     >
+      <div className="card-neon-edge" />
       {/* Header */}
-      <div className="p-3 bg-gradient-to-r from-[#141A29] to-[#0E1320] border-b border-[#20293D] flex items-center justify-between flex-shrink-0">
+      <div className="p-3 bg-gradient-to-r from-surface-lowest via-[#141a27] to-surface-lowest border-b border-amber-500/25 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center shadow-inner">
+          <div className="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.3)]">
             <Trophy size={14} />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <h3 className="text-xs font-mono font-black uppercase tracking-wider text-slate-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+              <h3 className="text-xs font-mono font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#FFF2CE] to-[#F4D068]">
                 LIVE STANDINGS
               </h3>
             </div>
-            <p className="text-[10px] font-mono text-slate-400">
+            <p className="text-[10px] font-mono text-amber-200/50">
               {players.length} of 6 Contestants Seated
             </p>
           </div>
@@ -64,13 +65,13 @@ export default function LiveLeaderboardSide({
         {isMobileDrawer && onClose ? (
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-[#182030] hover:bg-[#222C40] text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg bg-surface-lowest/80 hover:bg-[#1a2233] text-amber-200/70 hover:text-amber-200 border border-amber-500/30 transition-colors cursor-pointer"
             title="Close Standings"
           >
             <X size={16} />
           </button>
         ) : (
-          <div className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 font-mono text-[9px] font-bold">
+          <div className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-400/30 text-amber-300 font-mono text-[9px] font-bold shadow-[0_0_8px_rgba(245,158,11,0.15)]">
             {status === 'playing' ? `Feed ${currentFeedIndex + 1}/${totalFeeds}` : status.toUpperCase()}
           </div>
         )}
@@ -80,7 +81,7 @@ export default function LiveLeaderboardSide({
       <div className="p-2 space-y-1.5 flex-1 min-h-0 overflow-y-auto max-h-full">
         {sortedPlayers.length === 0 ? (
           <div className="py-8 text-center text-slate-500 font-mono text-xs">
-            <Users size={24} className="mx-auto mb-2 opacity-50" />
+            <Users size={24} className="mx-auto mb-2 opacity-50 text-amber-400" />
             No players seated yet
           </div>
         ) : (
@@ -96,12 +97,12 @@ export default function LiveLeaderboardSide({
             return (
               <div
                 key={player.playerId}
-                className={`relative p-2.5 rounded-2xl border transition-all duration-200 select-none ${
+                className={`relative p-2.5 rounded-xl border transition-all duration-200 select-none ${
                   isMe
-                    ? 'bg-[#151D2D]/95 border-amber-400/80 ring-1 ring-amber-400/40 shadow-[0_0_15px_rgba(251,191,36,0.2)]'
+                    ? 'bg-gradient-to-r from-amber-500/15 via-[#181d2a] to-amber-500/10 border-amber-400/80 ring-1 ring-amber-400/40 shadow-[0_0_18px_rgba(251,191,36,0.25)]'
                     : isFirst
-                    ? 'bg-[#121824]/90 border-amber-500/40 shadow-sm'
-                    : 'bg-[#0E131E]/80 border-[#1E273A] hover:border-[#2B374E]'
+                    ? 'bg-[#131926]/90 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.15)]'
+                    : 'bg-[#0E131E]/80 border-amber-500/15 hover:border-amber-500/30'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -111,12 +112,12 @@ export default function LiveLeaderboardSide({
                     <span
                       className={`w-6 h-6 rounded-lg flex items-center justify-center font-mono font-black text-xs shrink-0 ${
                         isFirst
-                          ? 'bg-amber-400 text-slate-950 shadow-sm'
+                          ? 'bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#D4AF37] text-slate-950 font-black shadow-[0_0_10px_rgba(244,208,104,0.4)]'
                           : isSecond
-                          ? 'bg-slate-300 text-slate-950'
+                          ? 'bg-gradient-to-b from-slate-100 to-slate-400 text-slate-950 font-black'
                           : isThird
-                          ? 'bg-amber-700 text-amber-100'
-                          : 'bg-[#182133] text-slate-400 border border-[#232D42]'
+                          ? 'bg-gradient-to-b from-amber-600 to-amber-800 text-amber-100 font-black'
+                          : 'bg-surface-lowest/90 text-slate-400 border border-amber-500/20'
                       }`}
                     >
                       {idx + 1}
@@ -125,7 +126,7 @@ export default function LiveLeaderboardSide({
                     {/* Seat & Name */}
                     <div className="min-w-0">
                       <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-mono font-bold text-slate-500 px-1 py-0.2 rounded bg-[#161D2B]">
+                        <span className="text-[9px] font-mono font-bold text-amber-400/70 px-1 py-0.2 rounded bg-surface-lowest border border-amber-500/20">
                           S{player.seatNumber}
                         </span>
                         <span className="text-xs font-display font-black text-white truncate">
@@ -182,7 +183,7 @@ export default function LiveLeaderboardSide({
                   <div className="text-right shrink-0">
                     <div className="flex items-center justify-end gap-1">
                       <Coins size={12} className="text-amber-400" />
-                      <span className="font-mono font-black text-sm text-amber-400">
+                      <span className="font-mono font-black text-sm text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E]">
                         ${player.chips}
                       </span>
                     </div>
@@ -214,7 +215,7 @@ export default function LiveLeaderboardSide({
 
                       if (player.betAmount > 0 && status === 'playing') {
                         return (
-                          <span className="text-[9px] font-mono text-slate-400">
+                          <span className="text-[9px] font-mono text-amber-200/50">
                             At risk: ${player.betAmount}
                           </span>
                         );
@@ -231,12 +232,12 @@ export default function LiveLeaderboardSide({
       </div>
 
       {/* Table Pot & Stats Footer */}
-      <div className="p-3 bg-[#080B12] border-t border-[#1C2436] flex items-center justify-between text-[10px] font-mono text-slate-400">
+      <div className="p-3 bg-surface-lowest border-t border-amber-500/20 flex items-center justify-between text-[10px] font-mono text-slate-400">
         <div className="flex items-center gap-1.5">
           <Flame size={12} className="text-amber-400" />
-          <span>Total Table Bankroll:</span>
+          <span className="text-amber-200/60">Total Table Bankroll:</span>
         </div>
-        <span className="font-black text-amber-400 text-xs">
+        <span className="font-black text-amber-400 text-xs drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]">
           ${(totalTableBankroll ?? 0).toLocaleString()}
         </span>
       </div>

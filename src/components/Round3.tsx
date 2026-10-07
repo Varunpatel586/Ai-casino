@@ -206,50 +206,54 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Intro Screen
   if (phase === 'intro') {
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
-        <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 shadow-2xl text-center my-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-[#2B354D] text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-3">
-            <MessageCircle size={14} />
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-2 sm:p-4 overflow-hidden select-none">
+        <div className="max-w-xl w-full casino-vip-card rounded-2xl p-4 sm:p-6 shadow-[0_25px_70px_rgba(0,0,0,0.9)] text-center relative border border-amber-500/30 my-auto">
+          <div className="card-neon-edge" />
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-surface-lowest/90 border border-amber-500/40 text-amber-400 text-[11px] font-mono font-bold tracking-widest uppercase mb-2 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
+            <span className="text-amber-400">♦</span>
+            <MessageCircle size={13} />
             <span>Event III • The Ultimate Turing Test</span>
+            <span className="text-amber-400">♦</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl font-display font-black text-white tracking-tight uppercase mb-3">
+          <h1 className="text-2xl sm:text-4xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] tracking-wider uppercase mb-2 drop-shadow-[0_2px_12px_rgba(244,208,104,0.3)]">
             The Turing Table
           </h1>
 
-          <p className="text-slate-300 text-base leading-relaxed mb-8 max-w-lg mx-auto">
+          <p className="text-amber-200/70 text-xs sm:text-sm leading-relaxed mb-4 max-w-lg mx-auto font-sans">
             You will enter a blind, private terminal with an unknown counterpart. It is either an autonomous AI model or a real human operator. You have 3 messages to interrogate them and deduce their true nature.
           </p>
 
-          <div className="grid grid-cols-3 gap-3 mb-8 text-left">
-            <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4">
-              <span className="text-[11px] font-mono uppercase text-slate-500 block">Subrounds</span>
-              <span className="text-2xl font-mono font-black text-white">{TOTAL_SUBROUNDS} Total</span>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-5 text-left">
+            <div className="bg-surface-lowest/90 border border-amber-500/25 rounded-xl p-2.5 sm:p-3 shadow-inner">
+              <span className="text-[10px] font-mono uppercase text-amber-200/50 block">Subrounds</span>
+              <span className="text-lg sm:text-xl font-mono font-black text-white">{TOTAL_SUBROUNDS} Total</span>
             </div>
-            <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4">
-              <span className="text-[11px] font-mono uppercase text-slate-500 block">Time Limit</span>
-              <span className="text-2xl font-mono font-black text-amber-400">2 Min / Rd</span>
+            <div className="bg-surface-lowest/90 border border-amber-500/25 rounded-xl p-2.5 sm:p-3 shadow-inner">
+              <span className="text-[10px] font-mono uppercase text-amber-200/50 block">Time Limit</span>
+              <span className="text-lg sm:text-xl font-mono font-black text-amber-400">2 Min / Rd</span>
             </div>
-            <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-4">
-              <span className="text-[11px] font-mono uppercase text-slate-500 block">Message Cap</span>
-              <span className="text-2xl font-mono font-black text-blue-400">{MESSAGES_PER_SUBROUND} msgs</span>
+            <div className="bg-surface-lowest/90 border border-amber-500/25 rounded-xl p-2.5 sm:p-3 shadow-inner">
+              <span className="text-[10px] font-mono uppercase text-amber-200/50 block">Message Cap</span>
+              <span className="text-lg sm:text-xl font-mono font-black text-blue-400">{MESSAGES_PER_SUBROUND} msgs</span>
             </div>
           </div>
 
           <button
             onClick={() => setPhase('betting')}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-lg uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
+            className="btn-marquee-gold w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
           >
             <span>PLACE WAGER &amp; START</span>
           </button>
 
           {/* Development skip button for testing transitions */}
-          <div className="mt-4">
+          <div className="mt-2.5">
             <button
               onClick={() => {
                 handleFinishRound();
               }}
-              className="text-xs font-mono text-slate-500 hover:text-slate-300 underline underline-offset-4 transition-colors cursor-pointer"
+              className="text-[11px] font-mono text-slate-500 hover:text-amber-400/70 underline underline-offset-4 transition-colors cursor-pointer"
             >
               Skip Round (Dev Test)
             </button>
@@ -262,7 +266,7 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Betting Screen
   if (phase === 'betting') {
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-2 sm:p-4 overflow-hidden select-none">
         <div className="max-w-2xl w-full my-auto">
           <BettingPanel currentChips={currentChips} onBet={handleBet} />
         </div>
@@ -273,22 +277,23 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Mode Selection Screen (random selection in progress)
   if (phase === 'mode-select') {
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
-        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl my-auto">
-          <div className="w-16 h-16 rounded-2xl bg-[#181D2A] border border-amber-500/30 flex items-center justify-center mx-auto mb-6">
-            <MessageCircle className="text-amber-400 animate-pulse" size={32} />
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-2 sm:p-4 overflow-hidden select-none">
+        <div className="max-w-md w-full casino-vip-card rounded-2xl p-5 sm:p-6 text-center border border-amber-500/30 relative shadow-[0_25px_70px_rgba(0,0,0,0.9)] my-auto">
+          <div className="card-neon-edge" />
+          <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(245,158,11,0.35)]">
+            <MessageCircle className="text-amber-400 animate-pulse" size={26} />
           </div>
-          <h2 className="text-2xl font-display font-black text-white uppercase tracking-tight mb-2">
+          <h2 className="text-xl sm:text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] uppercase tracking-wider mb-2">
             Establishing Secure Line
           </h2>
-          <p className="text-slate-400 text-sm font-mono mb-4">
+          <p className="text-amber-200/60 text-xs font-mono mb-4">
             Subround {currentRound + 1} of {TOTAL_SUBROUNDS} • Pairing with blind counterpart...
           </p>
-          <div className="w-full bg-[#181D2A] rounded-full h-1.5 overflow-hidden">
-            <div className="bg-amber-400 h-full w-2/3 animate-pulse rounded-full" />
+          <div className="w-full bg-surface-lowest rounded-full h-2 overflow-hidden border border-amber-500/20 p-0.5">
+            <div className="bg-gradient-to-r from-amber-400 to-amber-600 h-full w-2/3 animate-pulse rounded-full shadow-[0_0_10px_rgba(251,191,36,0.6)]" />
           </div>
           {connectionError && (
-            <div className="mt-4 p-3 bg-rose-950/40 border border-rose-500/40 rounded-lg text-rose-400 text-xs font-mono">
+            <div className="mt-3 p-2.5 bg-rose-950/60 border border-rose-500/50 rounded-lg text-rose-300 text-xs font-mono">
               {connectionError}
             </div>
           )}
@@ -300,19 +305,20 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Human Chat Connection Screen (when connecting to host)
   if (phase === 'playing' && actualMode === 'human' && !isConnected) {
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
-        <div className="max-w-md w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl my-auto">
-          <div className="w-16 h-16 rounded-2xl bg-[#181D2A] border border-blue-500/30 flex items-center justify-center mx-auto mb-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400 border-t-transparent" />
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-2 sm:p-4 overflow-hidden select-none">
+        <div className="max-w-md w-full casino-vip-card rounded-2xl p-5 sm:p-6 text-center border border-amber-500/30 relative shadow-[0_25px_70px_rgba(0,0,0,0.9)] my-auto">
+          <div className="card-neon-edge" />
+          <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(59,130,246,0.35)]">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-400 border-t-transparent" />
           </div>
-          <h2 className="text-2xl font-display font-black text-white uppercase tracking-tight mb-2">
+          <h2 className="text-xl sm:text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] uppercase tracking-wider mb-2">
             Pairing With Remote Host
           </h2>
-          <p className="text-slate-400 text-sm font-mono mb-2">
+          <p className="text-amber-200/60 text-xs font-mono mb-2">
             Synchronizing encrypted WebSocket channel...
           </p>
           {connectionError && (
-            <div className="mt-4 p-3 bg-rose-950/40 border border-rose-500/40 rounded-lg text-rose-400 text-xs font-mono">
+            <div className="mt-3 p-2.5 bg-rose-950/60 border border-rose-500/50 rounded-lg text-rose-300 text-xs font-mono">
               {connectionError}
             </div>
           )}
@@ -349,9 +355,9 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
     return (
       <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex flex-col overflow-hidden">
         {/* Subround HUD Banner */}
-        <div className="bg-[#12151E] border-b border-[#232938] px-4 sm:px-6 py-2 flex-shrink-0">
+        <div className="bg-surface-lowest/95 border-b border-amber-500/25 px-3 sm:px-6 py-1.5 sm:py-2 flex-shrink-0 backdrop-blur-md">
           <div className="max-w-5xl mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button 
                 onClick={() => {
                   if (confirm('Are you sure you want to abandon this interrogation? Your progress will be lost.')) {
@@ -360,23 +366,23 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
                     setActualMode(null);
                   }
                 }}
-                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-[#181D2A]"
+                className="text-amber-200/60 hover:text-amber-200 transition-colors p-1 rounded-lg hover:bg-surface-lowest border border-transparent hover:border-amber-500/30"
                 title="Abandon Subround"
               >
-                <ArrowLeft size={20} />
+                <ArrowLeft size={16} />
               </button>
               <div>
-                <span className="text-xs font-mono uppercase tracking-wider text-amber-400 font-bold">
+                <span className="text-[9px] font-mono uppercase tracking-wider text-amber-400 font-bold block">
                   Interrogation Session
                 </span>
-                <h3 className="text-sm sm:text-base font-bold text-white">
+                <h3 className="text-xs sm:text-sm font-display font-black text-white">
                   Subround {currentRound + 1} of {TOTAL_SUBROUNDS}
                 </h3>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="px-3 py-1 rounded-lg bg-[#181D2A] border border-[#2E374D] text-xs font-mono text-slate-300">
+            <div className="flex items-center gap-2">
+              <div className="px-2.5 py-0.5 rounded-lg bg-surface-lowest border border-amber-500/30 text-xs font-mono text-slate-300 shadow-inner">
                 Messages: <span className="text-amber-400 font-bold">{MESSAGES_PER_SUBROUND - messagesSent}</span> left
               </div>
             </div>
@@ -384,8 +390,9 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
         </div>
 
         {/* Chat Component Container */}
-        <div className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 overflow-hidden flex flex-col">
-          <div className="flex-1 bg-[#12151E] border border-[#232938] rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        <div className="flex-1 min-h-0 max-w-5xl w-full mx-auto p-2 sm:p-4 overflow-hidden flex flex-col">
+          <div className="flex-1 min-h-0 casino-vip-card rounded-2xl overflow-hidden border border-amber-500/30 shadow-[0_25px_70px_rgba(0,0,0,0.9)] flex flex-col relative">
+            <div className="card-neon-edge" />
             <ChatInterface 
               mode={actualMode}
               onComplete={() => {}} // disable auto-complete
@@ -409,34 +416,37 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
 
           {/* High-Stakes Verdict Modal */}
           {showGuess && (
-            <div className="fixed inset-0 flex items-center justify-center bg-[#08090D]/90 backdrop-blur-md z-50 p-4">
-              <div className="bg-[#12151E] border-2 border-amber-500/40 rounded-2xl p-6 sm:p-8 max-w-lg w-full text-center shadow-2xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-xs font-mono font-bold tracking-widest uppercase mb-4">
+            <div className="fixed inset-0 flex items-center justify-center bg-black/85 backdrop-blur-md z-50 p-3 sm:p-4 overflow-hidden">
+              <div className="casino-vip-card border-2 border-amber-500/40 rounded-2xl p-4 sm:p-6 max-w-md w-full text-center shadow-[0_30px_90px_rgba(0,0,0,0.95)] relative my-auto">
+                <div className="card-neon-edge" />
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-surface-lowest/90 border border-amber-500/40 text-amber-400 text-[11px] font-mono font-bold tracking-widest uppercase mb-3 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
+                  <span className="text-amber-400">♦</span>
                   <span>Interrogation Concluded</span>
+                  <span className="text-amber-400">♦</span>
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-display font-black text-white uppercase tracking-tight mb-2">
+                <h2 className="text-xl sm:text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] uppercase tracking-wider mb-1.5">
                   Identify Your Counterpart
                 </h2>
-                <p className="text-slate-400 text-sm font-mono mb-8">
+                <p className="text-amber-200/70 text-xs font-mono mb-4">
                   3 messages complete. Deliver your final classification to settle this subround.
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <button
-                    className="flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#182338] to-[#101726] hover:from-[#223250] hover:to-[#162035] border-2 border-blue-500/40 hover:border-blue-400 rounded-xl text-white shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all cursor-pointer"
+                    className="flex flex-col items-center justify-center p-3.5 sm:p-4 bg-gradient-to-b from-[#131c2e] to-[#0a101b] hover:from-[#1b2a47] hover:to-[#10192b] border-2 border-blue-400/50 hover:border-blue-400 rounded-xl text-white shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all cursor-pointer group"
                     onClick={() => handleSubroundGuess('ai')}
                   >
-                    <span className="text-2xl font-black font-display text-blue-400 mb-1">ARTIFICIAL</span>
-                    <span className="text-xs font-mono uppercase text-slate-400 tracking-wider">AI Model</span>
+                    <span className="text-lg sm:text-xl font-black font-display text-blue-400 mb-0.5 group-hover:scale-105 transition-transform">ARTIFICIAL</span>
+                    <span className="text-[10px] font-mono uppercase text-slate-300 tracking-wider">AI Model</span>
                   </button>
 
                   <button
-                    className="flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#2E1D10] to-[#1C120A] hover:from-[#3E2716] hover:to-[#26190E] border-2 border-amber-500/40 hover:border-amber-400 rounded-xl text-white shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all cursor-pointer"
+                    className="flex flex-col items-center justify-center p-3.5 sm:p-4 bg-gradient-to-b from-[#2a1c0d] to-[#170e05] hover:from-[#3d2914] hover:to-[#221508] border-2 border-amber-400/50 hover:border-amber-400 rounded-xl text-white shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all cursor-pointer group"
                     onClick={() => handleSubroundGuess('human')}
                   >
-                    <span className="text-2xl font-black font-display text-amber-400 mb-1">HUMAN</span>
-                    <span className="text-xs font-mono uppercase text-slate-400 tracking-wider">Live Host</span>
+                    <span className="text-lg sm:text-xl font-black font-display text-amber-400 mb-0.5 group-hover:scale-105 transition-transform">HUMAN</span>
+                    <span className="text-[10px] font-mono uppercase text-amber-200 tracking-wider">Live Host</span>
                   </button>
                 </div>
               </div>
@@ -453,48 +463,49 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
     const winnings = Math.max(0, Math.floor(currentBet * (scorePercentage / 50)));
 
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
-        <div className="max-w-xl w-full bg-[#12151E] border border-[#232938] rounded-2xl p-6 sm:p-8 text-center shadow-2xl my-auto">
-          <div className="w-14 h-14 rounded-2xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-4">
-            <MessageCircle size={28} />
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-2 sm:p-4 overflow-hidden select-none">
+        <div className="max-w-xl w-full casino-vip-card rounded-2xl p-4 sm:p-6 text-center relative border border-amber-500/30 shadow-[0_25px_70px_rgba(0,0,0,0.9)] my-auto">
+          <div className="card-neon-edge" />
+          <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(245,158,11,0.35)]">
+            <MessageCircle size={24} />
           </div>
 
-          <div className="text-xs font-mono uppercase tracking-widest text-slate-400 mb-1">
+          <div className="text-[11px] font-mono uppercase tracking-widest text-amber-400/70 mb-1">
             Round 3 Complete
           </div>
-          <h2 className="text-3xl font-display font-black text-white uppercase tracking-tight mb-6">
+          <h2 className="text-2xl sm:text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] uppercase tracking-wider mb-4">
             Turing Trial Settled
           </h2>
 
-          <div className="bg-[#181D2A] border border-[#283248] rounded-xl p-5 mb-6">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="bg-[#12151E] rounded-lg p-3 border border-[#232938]">
-                <span className="text-2xl font-mono font-black text-emerald-400">{roundScore}</span>
-                <span className="text-xs font-mono text-slate-400 block mt-0.5">Correct Guesses</span>
+          <div className="bg-surface-lowest/90 border border-amber-500/25 rounded-xl p-3.5 sm:p-4 mb-4 shadow-inner">
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="bg-surface-lowest rounded-lg p-2.5 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]">
+                <span className="text-xl font-mono font-black text-emerald-400">{roundScore}</span>
+                <span className="text-[11px] font-mono text-slate-400 block mt-0.5">Correct Guesses</span>
               </div>
-              <div className="bg-[#12151E] rounded-lg p-3 border border-[#232938]">
-                <span className="text-2xl font-mono font-black text-rose-400">{TOTAL_SUBROUNDS - roundScore}</span>
-                <span className="text-xs font-mono text-slate-400 block mt-0.5">Incorrect Guesses</span>
+              <div className="bg-surface-lowest rounded-lg p-2.5 border border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.15)]">
+                <span className="text-xl font-mono font-black text-rose-400">{TOTAL_SUBROUNDS - roundScore}</span>
+                <span className="text-[11px] font-mono text-slate-400 block mt-0.5">Incorrect Guesses</span>
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-3 border-t border-[#232938] text-xs font-mono">
-              <span className="text-slate-400">Round Wager:</span>
+            <div className="flex justify-between items-center pt-2 border-t border-amber-500/15 text-xs font-mono">
+              <span className="text-amber-200/60">Round Wager:</span>
               <span className="text-white font-bold text-sm">${currentBet}</span>
             </div>
-            <div className="flex justify-between items-center pt-2 text-xs font-mono">
-              <span className="text-slate-400">Total Turing Accuracy:</span>
+            <div className="flex justify-between items-center pt-1.5 text-xs font-mono">
+              <span className="text-amber-200/60">Total Turing Accuracy:</span>
               <span className="text-amber-400 font-bold text-sm">{scorePercentage}%</span>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-[#232938] text-xs font-mono">
-              <span className="text-slate-400">Settlement Payout:</span>
+            <div className="flex justify-between items-center pt-1.5 border-t border-amber-500/15 text-xs font-mono">
+              <span className="text-amber-200/60">Settlement Payout:</span>
               <span className="text-emerald-400 font-bold text-sm">+{winnings} Chips</span>
             </div>
           </div>
 
           <button
             onClick={handleFinishRound}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-4 px-10 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
+            className="btn-marquee-gold w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3 px-8 font-display font-black text-sm sm:text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
           >
             <span>COLLECT WINNINGS &amp; ENTER VAULT</span>
           </button>

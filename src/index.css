@@ -33,15 +33,19 @@ html, body {
 
 @layer base {
   body {
-    background-color: #060b14;
-    color: #F8FAFC;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #08060a;
+    color: #e5e7eb;
+    font-family: 'Sora', 'Plus Jakarta Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
   h1, h2, h3, h4, .font-display {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Cinzel', serif;
     letter-spacing: -0.02em;
+  }
+
+  .font-serif {
+    font-family: 'Playfair Display', Georgia, serif;
   }
 
   .font-mono, .tabular-nums {
@@ -59,51 +63,72 @@ div[id^="puter-"] {
   z-index: -9999 !important;
 }
 
-/* Authentic Vibrant Casino Felt & Ambient Lighting Atmosphere */
+/* Authentic Vibrant Casino Architectural Atmosphere matching the Monaco VIP Scheme */
 .casino-table-bg {
-  /* Base tone is now the royal purple gradient (bottom-most background layers below) */
-  background-color: #0d0217;
+  background-color: #08060a;
   background-image:
-    /* 1. Overhead Chandelier Warm Gold & Amber Radiance (Top Center) */
-    radial-gradient(ellipse 90% 45% at 50% -5%, rgba(245, 158, 11, 0.28) 0%, rgba(217, 119, 6, 0.12) 42%, transparent 72%),
-    /* 2. Iconic Casino Emerald / Jade Gaming Table Felt (Center Table) */
-    radial-gradient(ellipse 85% 58% at 50% 52%, rgba(16, 185, 129, 0.20) 0%, rgba(5, 150, 105, 0.10) 45%, transparent 75%),
-    /* 3. High-Roller Neon Sapphire & Electric Cyan Glow (Bottom Left) */
-    radial-gradient(circle at 10% 92%, rgba(37, 99, 235, 0.24) 0%, rgba(14, 165, 233, 0.12) 40%, transparent 65%),
-    /* 4. Royal Amethyst & Magenta Velvet Neon Glow (Bottom Right) */
-    radial-gradient(circle at 90% 92%, rgba(147, 51, 234, 0.24) 0%, rgba(219, 39, 119, 0.10) 40%, transparent 65%),
-    /* 5. High-Stakes Ruby Crimson Edge Accent (Mid Left) */
-    radial-gradient(circle at -4% 45%, rgba(225, 29, 72, 0.16) 0%, transparent 45%),
-    /* 6. Radiant Topaz Amber Edge Accent (Mid Right) */
-    radial-gradient(circle at 104% 45%, rgba(245, 158, 11, 0.18) 0%, transparent 45%),
-    /* 7. Luxury Casino Felt Diamond Lattice & Rosette Watermark Pattern */
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 L60 30 L30 60 L0 30 Z' fill='none' stroke='%23f59e0b' stroke-width='0.75' stroke-opacity='0.045'/%3E%3Cpolygon points='30%2C23 37%2C30 30%2C37 23%2C30' fill='%2310b981' fill-opacity='0.05'/%3E%3Ccircle cx='0' cy='0' r='2' fill='%23f59e0b' fill-opacity='0.06'/%3E%3Ccircle cx='60' cy='0' r='2' fill='%23f59e0b' fill-opacity='0.06'/%3E%3Ccircle cx='0' cy='60' r='2' fill='%23f59e0b' fill-opacity='0.06'/%3E%3Ccircle cx='60' cy='60' r='2' fill='%23f59e0b' fill-opacity='0.06'/%3E%3C/svg%3E"),
-    /* 8. Soft Edge Falloff Vignette for Focus & Cinematic Depth */
-    radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(4, 7, 14, 0.65) 100%),
-    /* ----- BASE: Royal Purple Ambient Gradient (replaces the former flat black base) ----- */
-    /* 9. Ruby Crimson Royal Radiance (Top Center) */
-    radial-gradient(circle at 50% 15%, rgba(136, 19, 55, 0.45) 0%, transparent 60%),
-    /* 10. Royal Amethyst & Violet Velvet Glow (Mid Left) */
-    radial-gradient(circle at 15% 45%, rgba(76, 29, 149, 0.55) 0%, transparent 55%),
-    /* 11. Magenta / Fuchsia Neon Bloom (Mid Right) */
-    radial-gradient(circle at 85% 55%, rgba(190, 24, 93, 0.4) 0%, transparent 55%),
-    /* 12. Warm Topaz Amber Halo (Bottom Center) */
-    radial-gradient(circle at 50% 85%, rgba(217, 119, 6, 0.25) 0%, transparent 50%),
-    /* 13. Deep Purple-to-Void Vertical Base Gradient */
-    linear-gradient(180deg, #120422 0%, #1e0933 50%, #0d0217 100%);
+    /* 1. Overhead Skylight Soft Cyan & Blue Radiance */
+    radial-gradient(circle 800px at 50% -80px, rgba(93, 173, 226, 0.18) 0%, transparent 60%),
+    /* 2. Marquee Canopy Golden & Warm Amber Bloom */
+    radial-gradient(ellipse 110% 60% at 50% 12%, rgba(245, 158, 11, 0.32) 0%, rgba(217, 119, 6, 0.16) 40%, transparent 75%),
+    /* 3. Deep Velvet Crimson Center Underglow */
+    radial-gradient(circle 650px at 50% 95%, rgba(225, 29, 72, 0.32) 0%, rgba(136, 19, 55, 0.25) 45%, transparent 75%),
+    /* 4. Luxury Casino Felt Micro-Glint Texture Pattern */
+    radial-gradient(rgba(251, 191, 36, 0.15) 1px, transparent 1px),
+    /* 5. Deep Obsidian-to-Burgundy Vertical Base Gradient */
+    linear-gradient(180deg, #0a060d 0%, #160a16 30%, #1a0a14 65%, #0b0409 100%);
   background-attachment: fixed;
-  background-size: auto, auto, auto, auto, auto, auto, 60px 60px, auto, auto, auto, auto, auto, auto;
+  background-size: auto, auto, auto, 28px 28px, auto;
 }
 
 .casino-panel {
-  background-color: #12151E;
-  border: 1px solid #232A3B;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+  background: linear-gradient(155deg, rgba(32, 14, 22, 0.94) 0%, rgba(18, 9, 16, 0.96) 65%, rgba(10, 5, 10, 0.98) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  box-shadow: 
+    0 20px 45px -10px rgba(0, 0, 0, 0.95),
+    0 0 25px -4px rgba(245, 158, 11, 0.25),
+    inset 0 1px 2px rgba(255, 245, 204, 0.3);
 }
 
 .casino-card-subtle {
-  background-color: #171C28;
-  border: 1px solid #283248;
+  background: linear-gradient(160deg, rgba(26, 12, 20, 0.85) 0%, rgba(14, 7, 13, 0.9) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+/* Icon badges matching the Monaco VIP scheme */
+.casino-icon-gold {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: #fbbf24;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+}
+
+.casino-icon-rose {
+  background: rgba(225, 29, 72, 0.2);
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  color: #fda4af;
+  box-shadow: 0 0 12px rgba(225, 29, 72, 0.35);
+}
+
+.casino-icon-emerald {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #6ee7b7;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+
+.casino-icon-blue {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  color: #93c5fd;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
+}
+
+.casino-pill-badge {
+  background: rgba(27, 13, 24, 0.9);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(12px);
 }
 
 /* Custom scrollbars for chat and tables */
@@ -120,4 +145,204 @@ div[id^="puter-"] {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #3B4866;
+}
+
+/* ==========================================================================
+   BEGIN: Architectural Casino Lighting & Grand Marquee Effects
+   ========================================================================== */
+
+/* Reference image architectural ceiling cove: illuminated sky dome + radiating warm arched beams */
+.ceiling-skylight-dome {
+  position: absolute;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 720px;
+  height: 380px;
+  background: radial-gradient(ellipse 65% 55% at 50% 30%, #5dade2 0%, #1a5276 40%, #0e273c 70%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(28px);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ceiling-dome-ring {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 240px;
+  border-radius: 50%;
+  border: 3px solid rgba(251, 191, 36, 0.45);
+  box-shadow: 0 0 45px rgba(245, 158, 11, 0.65), inset 0 0 35px rgba(251, 191, 36, 0.4);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Arched structural ribs stretching across ceiling */
+.arch-canopy-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 520px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.arch-rib {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  border-top-style: solid;
+  pointer-events: none;
+}
+
+/* Side Golden Marquee Pillars / Glowing column matrices */
+.column-luminaire-left {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 140px;
+  background: 
+    radial-gradient(ellipse at 0% 50%, rgba(245, 158, 11, 0.35) 0%, rgba(217, 119, 6, 0.15) 50%, transparent 80%),
+    repeating-linear-gradient(0deg, rgba(251, 191, 36, 0.22) 0px, rgba(251, 191, 36, 0.22) 14px, transparent 14px, transparent 32px);
+  box-shadow: inset -15px 0 30px rgba(0, 0, 0, 0.8), 20px 0 60px rgba(245, 158, 11, 0.2);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.column-luminaire-right {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 140px;
+  background: 
+    radial-gradient(ellipse at 100% 50%, rgba(245, 158, 11, 0.35) 0%, rgba(217, 119, 6, 0.15) 50%, transparent 80%),
+    repeating-linear-gradient(0deg, rgba(251, 191, 36, 0.22) 0px, rgba(251, 191, 36, 0.22) 14px, transparent 14px, transparent 32px);
+  box-shadow: inset 15px 0 30px rgba(0, 0, 0, 0.8), -20px 0 60px rgba(245, 158, 11, 0.2);
+  pointer-events: none;
+  z-index: 1;
+}
+
+@media (max-width: 640px) {
+  .column-luminaire-left, .column-luminaire-right {
+    width: 60px;
+    opacity: 0.4;
+  }
+}
+
+/* Casino floor central glowing carpet runner perspective */
+.carpet-perspective-glow {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 680px;
+  height: 380px;
+  background: 
+    radial-gradient(ellipse 70% 80% at 50% 100%, rgba(225, 29, 72, 0.42) 0%, rgba(180, 25, 60, 0.25) 40%, rgba(245, 158, 11, 0.12) 70%, transparent 95%),
+    linear-gradient(0deg, rgba(159, 18, 57, 0.45) 0%, rgba(217, 119, 6, 0.18) 60%, transparent 100%);
+  clip-path: polygon(25% 0%, 75% 0%, 100% 100%, 0% 100%);
+  filter: blur(12px);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.85;
+}
+
+/* Intense Underglow beneath the 3 feature cards */
+.cards-floor-underglow {
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95%;
+  height: 60px;
+  background: radial-gradient(ellipse 60% 100% at 50% 50%, rgba(245, 158, 11, 0.45) 0%, rgba(225, 29, 72, 0.3) 45%, transparent 75%);
+  filter: blur(16px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Metallic typography gradients matching casino marquee */
+.gold-metallic-text {
+  background: linear-gradient(180deg, #fffbeb 0%, #fef08a 25%, #fbbf24 55%, #d97706 82%, #92400e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 24px rgba(245, 158, 11, 0.55)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.9));
+}
+
+.white-metallic-text {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 40%, #cbd5e1 75%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.35)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.9));
+}
+
+/* High-roller glossy architectural cards with neon golden bevels */
+.casino-vip-card {
+  background: linear-gradient(155deg, rgba(32, 14, 22, 0.92) 0%, rgba(18, 9, 16, 0.96) 65%, rgba(10, 5, 10, 0.98) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  box-shadow: 
+    0 20px 45px -10px rgba(0, 0, 0, 0.95),
+    0 0 28px -4px rgba(245, 158, 11, 0.28),
+    inset 0 1px 2px rgba(255, 245, 204, 0.4),
+    inset 0 -1px 2px rgba(225, 29, 72, 0.35);
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.casino-vip-card:hover {
+  border-color: rgba(251, 191, 36, 0.85);
+  transform: translateY(-4px);
+  box-shadow: 
+    0 26px 50px -10px rgba(0, 0, 0, 0.95),
+    0 0 40px 2px rgba(245, 158, 11, 0.5),
+    inset 0 1px 3px rgba(255, 255, 255, 0.6),
+    inset 0 0 15px rgba(225, 29, 72, 0.2);
+}
+
+/* Individual bottom light spill beam for each card */
+.card-neon-edge {
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #fbbf24 50%, transparent 100%);
+  box-shadow: 0 4px 14px #f59e0b, 0 8px 24px rgba(245, 158, 11, 0.8);
+}
+
+/* High-impact golden marquee CTA button with requested underglow */
+.btn-marquee-gold {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef08a 20%, #fbbf24 50%, #f59e0b 80%, #b45309 100%);
+  box-shadow: 0 10px 40px rgba(245, 158, 11, 0.6), 0 0 25px rgba(251, 191, 36, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.8), inset 0 -2px 5px rgba(146, 64, 14, 0.6);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-marquee-gold:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #fef08a 25%, #fcd34d 55%, #f59e0b 85%, #92400e 100%);
+  box-shadow: 0 14px 48px rgba(245, 158, 11, 0.75), 0 0 35px rgba(251, 191, 36, 0.6), inset 0 1px 3px rgba(255, 255, 255, 0.95);
+  transform: translateY(-2px) scale(1.015);
+}
+
+.btn-marquee-gold:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+}
+
+/* Ambient ceiling bulb illumination dots */
+.marquee-bulb {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fffbeb;
+  box-shadow: 0 0 6px #fde047, 0 0 12px #f59e0b;
+  display: inline-block;
 }
