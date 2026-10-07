@@ -259,3 +259,45 @@ export async function ensurePuterAuth() {
     alert("Puter script not loaded yet.");
   }
 }
+
+/**
+ * Signs the current player out of Puter after the game completes so that
+ * the next player's image generation runs under their own free-tier account
+ * and doesn't drain the previous player's credits.
+ */
+export async function signOutPuter(): Promise<void> {
+  try {
+    if (window.puter) {
+      if (typeof window.puter.auth?.signOut === 'function') {
+        await window.puter.auth.signOut();
+      } else if (typeof window.puter.signOut === 'function') {
+        await window.puter.signOut();
+      }
+    }
+
+    // Clear any puter auth caches/tokens in storage to prevent token reuse
+    if (typeof window !== 'undefined') {
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.toLowerCase().includes('puter')) {
+            localStorage.removeItem(key);
+          }
+        }
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i);
+          if (key && key.toLowerCase().includes('puter')) {
+            sessionStorage.removeItem(key);
+          }
+        }
+      } catch (err) {
+        // storage cleanup failure is non-fatal
+      }
+    }
+
+    console.log('[Puter] Player signed out successfully.');
+  } catch (e) {
+    // Non-fatal — log and continue so the game flow isn't blocked
+    console.warn('[Puter] Sign-out failed (non-fatal):', e);
+  }
+}

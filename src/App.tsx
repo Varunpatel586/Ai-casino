@@ -17,6 +17,7 @@ import OperatorSetup from './components/OperatorSetup';
 import ErrorBoundary from './components/ErrorBoundary';
 import { network_manager } from './services/network';
 import { getBackendUrl } from './services/apiConfig';
+import { signOutPuter } from './services/huggingFaceService';
 
 const API_URL = getBackendUrl();
 
@@ -221,6 +222,10 @@ function App() {
     };
     setPlayer(updatedPlayer);
     saveProgressToDB(updatedPlayer);
+
+    // Auto sign out from Puter after Round 3 completes
+    signOutPuter();
+
     setScreen('bonus');
   };
 
@@ -235,6 +240,9 @@ function App() {
 
     setPlayer(updatedPlayer);
     await saveProgressToDB(updatedPlayer);
+
+    // Auto sign out from Puter on game completion
+    signOutPuter();
 
     try {
       const res = await fetch(`${API_URL}/api/leaderboard`);
@@ -257,6 +265,9 @@ function App() {
   };
 
   const handlePlayAgain = () => {
+    // Auto sign out from Puter when starting a new player session
+    signOutPuter();
+
     setPlayer({
       id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       username: '',

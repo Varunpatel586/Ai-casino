@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Trophy, Medal, Award, RotateCcw, User } from 'lucide-react';
 import { LeaderboardEntry } from '../types';
+import { signOutPuter } from '../services/huggingFaceService';
 
 interface LeaderboardProps {
   entries: LeaderboardEntry[];
@@ -8,6 +10,11 @@ interface LeaderboardProps {
 }
 
 export default function Leaderboard({ entries, currentPlayer, onPlayAgain }: LeaderboardProps) {
+  useEffect(() => {
+    // Ensure player is signed out of Puter at game end
+    signOutPuter();
+  }, []);
+
   const sortedEntries = [...entries].sort((a, b) => b.chips - a.chips);
   const playerRank = sortedEntries.findIndex((e) => e.username === currentPlayer.username) + 1;
 

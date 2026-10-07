@@ -6,6 +6,7 @@ import ChatInterface from './chat/ChatInterface';
 import { network_manager } from '../services/network';
 import { reset_conversation } from '../services/gemini_chat';
 import { getWsUrl } from '../services/apiConfig';
+import { signOutPuter } from '../services/huggingFaceService';
 
 
 interface Round3Props {
@@ -162,6 +163,7 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
       } else {
         // All rounds completed
         setPhase('results');
+        signOutPuter();
       }
     } catch (error) {
       console.error('Error during round completion:', error);
@@ -180,6 +182,7 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   // Finish the round
   const handleFinishRound = useCallback(() => {
     network_manager.disconnect();
+    signOutPuter();
     onComplete(roundScore, currentBet);
   }, [onComplete, roundScore, currentBet]);
 

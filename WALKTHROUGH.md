@@ -784,6 +784,27 @@ This document serves as the continuous project walkthrough and activity log. It 
   - Committed and pushed changes to `origin pranav` and `pranav-fork pranav`.
 - **Status:** ✅ Committed & Pushed to `origin pranav`.
 
+---
+
+### Entry 34: Auto Sign Out from Puter at Game Completion & Push to Upstream
+- **Date & Time:** 2026-10-07 23:14 IST
+- **User Prompt:**
+  > *"push again the changes"*
+- **Objective:**
+  - Commit Puter sign-out logic to guarantee player credit isolation across sessions.
+  - Push the updated `pranav` branch to `https://github.com/Varunpatel586/Ai-casino`.
+- **Actions Taken:**
+  - Updated [`src/services/huggingFaceService.ts`](src/services/huggingFaceService.ts):
+    - Added `signOutPuter()` to sign out via `window.puter.auth.signOut()` / `window.puter.signOut()`.
+    - Automatically cleans up Puter auth keys from `localStorage` and `sessionStorage`.
+  - Updated [`src/App.tsx`](src/App.tsx): triggers `signOutPuter()` upon Round 3 completion, overall game completion, and "Play Again" session reset.
+  - Updated [`src/components/Leaderboard.tsx`](src/components/Leaderboard.tsx): triggers `signOutPuter()` on mount.
+  - Updated [`src/components/Round3.tsx`](src/components/Round3.tsx): triggers `signOutPuter()` when finishing round or transitioning to results.
+  - Verified TypeScript compilation: `npm run typecheck` passed with 0 errors.
+  - Committed and pushed to `origin pranav` and `pranav-fork pranav`.
+- **Status:** ✅ Committed & Pushed to `origin pranav`.
+
+
 
 
 
