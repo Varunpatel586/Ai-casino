@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, ShieldAlert, Clock } from 'lucide-react';
-import { network_manager, NetworkMessage } from '../../services/network';
+import { network_manager, type NetworkMessage } from '../../services/network';
 import { get_ai_response } from '../../services/gemini_chat';
 
 type Message = {
@@ -39,9 +39,20 @@ export default function ChatInterface({
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
-  const repliesReceivedRef = useRef(0);
+  const repliesCountRef = useRef(0);
   const verdictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Helper to register delivered partner replies and trigger verdict after messageLimit
+  const registerPartnerReply = () => {
+    repliesCountRef.current += 1;
+    const limit = messageLimit || 3;
+    if (repliesCountRef.current >= limit) {
+      if (verdictTimerRef.current) clearTimeout(verdictTimerRef.current);
+      verdictTimerRef.current = setTimeout(() => {
+        onReadyForVerdict?.();
+      }, 2500);
+    }
+  };
 
   // Generate unique message ID
   const generateMessageId = () => {
@@ -50,16 +61,22 @@ export default function ChatInterface({
 
   // Initialize chat based on mode
   useEffect(() => {
+    // Reset partner reply counter and verdict timer for fresh session
+    repliesCountRef.current = 0;
+    if (verdictTimerRef.current) {
+      clearTimeout(verdictTimerRef.current);
+      verdictTimerRef.current = null;
+    }
+
     // Clean up previous mode setup
     network_manager.message_callback = null;
     network_manager.connection_callback = null;
-    repliesReceivedRef.current = 0;
 
     const GREETING = "Hi there! I'm your chat partner. Let's have a conversation!";
     let greetingTimer: ReturnType<typeof setTimeout>;
 
     if (mode === 'ai') {
-      // Send greeting exactly once on mount / mode switch
+      // Send greeting exactly once on mount / mode switch (does not count towards queries limit)
       greetingTimer = setTimeout(() => {
         setMessages([{
           id: generateMessageId(),
@@ -139,37 +156,29 @@ export default function ChatInterface({
             displayText = typeof parsedMsg.content === 'string' ? parsedMsg.content : JSON.stringify(parsedMsg.content || msg);
           }
 
+          setIsTyping(false);
           setMessages(prev => [...prev, {
             id: generateMessageId(),
             text: displayText,
             sender: parsedMsg.senderId === 'host' ? 'host' : 'human',
             timestamp: parsedMsg.timestamp ? new Date(parsedMsg.timestamp) : new Date()
           }]);
-          setIsTyping(false);
 
-          const nextReplies = repliesReceivedRef.current + 1;
-          repliesReceivedRef.current = nextReplies;
-          if (typeof messageLimit === 'number' && nextReplies >= messageLimit) {
-            verdictTimerRef.current = setTimeout(() => {
-              if (onReadyForVerdict) onReadyForVerdict();
-            }, 2500);
-          }
+          registerPartnerReply();
         }
       };
-
-      // We are already connected via Round3.tsx, so no need to call connect_to_host again here!
     }
 
     // Clean up
     return () => {
       clearTimeout(greetingTimer);
-      if (verdictTimerRef.current) clearTimeout(verdictTimerRef.current);
+      if (verdictTimerRef.current) {
+        clearTimeout(verdictTimerRef.current);
+      }
       network_manager.message_callback = null;
       network_manager.connection_callback = null;
     };
-  }, [mode, messageLimit, onReadyForVerdict]);
-
-
+  }, [mode]);
 
   // Timer effect
   useEffect(() => {
@@ -222,14 +231,7 @@ export default function ChatInterface({
             timestamp: new Date()
           }]);
           setIsTyping(false);
-
-          const nextReplies = repliesReceivedRef.current + 1;
-          repliesReceivedRef.current = nextReplies;
-          if (typeof messageLimit === 'number' && nextReplies >= messageLimit) {
-            verdictTimerRef.current = setTimeout(() => {
-              if (onReadyForVerdict) onReadyForVerdict();
-            }, 2500);
-          }
+          registerPartnerReply();
         }, 1000 + Math.random() * 2000); // 1-3 second delay
       } catch (error) {
         console.error('Error getting AI response:', error);
@@ -240,14 +242,7 @@ export default function ChatInterface({
           sender: 'ai',
           timestamp: new Date()
         }]);
-
-        const nextReplies = repliesReceivedRef.current + 1;
-        repliesReceivedRef.current = nextReplies;
-        if (typeof messageLimit === 'number' && nextReplies >= messageLimit) {
-          verdictTimerRef.current = setTimeout(() => {
-            if (onReadyForVerdict) onReadyForVerdict();
-          }, 2500);
-        }
+        registerPartnerReply();
       }
     } else {
       // Send to human chat (privately to host)
@@ -371,13 +366,11 @@ export default function ChatInterface({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              timeLeft <= 0
-                ? "Time expired."
+              disableInput || (remainingMessages !== null && remainingMessages <= 0)
+                ? (isTyping ? "Awaiting final response from counterpart..." : "Interrogation limit reached. Preparing verdict...")
                 : isTyping
-                  ? "Target is transmitting response..."
-                  : disableInput || (remainingMessages !== null && remainingMessages <= 0)
-                    ? "Interrogation limit reached. Awaiting verdict..."
-                    : "Type interrogation query..."
+                  ? "Counterpart is transmitting response..."
+                  : "Type interrogation query..."
             }
             className="flex-1 bg-surface-lowest border border-amber-500/25 rounded-xl px-4 py-2.5 text-white placeholder-amber-200/40 font-sans text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 disabled:opacity-40 disabled:cursor-not-allowed shadow-inner"
             disabled={timeLeft <= 0 || disableInput || isTyping || (remainingMessages !== null && remainingMessages <= 0)}

@@ -9,7 +9,7 @@ export default function OperatorSetup() {
     if (window.puter) {
       const signedIn = typeof window.puter.auth?.isSignedIn === 'function' 
         ? window.puter.auth.isSignedIn() 
-        : (typeof window.puter.isSignedIn === 'function' ? window.puter.isSignedIn() : false);
+        : (window.puter.isSignedIn?.() ?? false);
       
       setIsSignedIn(signedIn);
       
@@ -17,7 +17,7 @@ export default function OperatorSetup() {
         try {
           const user = typeof window.puter.auth?.getUser === 'function'
             ? await window.puter.auth.getUser()
-            : (typeof window.puter.getUser === 'function' ? await window.puter.getUser() : null);
+            : await window.puter.getUser?.();
           setUsername(user?.username || 'Unknown');
         } catch (error) {
           console.error("Failed to fetch user", error);

@@ -16,31 +16,39 @@ This document outlines proposed architecture, feature plans, file modifications,
 - **Status:** ✅ **Completed & Verified**
 - **Date Completed:** 2026-10-08
 - **Objective:**
-  In Round 3 ("The Turing Table"), ensure that all 3 replies from the counterpart (AI or Human host) are fully received, rendered, and readable in the chat before the "Identify Your Counterpart" verdict modal appears.
+  In Round 3 ("The Turing Table"), ensure that all 3 replies from the counterpart (AI or Human host) are fully received, rendered, and readable in the chat before the "Identify Your Counterpart" verdict modal appears. Also ensure counterpart assignment probability is an exact 50/50 split between AI and Human.
 - **Root Cause Analysis:**
-  In [`src/components/Round3.tsx`](src/components/Round3.tsx), `onSendMessage` previously started a premature blind 2-second timer as soon as query 3 was submitted, opening the verdict modal before the AI or host could deliver reply 3.
+  In [`src/components/Round3.tsx`](src/components/Round3.tsx) lines 433–440:
+  `onSendMessage` triggered immediately when the user pressed Send on their 3rd query. A blind 2000ms timer expired before `get_ai_response()` completed its API roundtrip and simulated typing delay, causing the verdict modal to pop up prematurely and obscure the chat feed.
 - **Architectural & Design Fix:**
-  1. **Add `onReadyForVerdict?: () => void` prop to [`src/components/chat/ChatInterface.tsx`](src/components/chat/ChatInterface.tsx):**
-     - Counterpart replies are tracked via `repliesReceivedRef`.
-     - In **AI mode**, once `get_ai_response()` completes, the response is appended to the message feed, and typing ends, if `nextReplies >= messageLimit` (3), a 2.5-second timer allows the player to read the message before triggering `onReadyForVerdict()`.
-     - In **Human mode**, when host chat messages arrive via WebSocket, the same counter checks `nextReplies >= messageLimit` and triggers `onReadyForVerdict()` after 2.5s.
-     - Input is disabled while `isTyping` is active to prevent message spamming.
-  2. **Update [`src/components/Round3.tsx`](src/components/Round3.tsx):**
-     - Removed premature `setTimeout` from `onSendMessage`.
-     - Connected `onReadyForVerdict={() => setShowGuess(true)}`.
-     - Added keying (`key={'subround-' + currentRound}`) to ensure fresh mount and reset on each subround.
+  1. **Added `onReadyForVerdict?: () => void` prop to [`src/components/chat/ChatInterface.tsx`](src/components/chat/ChatInterface.tsx):**
+     - Tracked the number of partner replies received (`repliesCountRef`) per interrogation subround.
+     - In **AI mode**: when `get_ai_response()` finishes, the response is appended to messages, and typing completes:
+       - Checks if `repliesCount >= messageLimit` (3 replies).
+       - If so, waits 2.5 seconds so the player can comfortably read the counterpart's final reply, then triggers `onReadyForVerdict()`.
+     - In **Human mode**: when host message is received in `network_manager.message_callback`:
+       - Appends host reply to messages.
+       - If `repliesCount >= messageLimit` (3 replies), waits 2.5 seconds to read, then triggers `onReadyForVerdict()`.
+     - Input and send button are disabled while `isTyping` is true, preventing overlapping queries before each reply arrives.
+  2. **Updated [`src/components/Round3.tsx`](src/components/Round3.tsx):**
+     - Removed the premature timer from `onSendMessage`. `onSendMessage` now strictly updates `messagesSent`.
+     - Added keying `key={'subround-' + currentRound + '-' + actualMode}` to ensure clean mount and state reset each subround.
+     - Wired `onReadyForVerdict={() => setShowGuess(true)}` to `ChatInterface`.
+     - Changed counterpart selection probability in `selectRandomMode`: `Math.random() < 0.5 ? 'ai' : 'human'` (50/50 split).
+     - Kept all scoring, subround limits, bets, payouts, and other game elements completely untouched.
 - **Phased Execution Checklist:**
   - [x] **Phase 1: Update `ChatInterface.tsx`**
-    - Added `onReadyForVerdict` to `ChatInterfaceProps`.
-    - Maintained counterpart reply tracking and timer cleanup.
-    - Disabled input while waiting for partner response / typing.
-    - Triggered `onReadyForVerdict()` only after reply 3 is rendered.
+    - Added `onReadyForVerdict?: () => void` to `ChatInterfaceProps`.
+    - Maintained counterpart reply count (`repliesCountRef`) and timer cleanup.
+    - Disabled input while waiting for partner response (`isTyping`).
+    - Triggered `onReadyForVerdict()` after the 3rd reply is rendered + 2.5s reading delay.
   - [x] **Phase 2: Update `Round3.tsx`**
     - Removed premature 2s timeout in `onSendMessage`.
-    - Connected `onReadyForVerdict={() => setShowGuess(true)}`.
+    - Passed `onReadyForVerdict={() => setShowGuess(true)}`.
+    - Set 50/50 probability split in `selectRandomMode`: `Math.random() < 0.5 ? 'ai' : 'human'`.
   - [x] **Phase 3: Verification & Quality Assurance**
     - `npm run typecheck`: Passed with 0 errors.
-    - `npm run build`: Production bundle built successfully.
+    - `npm run build`: Succeeded in 6.32s with 0 errors.
     - Documented in `WALKTHROUGH.md`.
 
 ---

@@ -88,7 +88,7 @@ export default function HostChatInterface() {
       } else if (msg.type === 'chat') {
         const newMessage: ChatMessage = {
           id: Date.now().toString() + Math.random(),
-          text: msg.content || '',
+          text: msg.content ?? msg.message ?? '',
           sender: msg.senderId === 'host' ? 'host' : 'player',
           timestamp: new Date(msg.timestamp),
           playerId: msg.senderId,

@@ -256,15 +256,13 @@ export async function generateImage(prompt: string, imageId?: number): Promise<G
 // Optional Auth Helper for Puter (can be called on mount if needed)
 export async function ensurePuterAuth() {
   if (window.puter) {
-    const signedIn = typeof window.puter.auth?.isSignedIn === 'function' 
-      ? window.puter.auth.isSignedIn() 
-      : (typeof window.puter.isSignedIn === 'function' ? window.puter.isSignedIn() : false);
+    const signedIn = typeof window.puter.auth?.isSignedIn === 'function' ? window.puter.auth.isSignedIn() : (window.puter.isSignedIn?.() ?? false);
     if (!signedIn) {
       try {
         if (typeof window.puter.auth?.signIn === 'function') {
           await window.puter.auth.signIn();
-        } else if (typeof window.puter.signIn === 'function') {
-          await window.puter.signIn();
+        } else {
+          await window.puter.signIn?.();
         }
       } catch (e) {
         console.warn("Puter sign-in failed or was cancelled.", e);

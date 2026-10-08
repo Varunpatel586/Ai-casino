@@ -109,8 +109,8 @@ export default function Round3({ currentChips, onComplete, username, onBackToBon
 
   // Randomly select AI or Human mode and set up connection
   const selectRandomMode = useCallback(async () => {
-    // Randomly choose between AI and Human (70% AI, 30% Human chance)
-    const randomMode: ChatMode = Math.random() < 0.7 ? 'ai' : 'human';
+    // Randomly choose between AI and Human (50% AI, 50% Human chance)
+    const randomMode: ChatMode = Math.random() < 0.5 ? 'ai' : 'human';
     setActualMode(randomMode);
     setConnectionError('');
     console.log('Selected mode (hidden from player):', randomMode);
@@ -423,7 +423,7 @@ export default function Round3({ currentChips, onComplete, username, onBackToBon
           <div className="flex-1 min-h-0 casino-vip-card rounded-2xl overflow-hidden border border-amber-500/30 shadow-[0_25px_70px_rgba(0,0,0,0.9)] flex flex-col relative">
             <div className="card-neon-edge" />
             <ChatInterface 
-              key={`subround-${currentRound}`}
+              key={`subround-${currentRound}-${actualMode}`}
               mode={actualMode}
               onComplete={() => {}} // disable auto-complete
               timeLimit={120}
