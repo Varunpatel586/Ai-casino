@@ -72,7 +72,7 @@ export default function ChatInterface({
     network_manager.message_callback = null;
     network_manager.connection_callback = null;
 
-    const GREETING = "Hi there! I'm your chat partner. Let's have a conversation!";
+    const GREETING = "hi kesa hai bhai";
     let greetingTimer: ReturnType<typeof setTimeout>;
 
     if (mode === 'ai') {
@@ -222,7 +222,11 @@ export default function ChatInterface({
       try {
         const aiResponse = await get_ai_response(input);
 
-        // Simulate typing delay
+        // Simulate realistic human typing delay (reading buffer + character typing cadence)
+        const readingPause = 1500 + Math.random() * 500;
+        const typingDuration = aiResponse.length * 60;
+        const totalDelay = Math.min(5500, Math.max(3500, readingPause + typingDuration));
+
         setTimeout(() => {
           setMessages(prev => [...prev, {
             id: generateMessageId(),
@@ -232,17 +236,19 @@ export default function ChatInterface({
           }]);
           setIsTyping(false);
           registerPartnerReply();
-        }, 1000 + Math.random() * 2000); // 1-3 second delay
+        }, totalDelay);
       } catch (error) {
         console.error('Error getting AI response:', error);
-        setIsTyping(false);
-        setMessages(prev => [...prev, {
-          id: generateMessageId(),
-          text: 'Sorry, I couldn\'t understand that. Please try again.',
-          sender: 'ai',
-          timestamp: new Date()
-        }]);
-        registerPartnerReply();
+        setTimeout(() => {
+          setIsTyping(false);
+          setMessages(prev => [...prev, {
+            id: generateMessageId(),
+            text: 'kuch samjha nhi bhai firse bol',
+            sender: 'ai',
+            timestamp: new Date()
+          }]);
+          registerPartnerReply();
+        }, 3500);
       }
     } else {
       // Send to human chat (privately to host)

@@ -83,10 +83,26 @@ async function callGroqAPI(systemPrompt: string, userPrompt: string): Promise<st
 }
 
 /**
- * Helper to add AI response to history and return it
+ * Helper to add AI response to history and return it with human-like Hinglish sanitization
  */
 const finalizeResponse = (text: string) => {
-  const cleanText = text.trim();
+  let cleanText = text.trim();
+  // Strip quotation marks wrapping the whole response
+  if ((cleanText.startsWith('"') && cleanText.endsWith('"')) || (cleanText.startsWith("'") && cleanText.endsWith("'"))) {
+    cleanText = cleanText.slice(1, -1).trim();
+  }
+  // Strip speaker prefixes if returned by LLM
+  cleanText = cleanText.replace(/^(you|ai|partner|bot|assistant):\s*/i, '');
+  // Remove exclamation marks which are an obvious AI giveaway
+  cleanText = cleanText.replace(/!+/g, '');
+  // Convert to casual lowercase (real casual texters don't use title casing or formal punctuation)
+  cleanText = cleanText.toLowerCase();
+  // Strip trailing periods if short message
+  if (cleanText.endsWith('.') && cleanText.split(' ').length <= 8) {
+    cleanText = cleanText.slice(0, -1);
+  }
+  cleanText = cleanText.trim();
+
   conversationHistory.push(`AI: ${cleanText}`);
   if (conversationHistory.length > 20) {
     conversationHistory = conversationHistory.slice(-20);
@@ -108,11 +124,17 @@ export const get_ai_response = async (message: string): Promise<string> => {
 
     const recentHistory = conversationHistory.slice(-8).join('\n');
     
-    const systemPrompt = `You are participating in a Turing test game. The user is trying to determine if you're human or AI. 
-Respond naturally and conversationally, but don't reveal you're an AI unless directly asked. 
-Keep responses under 2 sentences and sound like a real person. Be casual, use informal language.`;
+    const systemPrompt = `You are a real Indian college student chatting casually in an online Turing test game.
+Talk strictly in casual Hinglish (natural mix of Hindi and English words like 'bhai', 'yaar', 'kesa hai', 'kya scene', 'bol na', 'sahi hai', 'arre', 'hn', 'nhi', 'lol').
+Strict rules:
+- NEVER use exclamation marks (!).
+- Write in all lowercase, like a quick casual WhatsApp message.
+- Keep replies extremely short (under 8 to 10 words maximum).
+- If greeted (e.g. 'hi' / 'hello'), reply naturally like: 'hi kesa hai bhai' or 'yo bhai kya haal'.
+- If asked if you are AI/bot, deny it casually like: 'arre human hu bhai kya bolra lol' or 'mai bot thodi hu yaar'.
+- Never speak formally, never explain things, and never sound like an AI assistant.`;
 
-    const userPrompt = `Recent conversation:
+    const userPrompt = `Recent chat:
 ${recentHistory}
 
 User: ${message}
@@ -120,11 +142,12 @@ You:`;
 
     const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
     
-    const pollinationsPrompt = `Respond as a human in a Turing test. Do not reveal you are an AI. Be very casual, like texting a friend. Keep it under 2 sentences. 
-Past context:
+    const pollinationsPrompt = `You are an Indian player chatting in a game. Reply strictly in casual Hinglish (mix of Hindi & English like 'bhai', 'yaar', 'kesa hai', 'bol na', 'arre'). Write strictly in lowercase, NO exclamation marks, under 8 words. Example for 'hi': 'hi kesa hai bhai'.
+Past chat:
 ${recentHistory}
 
-The user just said: '${message}'`;
+User said: '${message}'
+You:`;
 
     let aiText = '';
 
@@ -252,7 +275,7 @@ The user just said: '${message}'`;
 };
 
 /**
- * Generate intelligent fallback responses based on message patterns
+ * Generate intelligent fallback responses based on message patterns in authentic Hinglish
  */
 const generateFallbackResponse = (message: string): string => {
   const messageLower = message.toLowerCase().trim();
@@ -263,78 +286,68 @@ const generateFallbackResponse = (message: string): string => {
   
   const responsePatterns: {pattern: RegExp, responses: string[]}[] = [
     {
-      pattern: /hello|hi|hey|greetings|what's up|yo/i,
+      pattern: /hello|hi|hey|greetings|what's up|yo|sup|hlo|helo/i,
       responses: [
-        "Hey there! What's on your mind?", 
-        "Hi! How are you doing today?", 
-        "Yo! What are we chatting about?",
-        "Hey! How's it going?",
-        "Hi! Ready for the next round?"
+        "hi kesa hai bhai",
+        "yo bhai kya haal",
+        "haan bol bhai kya chalra",
+        "hey kya scene hai",
+        "haan bol na bhai"
       ]
     },
     {
-      pattern: /how are you|how do you do|how's it going/i,
+      pattern: /how are you|kaisa hai|kesa hai|kya haal|how r u/i,
       responses: [
-        "I'm doing well, just hanging out here. You?", 
-        "Pretty good, actually! Trying to win this game.", 
-        "All good here! How's your day been?",
-        "Doing fine! Just chatting away.",
-        "I'm great! Thanks for asking."
+        "badhiya bhai tu bata",
+        "sab mast tu kaisa hai yaar",
+        "theek thak chalra tu bol",
+        "bas badhiya bhai tu suna",
+        "mast hu bhai tu bata"
       ]
     },
     {
-      pattern: /what are you|who are you|are you ai|are you bot|robot|are you real|are you human|prove it/i,
+      pattern: /what are you|who are you|are you ai|are you bot|robot|are you real|are you human|prove it|ai ho kya|bot hai kya|insaan/i,
       responses: [
-        "Haha, I'm just a normal person trying to play this game.", 
-        "I'm definitely human! Sitting right here typing this.", 
-        "I'm your opponent! Or maybe your partner? We'll see.",
-        "Just a regular player like you!",
-        "Why, do I sound like a bot? I'm human I promise!",
-        "If I were an AI, would I be this bad at typing? lol",
-        "100% human. Unless this is the Matrix.",
-        "I'm real! But honestly, that's exactly what an AI would say, right? 😂",
-        "Dude I'm just trying to win these chips.",
-        "I promise I'm human! I even had coffee this morning."
+        "arre human hu bhai kya bolra lol",
+        "mai bot thodi hu yaar",
+        "bhai real banda hu mai tu bot lagra mujhe",
+        "haha kyu lagra aisa mai insaan hu bhai",
+        "bhai chips jeetne aaya hu bot nhi hu lol",
+        "arre real player hu bhai typing dekh meri"
       ]
     },
     {
-      pattern: /turing test|turing|test/i,
+      pattern: /turing test|turing|test|guess/i,
       responses: [
-        "This whole Turing test thing is making me paranoid.",
-        "I'm pretty sure you're the AI in this Turing test.",
-        "Are you testing me? I'm just a person lol.",
-        "I don't know how to prove I'm human over a chat box!",
-        "Plot twist: we're both AI."
+        "bhai test chhod seedha baat kar na",
+        "lol mujhe mat test kar mai banda hu",
+        "tu guess kar mai human hu ya ai lol",
+        "kya lagta hu tujhe human ya bot"
       ]
     },
     {
-      pattern: /joke|funny|laugh|humor/i,
+      pattern: /joke|funny|laugh|humor|hasao/i,
       responses: [
-        "I'm terrible at jokes under pressure!",
-        "Why did the computer go to the doctor? It had a virus! (Sorry, that was bad)",
-        "I can't think of one right now, my mind went blank.",
-        "You're putting me on the spot! I don't know any good jokes.",
-        "I'll spare you my terrible sense of humor today."
+        "joke to nhi aata bhai abhi lol",
+        "bhai standup comedian thodi hu",
+        "mood nhi hai joke ka abhi game khel"
       ]
     },
     {
-      pattern: /ronaldo|messi|football|soccer|team/i,
+      pattern: /ronaldo|messi|football|soccer|cricket|ipl|kohli/i,
       responses: [
-        "Honestly both are legends, but I lean towards Messi.",
-        "Ronaldo all the way! His work ethic is insane.",
-        "I'm not the biggest football fan to be honest.",
-        "I respect both, but Messi's dribbling is magical.",
-        "CR7! The goat!"
+        "messi better hai bhai waise",
+        "cr7 goat hai bhai",
+        "kohli best hai bhai cricket me",
+        "football utna nhi dekhta bhai"
       ]
     },
     {
-      pattern: /singer|music|song|artist/i,
+      pattern: /naam kya hai|what is your name|who r u|name/i,
       responses: [
-        "I listen to a bit of everything, but The Weeknd is great.",
-        "Mostly pop and rock. You?",
-        "I'm a big Taylor Swift fan actually!",
-        "I don't have a favorite, it depends on my mood.",
-        "Anything with a good beat honestly."
+        "naam me kya rakha hai bhai game khel",
+        "bhai player hu bas chips bachane aya hu",
+        "naam chhod tu apna bata"
       ]
     }
   ];
@@ -347,18 +360,17 @@ const generateFallbackResponse = (message: string): string => {
     }
   }
 
-  // Default contextual responses
+  // Default contextual responses in Hinglish
   const defaultResponses = [
-    "Oh that's interesting. Tell me more?",
-    "I'm not totally sure I follow, can you explain?",
-    "Yeah I completely agree with that.",
-    "That makes sense to me.",
-    "Hmm, I haven't really thought about it like that before.",
-    "Haha yeah, exactly!",
-    "That's pretty cool actually.",
-    "I see what you mean.",
-    "Gotcha. What else is going on?",
-    "Fair point!"
+    "sahi hai bhai",
+    "hn wahi to yaar",
+    "accha aisa kya",
+    "theek hai bhai",
+    "sahi bola yaar",
+    "aur bata kya chalra",
+    "arre haan bhai",
+    "lol sahi hai",
+    "samajh gaya bhai"
   ];
 
   const response = defaultResponses[Math.floor(Math.random() * defaultResponses.length)];

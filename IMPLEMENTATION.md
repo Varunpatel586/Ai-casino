@@ -12,6 +12,51 @@ This document outlines proposed architecture, feature plans, file modifications,
 
 ## 📋 Active Implementation Plan
 
+### Plan 11: Human-Like Hinglish Persona & Realistic Typing Cadence for Round 3 AI Counterpart
+- **Status:** ✅ **Completed & Verified**
+- **Date Completed:** 2026-10-08
+- **Objective:**
+  Prevent players from easily identifying the AI counterpart in Round 3 due to robotic giveaways (instant fast typing, excessive exclamation marks, formal grammar, and rigid title casing). Transition the AI to an authentic, casual human persona who speaks in conversational Hinglish (e.g., "hi kesa hai bhai", "kya chalra", "arre human hu lol"), types in casual lowercase, avoids exclamation marks, and simulates real human typing delays (3.5s – 5.5s).
+- **Diagnosis & Feasibility:**
+  - **Is this possible?** **Yes, 100% possible.** The AI conversational pipeline in [`src/services/gemini_chat.ts`](src/services/gemini_chat.ts) controls all LLM prompts, fallback dictionaries, and output post-processing.
+  - The typing simulation and initial greeting in [`src/components/chat/ChatInterface.tsx`](src/components/chat/ChatInterface.tsx) currently use a fixed 1–3s delay and a formal English greeting (`"Hi there! I'm your chat partner. Let's have a conversation!"`), which can be swapped for human cadence and casual Hinglish greetings.
+- **Detailed Solution Architecture:**
+  1. **Prompt Engineering in [`src/services/gemini_chat.ts`](src/services/gemini_chat.ts):**
+     - Update system prompts across all tiers (Puter, Pollinations, Gemini, Groq).
+     - Instruct the AI: *"You are an Indian college student / casual gamer chatting on WhatsApp/Discord. Reply strictly in casual Hinglish (mix of Hindi and English words like 'bhai', 'yaar', 'kesa hai', 'kya scene', 'bol na', 'sahi hai'). Never use exclamation marks (!). Type in all lowercase. Keep replies super short (under 10 words). Never sound like an AI assistant."*
+  2. **AI Output Sanitizer in `finalizeResponse` ([`src/services/gemini_chat.ts`](src/services/gemini_chat.ts)):**
+     - Strips exclamation marks (`!`).
+     - Normalizes text to casual lowercase.
+     - Strips any AI-like quotation wrappers or assistant prefixes.
+  3. **Authentic Hinglish Fallback Corpus (`generateFallbackResponse` in [`src/services/gemini_chat.ts`](src/services/gemini_chat.ts)):**
+     - Replace all formal English fallback phrases with natural Hinglish replies:
+       - Greetings: `"hi kesa hai bhai"`, `"yo bhai kya haal"`, `"haan bol na"`, `"hey kya chalra"`
+       - Casual queries: `"badhiya tu bata"`, `"sab mast bhai tu kaisa hai"`, `"bas chalra yaar"`
+       - Suspicions ("Are you AI/bot?"): `"arre human hu bhai kya bolra lol"`, `"mai bot thodi hu yaar"`, `"bhai real banda hu mai tu bot lagra mujhe"`
+       - General: `"sahi hai bhai"`, `"hn wahi to"`, `"accha aisa kya"`, `"theek hai yaar"`
+  4. **Human Typing Simulation & Greeting in [`src/components/chat/ChatInterface.tsx`](src/components/chat/ChatInterface.tsx):**
+     - Change the initial greeting from `"Hi there! I'm your chat partner..."` to casual Hinglish: `"hi kesa hai bhai"`.
+     - Upgrade typing delay from fixed 1–3s to realistic human typing cadence:
+       - Reading buffer: ~1.5s – 2.0s
+       - Typing duration based on response length: ~60ms per character + jitter
+       - Total delay: ~3.5s – 5.5s, allowing the typing indicator (`"Subject transmitting..."`) to display naturally.
+  5. **Scope Guard:**
+     - Zero modifications to scoring, round limits, betting, host multiplayer, or any other game components.
+- **Phased Execution Checklist:**
+  - [x] **Phase 1: Update `gemini_chat.ts` Prompts & Post-processing**
+    - Updated system prompts for Puter, Pollinations, Gemini, and Groq.
+    - Implemented `finalizeResponse` post-sanitizer (lowercase, strip `!`, remove formal filler).
+    - Rewrote `generateFallbackResponse` corpus in authentic Hinglish.
+  - [x] **Phase 2: Update `ChatInterface.tsx` Greeting & Human Typing Cadence**
+    - Set greeting to `"hi kesa hai bhai"`.
+    - Implemented realistic human typing calculation (~3.5s - 5.5s).
+  - [x] **Phase 3: Verification & Quality Assurance**
+    - `npm run typecheck`: Passed with 0 errors.
+    - `npm run build`: Succeeded in 6.31s with 0 errors.
+    - Logged completion in `WALKTHROUGH.md`.
+
+---
+
 ### Plan 10: Round 3 Partner Reply Delivery Synchronization Before Verdict Guess Modal
 - **Status:** ✅ **Completed & Verified**
 - **Date Completed:** 2026-10-08
