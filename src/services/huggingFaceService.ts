@@ -6,7 +6,22 @@ export interface GeneratedImage {
 // Ensure puter is available globally
 declare global {
   interface Window {
-    puter?: any;
+    puter?: {
+      ai?: {
+        chat?: (prompt: string, options?: { model?: string }) => Promise<unknown>;
+        txt2img?: (prompt: string, options?: { model?: string }) => Promise<HTMLImageElement | string>;
+      };
+      auth?: {
+        isSignedIn?: () => boolean;
+        getUser?: () => Promise<{ username?: string }>;
+        signIn?: () => Promise<void>;
+        signOut?: () => Promise<void>;
+      };
+      isSignedIn?: () => boolean;
+      getUser?: () => Promise<{ username?: string }>;
+      signIn?: () => Promise<void>;
+      signOut?: () => Promise<void>;
+    };
   }
 }
 
@@ -54,14 +69,14 @@ async function generateWithPuter(prompt: string): Promise<string> {
     const currentNodes = Array.from(document.body.childNodes);
     currentNodes.forEach(node => {
       if (!childNodesBefore.includes(node)) {
-        try { document.body.removeChild(node); } catch (e) {}
+        try { document.body.removeChild(node); } catch { /* ignore */ }
       }
     });
     
     // Fallback: Remove any element with 'puter' in its ID or class that isn't the main script
     document.querySelectorAll('[id*="puter"], [class*="puter"]').forEach(el => {
       if (el.tagName !== 'SCRIPT') {
-        try { el.remove(); } catch (e) {}
+        try { el.remove(); } catch { /* ignore */ }
       }
     });
     
@@ -148,15 +163,16 @@ async function generateWithHuggingFace(prompt: string): Promise<string> {
         try {
           const errJson = await response.json();
           errorText = errJson.error || errorText;
-        } catch (e) {}
+        } catch { /* ignore */ }
         throw new Error(`Status ${response.status}: ${errorText}`);
       }
 
       const blob = await response.blob();
       return URL.createObjectURL(blob);
-    } catch (e: any) {
-      console.warn(`[ImageGen] HF Model ${model} failed:`, e.message);
-      lastError = e.message;
+    } catch (e: unknown) {
+      const errMessage = e instanceof Error ? e.message : String(e);
+      console.warn(`[ImageGen] HF Model ${model} failed:`, errMessage);
+      lastError = errMessage;
       // Continue to next model
     }
   }
@@ -240,13 +256,13 @@ export async function generateImage(prompt: string, imageId?: number): Promise<G
 // Optional Auth Helper for Puter (can be called on mount if needed)
 export async function ensurePuterAuth() {
   if (window.puter) {
-    const signedIn = typeof window.puter.auth?.isSignedIn === 'function' ? window.puter.auth.isSignedIn() : window.puter.isSignedIn();
+    const signedIn = typeof window.puter.auth?.isSignedIn === 'function' ? window.puter.auth.isSignedIn() : (window.puter.isSignedIn?.() ?? false);
     if (!signedIn) {
       try {
         if (typeof window.puter.auth?.signIn === 'function') {
           await window.puter.auth.signIn();
         } else {
-          await window.puter.signIn();
+          await window.puter.signIn?.();
         }
       } catch (e) {
         console.warn("Puter sign-in failed or was cancelled.", e);
@@ -257,5 +273,47 @@ export async function ensurePuterAuth() {
     }
   } else {
     alert("Puter script not loaded yet.");
+  }
+}
+
+/**
+ * Signs the current player out of Puter after the game completes so that
+ * the next player's image generation runs under their own free-tier account
+ * and doesn't drain the previous player's credits.
+ */
+export async function signOutPuter(): Promise<void> {
+  try {
+    if (window.puter) {
+      if (typeof window.puter.auth?.signOut === 'function') {
+        await window.puter.auth.signOut();
+      } else if (typeof window.puter.signOut === 'function') {
+        await window.puter.signOut();
+      }
+    }
+
+    // Clear any puter auth caches/tokens in storage to prevent token reuse
+    if (typeof window !== 'undefined') {
+      try {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.toLowerCase().includes('puter')) {
+            localStorage.removeItem(key);
+          }
+        }
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i);
+          if (key && key.toLowerCase().includes('puter')) {
+            sessionStorage.removeItem(key);
+          }
+        }
+      } catch {
+        // storage cleanup failure is non-fatal
+      }
+    }
+
+    console.log('[Puter] Player signed out successfully.');
+  } catch (e) {
+    // Non-fatal — log and continue so the game flow isn't blocked
+    console.warn('[Puter] Sign-out failed (non-fatal):', e);
   }
 }

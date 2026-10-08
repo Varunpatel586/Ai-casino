@@ -7,9 +7,10 @@ interface CardGameProps {
   selectedBet: number | null;
   result: string;
   currentChips: number;
+  onPlayed?: () => void;
 }
 
-const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, currentChips }) => {
+const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, currentChips, onPlayed }) => {
   const [winningCard, setWinningCard] = useState('');
   const [selectedCard, setSelectedCard] = useState('');
   const [showResult, setShowResult] = useState(false);
@@ -33,8 +34,6 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
       return;
     }
 
-    // Deduct chips immediately when bet is placed
-    console.log('CardGame: Deducting', amount, 'chips for card game');
     onChipUpdate(currentChips - amount);
     setHasDeductedBet(true);
     onSelectBonusBet(amount, 'card');
@@ -45,34 +44,35 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
 
     setSelectedCard(cardType);
     setShowResult(true);
+    onPlayed?.();
 
-    // Check if player won and reward chips
     if (cardType === winningCard) {
       const winnings = selectedBet * 2;
-      console.log('CardGame: Player won! Awarding', winnings, 'chips');
-      onChipUpdate(currentChips + winnings); // Current chips already had bet deducted
+      onChipUpdate(currentChips + winnings);
     }
   };
 
   return (
-    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
-      <div className="max-w-md sm:max-w-lg w-full bg-[#12151E] border border-[#232938] rounded-2xl p-4 sm:p-6 text-center shadow-2xl my-auto">
+    <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-2 sm:p-4 overflow-hidden select-none">
+      <div className="max-w-md sm:max-w-lg w-full casino-vip-card rounded-2xl p-4 sm:p-5 text-center shadow-2xl my-auto relative overflow-hidden">
+        <div className="card-neon-edge" />
+
         {/* Header */}
-        <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-blue-500/30 text-blue-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
-          <span>Side Action // 2.0x Payout</span>
+        <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#1b0d18]/90 border border-blue-400/40 text-blue-300 text-[10px] sm:text-xs font-mono font-bold tracking-[0.2em] uppercase mb-1 shadow-[0_0_12px_rgba(59,130,246,0.25)]">
+          <span>♠ Side Action // 2.0x Payout ♥</span>
         </div>
 
-        <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
+        <h2 className="text-xl sm:text-2xl font-display font-black uppercase tracking-tight mb-0.5 white-metallic-text">
           High-Card Duel
         </h2>
-        <p className="text-slate-400 text-xs font-sans mb-3">
+        <p className="text-amber-200/70 text-xs font-sans mb-3">
           Wager your chips on the house card. If your selected card matches the hidden dealer card, you double your wager.
         </p>
 
         {/* Wager Selection */}
         {!hasDeductedBet && (
-          <div className="mb-6 p-4 bg-[#181D2A] border border-[#283248] rounded-xl">
-            <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block mb-3">
+          <div className="mb-4 p-3 bg-[#140814]/90 border border-amber-400/30 rounded-xl">
+            <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-amber-200/80 block mb-2 font-bold">
               Step 1: Choose Wager Amount
             </span>
             <div className="flex justify-center gap-3">
@@ -84,47 +84,47 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
                     key={amt}
                     onClick={() => canAfford && handleBetSelect(amt)}
                     disabled={!canAfford}
-                    className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center transition-all cursor-pointer ${
+                    className={`relative w-16 h-16 rounded-full flex flex-col items-center justify-center transition-all cursor-pointer ${
                       isSelected
                         ? 'ring-4 ring-amber-400 scale-105 shadow-chip'
-                        : 'border-2 border-dashed border-[#2E384D] hover:border-amber-400/60'
+                        : 'border-2 border-dashed border-amber-400/40 hover:border-amber-400'
                     } ${
                       amt === 10
-                        ? 'bg-emerald-950/80 text-emerald-300'
+                        ? 'bg-gradient-to-br from-emerald-950/80 to-[#07150e] text-emerald-300'
                         : amt === 20
-                          ? 'bg-blue-950/80 text-blue-300'
-                          : 'bg-purple-950/80 text-purple-300'
+                          ? 'bg-gradient-to-br from-blue-950/80 to-[#081022] text-blue-300'
+                          : 'bg-gradient-to-br from-purple-950/80 to-[#180820] text-purple-300'
                     } ${!canAfford ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'}`}
                   >
-                    <span className="text-[10px] font-mono uppercase text-slate-400">CHIP</span>
-                    <span className="text-lg font-mono font-black">${amt}</span>
+                    <span className="text-[9px] font-mono uppercase text-zinc-400">CHIP</span>
+                    <span className="text-base font-mono font-black">${amt}</span>
                   </button>
                 );
               })}
             </div>
             {currentChips < 10 && (
-              <p className="text-xs font-mono text-rose-400 mt-2">Insufficient chips to enter this duel.</p>
+              <p className="text-xs font-mono text-rose-400 mt-1.5">Insufficient chips to enter this duel.</p>
             )}
           </div>
         )}
 
         {/* Active Bet Notice */}
         {hasDeductedBet && !showResult && (
-          <div className="mb-4 inline-flex items-center gap-2 bg-[#181D2A] border border-amber-500/30 px-3 py-1.5 rounded-full text-xs font-mono text-amber-400">
+          <div className="mb-3 inline-flex items-center gap-2 bg-[#1b0d18] border border-amber-400/40 px-3 py-1 rounded-full text-xs font-mono text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.25)]">
             <span>Wager Locked: <strong>${selectedBet}</strong> (Potential Payout: <strong>${selectedBet ? selectedBet * 2 : 0}</strong>)</span>
           </div>
         )}
 
         {/* Card Arena */}
-        <div className="mb-6">
-          <span className="text-xs font-mono uppercase tracking-wider text-slate-400 block mb-4">
+        <div className="mb-4">
+          <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-amber-200/70 block mb-2.5 font-bold">
             {hasDeductedBet && !showResult ? 'Step 2: Choose Your Suit' : 'Duel Deck'}
           </span>
-          <div className="flex justify-center items-center gap-6">
+          <div className="flex justify-center items-center gap-4 sm:gap-6">
             {/* Spade Card */}
             <div
               onClick={() => handleCardSelect('spade')}
-              className={`w-32 h-44 rounded-xl transition-all duration-300 relative select-none flex flex-col justify-between p-3 cursor-pointer ${
+              className={`w-28 h-36 sm:w-32 sm:h-40 max-h-[25vh] rounded-xl transition-all duration-300 relative select-none flex flex-col justify-between p-2.5 sm:p-3 cursor-pointer ${
                 showResult
                   ? selectedCard === 'spade'
                     ? selectedCard === winningCard
@@ -134,20 +134,20 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
                       ? 'bg-white text-slate-900 border-2 border-amber-400 shadow-xl opacity-90'
                       : 'bg-white text-slate-900 border-2 border-slate-300 opacity-60'
                   : hasDeductedBet
-                    ? 'bg-gradient-to-b from-[#181D2A] to-[#0E1118] border-2 border-amber-500/40 hover:border-amber-400 hover:scale-105 shadow-tactile'
-                    : 'bg-[#151922] border-2 border-[#232938] opacity-60 cursor-not-allowed'
+                    ? 'bg-gradient-to-b from-[#240e20] to-[#10050e] border-2 border-amber-400/60 hover:border-amber-300 hover:scale-105 shadow-[0_10px_25px_rgba(0,0,0,0.8),0_0_15px_rgba(245,158,11,0.25)]'
+                    : 'bg-[#150714] border-2 border-amber-400/20 opacity-60 cursor-not-allowed'
               }`}
             >
               {showResult ? (
                 <>
-                  <div className="text-left font-mono font-black text-sm text-slate-900 leading-none">A<br/>♠</div>
-                  <div className="text-4xl text-slate-900 text-center my-auto">♠</div>
-                  <div className="text-right font-mono font-black text-sm text-slate-900 leading-none rotate-180">A<br/>♠</div>
+                  <div className="text-left font-mono font-black text-xs sm:text-sm text-slate-900 leading-none">A<br/>♠</div>
+                  <div className="text-3xl sm:text-4xl text-slate-900 text-center my-auto drop-shadow-sm">♠</div>
+                  <div className="text-right font-mono font-black text-xs sm:text-sm text-slate-900 leading-none rotate-180">A<br/>♠</div>
                 </>
               ) : (
-                <div className="w-full h-full border border-amber-500/20 rounded-lg flex flex-col items-center justify-center">
-                  <span className="text-2xl text-amber-500/60 mb-1">♠</span>
-                  <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-bold">SPADE</span>
+                <div className="w-full h-full border border-amber-400/30 rounded-lg flex flex-col items-center justify-center bg-gradient-to-b from-amber-500/5 to-transparent">
+                  <span className="text-2xl sm:text-3xl text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.7)] mb-0.5">♠</span>
+                  <span className="text-[9px] font-mono text-amber-200/90 uppercase tracking-[0.2em] font-bold">SPADE</span>
                 </div>
               )}
             </div>
@@ -155,7 +155,7 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
             {/* Heart Card */}
             <div
               onClick={() => handleCardSelect('heart')}
-              className={`w-32 h-44 rounded-xl transition-all duration-300 relative select-none flex flex-col justify-between p-3 cursor-pointer ${
+              className={`w-28 h-36 sm:w-32 sm:h-40 max-h-[25vh] rounded-xl transition-all duration-300 relative select-none flex flex-col justify-between p-2.5 sm:p-3 cursor-pointer ${
                 showResult
                   ? selectedCard === 'heart'
                     ? selectedCard === winningCard
@@ -165,20 +165,20 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
                       ? 'bg-white text-rose-600 border-2 border-amber-400 shadow-xl opacity-90'
                       : 'bg-white text-rose-600 border-2 border-slate-300 opacity-60'
                   : hasDeductedBet
-                    ? 'bg-gradient-to-b from-[#181D2A] to-[#0E1118] border-2 border-amber-500/40 hover:border-amber-400 hover:scale-105 shadow-tactile'
-                    : 'bg-[#151922] border-2 border-[#232938] opacity-60 cursor-not-allowed'
+                    ? 'bg-gradient-to-b from-[#240e20] to-[#10050e] border-2 border-amber-400/60 hover:border-amber-300 hover:scale-105 shadow-[0_10px_25px_rgba(0,0,0,0.8),0_0_15px_rgba(245,158,11,0.25)]'
+                    : 'bg-[#150714] border-2 border-amber-400/20 opacity-60 cursor-not-allowed'
               }`}
             >
               {showResult ? (
                 <>
-                  <div className="text-left font-mono font-black text-sm text-rose-600 leading-none">A<br/>♥</div>
-                  <div className="text-4xl text-rose-600 text-center my-auto">♥</div>
-                  <div className="text-right font-mono font-black text-sm text-rose-600 leading-none rotate-180">A<br/>♥</div>
+                  <div className="text-left font-mono font-black text-xs sm:text-sm text-rose-600 leading-none">A<br/>♥</div>
+                  <div className="text-3xl sm:text-4xl text-rose-600 text-center my-auto drop-shadow-sm">♥</div>
+                  <div className="text-right font-mono font-black text-xs sm:text-sm text-rose-600 leading-none rotate-180">A<br/>♥</div>
                 </>
               ) : (
-                <div className="w-full h-full border border-amber-500/20 rounded-lg flex flex-col items-center justify-center">
-                  <span className="text-2xl text-rose-500/60 mb-1">♥</span>
-                  <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-bold">HEART</span>
+                <div className="w-full h-full border border-amber-400/30 rounded-lg flex flex-col items-center justify-center bg-gradient-to-b from-amber-500/5 to-transparent">
+                  <span className="text-2xl sm:text-3xl text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.7)] mb-0.5">♥</span>
+                  <span className="text-[9px] font-mono text-amber-200/90 uppercase tracking-[0.2em] font-bold">HEART</span>
                 </div>
               )}
             </div>
@@ -187,15 +187,15 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
 
         {/* Result Settlement Display */}
         {showResult && (
-          <div className={`p-4 rounded-xl border mb-6 animate-in fade-in zoom-in-95 duration-200 ${
+          <div className={`p-2.5 sm:p-3 rounded-xl border mb-3 animate-in fade-in zoom-in-95 duration-200 ${
             selectedCard === winningCard
-              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-              : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+              ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.25)]'
+              : 'bg-rose-950/50 border-rose-500/50 text-rose-300 shadow-[0_0_20px_rgba(225,29,72,0.25)]'
           }`}>
-            <span className="text-[10px] font-mono uppercase tracking-widest block mb-0.5">
+            <span className="text-[9px] font-mono uppercase tracking-[0.2em] block mb-0.5">
               Settlement Verdict
             </span>
-            <p className="text-xl font-display font-black uppercase mb-1">
+            <p className="text-lg font-display font-black uppercase mb-0.5">
               {selectedCard === winningCard ? 'Victory — Suit Matched!' : 'Defeat — Dealer Prevailed'}
             </p>
             <p className="text-xs font-mono">
@@ -207,10 +207,10 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-2.5">
           <button
             onClick={onBack}
-            className="py-3 px-6 bg-[#181D2A] hover:bg-[#202738] border border-[#283248] hover:border-slate-500 text-slate-300 font-mono text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+            className="py-2.5 px-6 bg-[#180c19] hover:bg-[#231225] border border-amber-400/35 hover:border-amber-400/70 text-amber-200/90 font-mono text-xs font-bold uppercase tracking-[0.16em] rounded-xl transition-all cursor-pointer shadow-sm active:translate-y-0.5"
           >
             Back To Tables
           </button>

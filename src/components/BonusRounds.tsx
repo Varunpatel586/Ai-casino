@@ -7,56 +7,103 @@ interface BonusRoundsProps {
   onComplete: (earnings: number) => void;
   onChipUpdate: (chips: number) => void;
   currentRound?: number;
+  playedGames?: string[];
+  onMarkGamePlayed?: (gameName: string) => void;
 }
 
-export default function BonusRounds({ currentChips, onComplete, onChipUpdate, currentRound }: BonusRoundsProps) {
+export default function BonusRounds({
+  currentChips,
+  onComplete,
+  onChipUpdate,
+  currentRound,
+  playedGames = [],
+  onMarkGamePlayed
+}: BonusRoundsProps) {
   const [screen, setScreen] = useState<'menu' | 'wheel' | 'cardgame' | 'datadash' | 'dicegame' | 'minesgame' | 'numberguess' | 'results'>('menu');
   const [selectedBet, setSelectedBet] = useState<number | null>(null);
 
-  const [playedGames, setPlayedGames] = useState<Set<string>>(new Set());
+  const playedGamesSet = new Set(playedGames);
 
-  const handleSelectBonusBet = (amount: number, _gameType?: string) => {
+  const handleSelectBonusBet = (amount: number) => {
     setSelectedBet(amount);
   };
 
   const markGameAsPlayed = (gameName: string) => {
-    setPlayedGames(prev => new Set([...prev, gameName]));
+    onMarkGamePlayed?.(gameName);
   };
 
   const handleWheelBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('wheel');
   };
 
   const handleCardGameBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('cardgame');
   };
 
   const handleDataDashBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('datadash');
   };
 
   const handleDiceGameBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('dicegame');
   };
 
   const handleMinesGameBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('minesgame');
   };
 
   const handleNumberGuessBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('numberguess');
+  };
+
+  const renderNeuralWheelButton = () => {
+    const isSettled = playedGamesSet.has('wheel');
+    return (
+      <button
+        key="wheel-button"
+        onClick={() => setScreen('wheel')}
+        disabled={isSettled}
+        className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${
+          isSettled
+            ? 'opacity-60 cursor-not-allowed border-amber-500/20'
+            : 'hover:border-amber-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(245,158,11,0.2)] active:translate-y-0.5 cursor-pointer'
+        }`}
+      >
+        <div className="card-neon-edge" />
+        <div className="flex items-start justify-between mb-2">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(245,158,11,0.35)]">
+            <Sparkles size={18} />
+          </div>
+          {isSettled ? (
+            <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-amber-400/20">
+              <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
+            </span>
+          ) : (
+            <span className="text-[10px] font-mono text-amber-300 bg-amber-950/60 border border-amber-400/40 px-2 py-0.5 rounded-full font-bold shadow-sm">
+              FREE SPIN
+            </span>
+          )}
+        </div>
+        <h3 className="text-base sm:text-lg font-display font-black text-white uppercase mb-0.5">
+          Neural Roulette
+        </h3>
+        <p className="text-zinc-300 text-xs font-sans mb-2 line-clamp-2">
+          Calibrate the probabilistic wheel for an immediate chip injection without risking your stack.
+        </p>
+        <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
+          <span className="text-amber-200/60 text-[11px]">Risk: None</span>
+          <span className="text-amber-300 font-bold flex items-center gap-1 text-[11px]">
+            {isSettled ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
+          </span>
+        </div>
+      </button>
+    );
   };
 
   if (screen === 'menu') {
@@ -67,94 +114,61 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         : 'FINAL VAULT LOUNGE';
 
     return (
-      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex justify-center p-3 sm:p-5 overflow-y-auto overflow-x-hidden select-none">
-        <div className="max-w-3xl w-full text-center min-h-full flex flex-col justify-between py-2 sm:py-3">
+      <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-2 sm:p-4 overflow-hidden select-none">
+        <div className="max-w-3xl w-full text-center h-full max-h-full flex flex-col justify-between py-1 sm:py-2">
           {/* Header Plaque */}
           <div className="flex-shrink-0">
-            <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-[#181D2A] border border-amber-500/30 text-amber-400 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase mb-1.5">
-              <span>{stageLabel}</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#1b0d18]/90 border border-amber-400/40 text-amber-300 text-[10px] sm:text-xs font-mono font-bold tracking-[0.2em] uppercase mb-1 shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+              <span>✨ {stageLabel}</span>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-display font-black text-white uppercase tracking-tight mb-1">
+            <h1 className="text-xl sm:text-3xl font-display font-black uppercase tracking-tight mb-0.5 white-metallic-text">
               Side Action Tables
             </h1>
-            <p className="text-slate-400 text-xs sm:text-sm font-sans max-w-lg mx-auto">
+            <p className="text-amber-200/70 text-xs sm:text-sm font-sans max-w-lg mx-auto">
               Amplify your tournament chip bankroll before proceeding. Each side table can be played once per intermission.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-3 sm:gap-4 my-auto text-left w-full">
+          <div className="grid md:grid-cols-2 gap-2.5 sm:gap-3.5 my-auto text-left w-full">
             {/* Round 1: Neural Wheel and Card Game */}
             {currentRound === 1.5 && (
               <>
-                <button
-                  onClick={() => setScreen('wheel')}
-                  disabled={playedGames.has('wheel')}
-                  className={`relative p-4 sm:p-5 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('wheel')
-                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                    : 'bg-[#12151E] border-[#283248] hover:border-amber-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
-                    }`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#181D2A] border border-amber-500/30 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Sparkles size={20} />
-                    </div>
-                    {playedGames.has('wheel') ? (
-                      <span className="flex items-center gap-1 text-[10px] font-mono text-slate-400 bg-[#181D2A] px-2 py-0.5 rounded-full border border-white/10">
-                        <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                        FREE SPIN
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-lg font-display font-black text-white uppercase mb-0.5">
-                    Neural Roulette
-                  </h3>
-                  <p className="text-slate-400 text-xs font-sans mb-3 line-clamp-2">
-                    Calibrate the probabilistic wheel for an immediate chip injection without risking your stack.
-                  </p>
-                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
-                    <span className="text-slate-500">Risk: None</span>
-                    <span className="text-amber-400 font-bold flex items-center gap-1">
-                      ENTER TABLE <ChevronRight size={14} />
-                    </span>
-                  </div>
-                </button>
+                {renderNeuralWheelButton()}
 
                 <button
                   onClick={() => setScreen('cardgame')}
-                  disabled={playedGames.has('cardgame')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('cardgame')
-                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                    : 'bg-[#12151E] border-[#283248] hover:border-blue-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                  disabled={playedGamesSet.has('cardgame')}
+                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${playedGamesSet.has('cardgame')
+                    ? 'opacity-60 cursor-not-allowed border-blue-500/20'
+                    : 'hover:border-blue-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(59,130,246,0.2)] active:translate-y-0.5 cursor-pointer'
                     }`}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-blue-500/30 text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Layers size={24} />
+                  <div className="card-neon-edge" />
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-blue-500/20 border border-blue-400/40 text-blue-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(59,130,246,0.35)]">
+                      <Layers size={18} />
                     </div>
-                    {playedGames.has('cardgame') ? (
-                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
-                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                    {playedGamesSet.has('cardgame') ? (
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-blue-400/20">
+                        <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
                     ) : (
-                      <span className="text-[11px] font-mono text-blue-400 bg-blue-950/50 border border-blue-500/30 px-2.5 py-1 rounded-full">
+                      <span className="text-[10px] font-mono text-blue-300 bg-blue-950/60 border border-blue-400/40 px-2 py-0.5 rounded-full font-bold shadow-sm">
                         2X PAYOUT
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                  <h3 className="text-base sm:text-lg font-display font-black text-white uppercase mb-0.5">
                     High-Card Duel
                   </h3>
-                  <p className="text-slate-400 text-xs font-sans mb-4">
+                  <p className="text-zinc-300 text-xs font-sans mb-2 line-clamp-2">
                     Wager on Spades vs Hearts against the house deck. Double your wager on correct prediction.
                   </p>
-                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
-                    <span className="text-slate-500">Payout: 2.0x</span>
-                    <span className="text-blue-400 font-bold flex items-center gap-1">
-                      ENTER TABLE <ChevronRight size={14} />
+                  <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
+                    <span className="text-amber-200/60 text-[11px]">Payout: 2.0x</span>
+                    <span className="text-blue-300 font-bold flex items-center gap-1 text-[11px]">
+                      {playedGamesSet.has('cardgame') ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
                     </span>
                   </div>
                 </button>
@@ -166,72 +180,74 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
               <>
                 <button
                   onClick={() => setScreen('datadash')}
-                  disabled={playedGames.has('datadash')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('datadash')
-                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                    : 'bg-[#12151E] border-[#283248] hover:border-emerald-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                  disabled={playedGamesSet.has('datadash')}
+                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${playedGamesSet.has('datadash')
+                    ? 'opacity-60 cursor-not-allowed border-emerald-500/20'
+                    : 'hover:border-emerald-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(16,185,129,0.2)] active:translate-y-0.5 cursor-pointer'
                     }`}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Binary size={24} />
+                  <div className="card-neon-edge" />
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(16,185,129,0.35)]">
+                      <Binary size={18} />
                     </div>
-                    {playedGames.has('datadash') ? (
-                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
-                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                    {playedGamesSet.has('datadash') ? (
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-emerald-400/20">
+                        <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
                     ) : (
-                      <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+                      <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-400/40 px-2 py-0.5 rounded-full font-bold shadow-sm">
                         FREE ENTRY
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                  <h3 className="text-base sm:text-lg font-display font-black text-white uppercase mb-0.5">
                     Binary Decryption
                   </h3>
-                  <p className="text-slate-400 text-xs font-sans mb-4">
+                  <p className="text-zinc-300 text-xs font-sans mb-2 line-clamp-2">
                     Deduce the missing bit in algorithmic sequences to collect bounty chips with zero risk.
                   </p>
-                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
-                    <span className="text-slate-500">Reward: +10 Chips</span>
-                    <span className="text-emerald-400 font-bold flex items-center gap-1">
-                      ENTER TABLE <ChevronRight size={14} />
+                  <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
+                    <span className="text-amber-200/60 text-[11px]">Reward: +10 Chips</span>
+                    <span className="text-emerald-300 font-bold flex items-center gap-1 text-[11px]">
+                      {playedGamesSet.has('datadash') ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
                     </span>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setScreen('dicegame')}
-                  disabled={playedGames.has('dicegame')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('dicegame')
-                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                    : 'bg-[#12151E] border-[#283248] hover:border-purple-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                  disabled={playedGamesSet.has('dicegame')}
+                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${playedGamesSet.has('dicegame')
+                    ? 'opacity-60 cursor-not-allowed border-purple-500/20'
+                    : 'hover:border-purple-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(168,85,247,0.2)] active:translate-y-0.5 cursor-pointer'
                     }`}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-purple-500/30 text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Dices size={24} />
+                  <div className="card-neon-edge" />
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-purple-500/20 border border-purple-400/40 text-purple-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(168,85,247,0.35)]">
+                      <Dices size={18} />
                     </div>
-                    {playedGames.has('dicegame') ? (
-                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
-                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                    {playedGamesSet.has('dicegame') ? (
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-purple-400/20">
+                        <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
                     ) : (
-                      <span className="text-[11px] font-mono text-purple-400 bg-purple-950/50 border border-purple-500/30 px-2.5 py-1 rounded-full">
+                      <span className="text-[10px] font-mono text-purple-300 bg-purple-950/60 border border-purple-400/40 px-2 py-0.5 rounded-full font-bold shadow-sm">
                         3X PAYOUT
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                  <h3 className="text-base sm:text-lg font-display font-black text-white uppercase mb-0.5">
                     Dice Sum Wager
                   </h3>
-                  <p className="text-slate-400 text-xs font-sans mb-4">
+                  <p className="text-zinc-300 text-xs font-sans mb-2 line-clamp-2">
                     Predict the exact total sum of two precision casino dice (2-12). High variance, 3x payout.
                   </p>
-                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
-                    <span className="text-slate-500">Payout: 3.0x</span>
-                    <span className="text-purple-400 font-bold flex items-center gap-1">
-                      ENTER TABLE <ChevronRight size={14} />
+                  <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
+                    <span className="text-amber-200/60 text-[11px]">Payout: 3.0x</span>
+                    <span className="text-purple-300 font-bold flex items-center gap-1 text-[11px]">
+                      {playedGamesSet.has('dicegame') ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
                     </span>
                   </div>
                 </button>
@@ -243,72 +259,74 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
               <>
                 <button
                   onClick={() => setScreen('minesgame')}
-                  disabled={playedGames.has('minesgame')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('minesgame')
-                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                    : 'bg-[#12151E] border-[#283248] hover:border-rose-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                  disabled={playedGamesSet.has('minesgame')}
+                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${playedGamesSet.has('minesgame')
+                    ? 'opacity-60 cursor-not-allowed border-rose-500/20'
+                    : 'hover:border-rose-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(225,29,72,0.2)] active:translate-y-0.5 cursor-pointer'
                     }`}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-rose-500/30 text-rose-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Bomb size={24} />
+                  <div className="card-neon-edge" />
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(225,29,72,0.35)]">
+                      <Bomb size={18} />
                     </div>
-                    {playedGames.has('minesgame') ? (
-                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
-                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                    {playedGamesSet.has('minesgame') ? (
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-rose-400/20">
+                        <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
                     ) : (
-                      <span className="text-[11px] font-mono text-rose-400 bg-rose-950/50 border border-rose-500/30 px-2.5 py-1 rounded-full">
+                      <span className="text-[10px] font-mono text-rose-300 bg-rose-950/60 border border-rose-400/40 px-2 py-0.5 rounded-full font-bold shadow-sm">
                         HIGH STAKES
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                  <h3 className="text-base sm:text-lg font-display font-black text-white uppercase mb-0.5">
                     Vault Grid Mines
                   </h3>
-                  <p className="text-slate-400 text-xs font-sans mb-4">
+                  <p className="text-zinc-300 text-xs font-sans mb-2 line-clamp-2">
                     Uncover diamonds on a 5x5 matrix while avoiding hidden explosives. Cash out anytime.
                   </p>
-                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
-                    <span className="text-slate-500">Type: Cash-Out Matrix</span>
-                    <span className="text-rose-400 font-bold flex items-center gap-1">
-                      ENTER TABLE <ChevronRight size={14} />
+                  <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
+                    <span className="text-amber-200/60 text-[11px]">Type: Cash-Out Matrix</span>
+                    <span className="text-rose-300 font-bold flex items-center gap-1 text-[11px]">
+                      {playedGamesSet.has('minesgame') ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
                     </span>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setScreen('numberguess')}
-                  disabled={playedGames.has('numberguess')}
-                  className={`relative p-6 rounded-2xl border transition-all text-left group cursor-pointer ${playedGames.has('numberguess')
-                    ? 'bg-[#12151E]/60 border-[#232938] opacity-60 cursor-not-allowed'
-                    : 'bg-[#12151E] border-[#283248] hover:border-emerald-500/60 shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5'
+                  disabled={playedGamesSet.has('numberguess')}
+                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${playedGamesSet.has('numberguess')
+                    ? 'opacity-60 cursor-not-allowed border-emerald-500/20'
+                    : 'hover:border-emerald-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(16,185,129,0.2)] active:translate-y-0.5 cursor-pointer'
                     }`}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#181D2A] border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Target size={24} />
+                  <div className="card-neon-edge" />
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(16,185,129,0.35)]">
+                      <Target size={18} />
                     </div>
-                    {playedGames.has('numberguess') ? (
-                      <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400 bg-[#181D2A] px-2.5 py-1 rounded-full border border-white/10">
-                        <CheckCircle2 size={13} className="text-emerald-400" /> SETTLED
+                    {playedGamesSet.has('numberguess') ? (
+                      <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-emerald-400/20">
+                        <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
                     ) : (
-                      <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+                      <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-400/40 px-2 py-0.5 rounded-full font-bold shadow-sm">
                         2X PAYOUT
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-display font-black text-white uppercase mb-1">
+                  <h3 className="text-base sm:text-lg font-display font-black text-white uppercase mb-0.5">
                     Cipher Pin Code
                   </h3>
-                  <p className="text-slate-400 text-xs font-sans mb-4">
+                  <p className="text-zinc-300 text-xs font-sans mb-2 line-clamp-2">
                     Crack the secret 1-10 pin code within 5 precision attempts to double your chips.
                   </p>
-                  <div className="flex items-center justify-between text-xs font-mono pt-3 border-t border-[#232938]">
-                    <span className="text-slate-500">Payout: 2.0x</span>
-                    <span className="text-emerald-400 font-bold flex items-center gap-1">
-                      ENTER TABLE <ChevronRight size={14} />
+                  <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
+                    <span className="text-amber-200/60 text-[11px]">Payout: 2.0x</span>
+                    <span className="text-emerald-300 font-bold flex items-center gap-1 text-[11px]">
+                      {playedGamesSet.has('numberguess') ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
                     </span>
                   </div>
                 </button>
@@ -320,15 +338,15 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
             <button
               onClick={() => {
                 if (currentChips <= 0) {
-                  onChipUpdate(30); // Guaranteed starter bailout if wheel was skipped
+                  onChipUpdate(30);
                 }
                 onComplete(0);
               }}
-              className="py-2.5 sm:py-3 px-8 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-sm sm:text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
+              className="btn-marquee-gold py-2.5 px-7 text-black font-extrabold text-xs sm:text-sm uppercase tracking-[0.16em] rounded-xl cursor-pointer select-none group border border-amber-200/50"
             >
               Continue To Next Stage
             </button>
-            <span className="text-[10px] sm:text-xs font-mono text-slate-500 mt-1.5">
+            <span className="text-[10px] sm:text-xs font-mono text-amber-200/60 mt-1 tracking-wider">
               Side games are optional. You can proceed directly to the tournament.
             </span>
           </div>
@@ -346,6 +364,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('wheel')}
       />
     );
   }
@@ -359,6 +378,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('datadash')}
       />
     );
   }
@@ -372,6 +392,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('cardgame')}
       />
     );
   }
@@ -385,6 +406,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('dicegame')}
       />
     );
   }
@@ -398,6 +420,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('minesgame')}
       />
     );
   }
@@ -411,6 +434,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('numberguess')}
       />
     );
   }

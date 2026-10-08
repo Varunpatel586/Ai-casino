@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { network_manager } from '../services/network';
+import { network_manager, NetworkMessage } from '../services/network';
 
 interface Message {
   id: string;
@@ -46,9 +46,9 @@ export default function HostChatScreen() {
       }
     };
     
-    const handleMessage = (msg: any) => {
+    const handleMessage = (msg: NetworkMessage) => {
       console.log('Received message:', msg);
-      if (msg.type === 'chat') {
+      if (msg.type === 'chat' && msg.content) {
         const newMessage: Message = {
           id: Date.now().toString(),
           text: msg.content,

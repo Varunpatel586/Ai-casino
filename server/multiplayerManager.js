@@ -61,6 +61,7 @@ export class MultiplayerManager {
     this.hostSockets = new Map(); // roomId -> socket.id
     this.playerLastDeltas = new Map(); // `${roomId}:${playerId}` -> { delta, multiplier, isCorrect }
     this.roomChallenges = new Map(); // roomId -> Array of 10 challenges (5 randomized images + 5 videos)
+    this.roomFeedStartTimes = new Map(); // roomId -> timestamp (ms) of feed start
 
     // Initialize challenges for table_01
     this.generateNewRoundChallenges('table_01');
@@ -573,6 +574,9 @@ export class MultiplayerManager {
     const currentVideo = challenges[feedIndex];
     const duration = currentVideo?.type === 'video' ? VIDEO_FEED_DURATION : IMAGE_FEED_DURATION;
     const feedStartTime = Date.now();
+    if (this.roomFeedStartTimes) {
+      this.roomFeedStartTimes.set(roomId, feedStartTime);
+    }
 
     db.resetPlayerAnswerStatuses(roomId);
     const playersInFeed = db.getPlayersInRoom(roomId);
@@ -653,7 +657,7 @@ export class MultiplayerManager {
     this.roomTimers.set(roomId, { timerInterval });
   }
 
-  handleSubmitAnswer(socket, { roomId = 'table_01', playerId, feedIndex, answer }) {
+  handleSubmitAnswer(socket, { roomId = 'table_01', playerId, feedIndex, answer, clientTimeTaken }) {
     const room = db.getOrCreateRoom(roomId);
     if (room.status !== 'playing' || room.current_feed_index !== feedIndex) {
       return;
@@ -666,9 +670,23 @@ export class MultiplayerManager {
     const player = db.getPlayer(roomId, playerId);
     if (!player) return;
 
-    // Calculate time taken from feed start time
-    const feedStartTime = room.feed_start_time || Date.now();
-    const timeTaken = Math.max(0.1, Number(((Date.now() - feedStartTime) / 1000).toFixed(1)));
+    // Calculate time taken accurately from in-memory feed start time or DB feed_start_time
+    const memStartTime = this.roomFeedStartTimes ? this.roomFeedStartTimes.get(roomId) : null;
+    const feedStartTime = memStartTime || room.feed_start_time;
+
+    let timeTaken;
+    if (feedStartTime) {
+      timeTaken = Math.max(0.1, Number(((Date.now() - feedStartTime) / 1000).toFixed(1)));
+    } else if (typeof clientTimeTaken === 'number' && clientTimeTaken > 0) {
+      timeTaken = Number(clientTimeTaken.toFixed(1));
+    } else {
+      timeTaken = 25.0; // fallback if feed timer missing, never default to 0.1s
+    }
+
+    // If clientTimeTaken is supplied, use the maximum of server and client to prevent network delay granting an unearned 5x speed multiplier
+    if (typeof clientTimeTaken === 'number' && clientTimeTaken > 0) {
+      timeTaken = Math.max(timeTaken, Number(clientTimeTaken.toFixed(1)));
+    }
 
     // Calculate Speed Multiplier (30s rounds):
     // <=5s: 5x, <=10s: 4x, <=15s: 3x, <=20s: 2x, >20s: 1x

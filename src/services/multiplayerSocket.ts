@@ -178,8 +178,8 @@ class MultiplayerSocketService {
     this.connect().emit('add_bots', { roomId });
   }
 
-  public submitAnswer(roomId: string, playerId: string, feedIndex: number, answer: 'real' | 'ai') {
-    this.connect().emit('submit_answer', { roomId, playerId, feedIndex, answer });
+  public submitAnswer(roomId: string, playerId: string, feedIndex: number, answer: 'real' | 'ai', clientTimeTaken?: number) {
+    this.connect().emit('submit_answer', { roomId, playerId, feedIndex, answer, clientTimeTaken });
   }
 
   public resetTable(roomId: string) {

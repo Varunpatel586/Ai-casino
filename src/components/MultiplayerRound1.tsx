@@ -301,7 +301,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     setMyAnswer(answer);
     setLockedTimeTaken(elapsed);
     setLockedMultiplier(liveMultiplier);
-    multiplayerSocket.submitAnswer(roomIdRef.current, player.id, currentFeedIndex, answer);
+    multiplayerSocket.submitAnswer(roomIdRef.current, player.id, currentFeedIndex, answer, elapsed);
   };
 
   const handleSelectSeat = (seatNum: number) => {
@@ -352,16 +352,16 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
       <div
         key={seatNum}
         className={`relative z-20 flex flex-col justify-between p-1.5 sm:p-2 rounded-xl border transition-all duration-300 select-none shadow-xl ${isMe
-          ? 'bg-[#121826]/95 border-amber-400 ring-2 ring-amber-400/40 shadow-[0_0_20px_rgba(251,191,36,0.3)]'
+          ? 'bg-gradient-to-r from-amber-500/15 via-[#181d2a] to-amber-500/10 border-amber-400 ring-2 ring-amber-400/40 shadow-[0_0_20px_rgba(251,191,36,0.35)]'
           : seatPlayer
-            ? 'bg-[#0B0F19]/90 border-[#222B3D]'
-            : 'bg-[#07090F]/70 border-dashed border-[#1B2233] opacity-60'
+            ? 'bg-surface-lowest/90 border-amber-500/25'
+            : 'bg-[#07090F]/70 border-dashed border-amber-500/20 opacity-60'
           }`}
         style={{ minWidth: '115px', maxWidth: '145px' }}
       >
         {/* Top Header: Seat Number & Status */}
         <div className="flex items-center justify-between gap-1 mb-1">
-          <span className={`text-[9px] font-mono font-black px-1.5 py-0.2 rounded ${isMe ? 'bg-amber-400 text-slate-950 shadow-sm' : 'bg-[#181F2E] text-slate-400 border border-[#2B354D]'
+          <span className={`text-[9px] font-mono font-black px-1.5 py-0.2 rounded ${isMe ? 'bg-gradient-to-b from-[#FFF2CE] to-[#F4D068] text-slate-950 shadow-sm' : 'bg-surface-lowest text-amber-200/60 border border-amber-500/25'
             }`}>
             S{seatNum}
           </span>
@@ -396,10 +396,10 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
             <div className="flex items-center justify-between mt-0.5 text-[10px] font-mono">
               <div className="flex items-center gap-0.5">
                 <Coins size={10} className="text-amber-400" />
-                <span className="font-black text-amber-400">${(seatPlayer.chips ?? 0).toLocaleString()}</span>
+                <span className="font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E]">${(seatPlayer.chips ?? 0).toLocaleString()}</span>
               </div>
               {(seatPlayer.betAmount ?? 0) > 0 ? (
-                <span className="text-[9px] text-slate-400 font-bold">
+                <span className="text-[9px] text-amber-300/80 font-bold">
                   Bet: ${seatPlayer.betAmount}
                 </span>
               ) : (seatPlayer.chips ?? 0) <= 0 ? (
@@ -411,7 +411,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
             {/* Answer Status in Playing Phase */}
             {tableState?.status === 'playing' && (
-              <div className="mt-0.5 pt-0.5 border-t border-[#1C2333] flex items-center justify-between text-[8px] font-mono">
+              <div className="mt-0.5 pt-0.5 border-t border-amber-500/15 flex items-center justify-between text-[8px] font-mono">
                 <span className="text-slate-500 uppercase">CHOICE:</span>
                 {seatPlayer.answerStatus === 'answered' ? (
                   <span className="text-emerald-400 font-black flex items-center gap-0.5">
@@ -460,26 +460,27 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
   if (!tableState) {
     return (
       <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-4 text-slate-100 select-none overflow-hidden">
-        <div className="max-w-md w-full bg-[#12151E] border border-[#2B354D] rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
-          <div className="w-14 h-14 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-4 animate-pulse">
+        <div className="max-w-md w-full casino-vip-card rounded-3xl p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.9)] text-center relative border border-amber-500/30">
+          <div className="card-neon-edge" />
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse">
             <Users size={28} />
           </div>
-          <h3 className="text-2xl font-display font-black text-white uppercase tracking-tight mb-2">
+          <h3 className="text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] uppercase tracking-wider mb-2">
             Entering Arena Table
           </h3>
-          <p className="text-slate-400 text-xs font-mono mb-6">
+          <p className="text-amber-200/60 text-xs font-mono mb-6">
             Joining room <strong className="text-white uppercase">{roomId}</strong> as <strong className="text-amber-400">{player.username}</strong>...
           </p>
           <div className="flex flex-col gap-2.5">
             <button
               onClick={() => multiplayerSocket.joinTable(roomId, player.id, player.username, player.chips)}
-              className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-xs uppercase tracking-wider rounded-xl shadow-tactile cursor-pointer"
+              className="btn-marquee-gold w-full py-3 text-slate-950 font-display font-black text-xs uppercase tracking-wider rounded-xl shadow-tactile cursor-pointer"
             >
               TAKE SEAT NOW
             </button>
             <button
               onClick={handleResetTable}
-              className="w-full py-2.5 bg-[#181D2A] hover:bg-[#202738] border border-[#2D374D] text-slate-400 rounded-xl font-mono text-xs cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 bg-surface-lowest/80 hover:bg-surface-lowest border border-amber-500/25 text-amber-200/70 rounded-xl font-mono text-xs cursor-pointer flex items-center justify-center gap-1.5 transition-colors"
             >
               <RotateCcw size={12} />
               <span>Reset Room State</span>
@@ -518,30 +519,30 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
         )}
 
         {/* Header HUD */}
-        <div className="flex flex-wrap justify-between items-center gap-2 bg-[#12151E] border border-[#232938] rounded-xl px-4 py-2 mb-2 shadow-xl flex-shrink-0">
+        <div className="flex flex-wrap justify-between items-center gap-2 bg-surface-lowest/95 border border-amber-500/30 rounded-xl px-4 py-2.5 mb-2 shadow-xl flex-shrink-0 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.3)]">
               <Video size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono uppercase text-blue-400 tracking-widest font-bold">
+                <span className="text-[11px] font-mono uppercase text-amber-400 tracking-widest font-bold">
                   Round 1 • Real vs AI Intelligence
                 </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold shadow-[0_0_8px_rgba(16,185,129,0.2)]">
                   <Users size={10} />
                   <span>Room: {tableState.roomCode || roomId}</span>
                 </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/15 text-amber-300 border border-amber-400/30">
                   {readyCount}/{totalOccupied} Ready
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] uppercase tracking-tight flex items-center gap-2">
                 <span>The Reality Bet</span>
                 {tableState.status === 'playing' && (
-                  <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border ${isVideoRound
+                  <span className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border shadow-sm ${isVideoRound
                     ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
-                    : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                    : 'bg-amber-500/20 text-amber-300 border-amber-400/40'
                     }`}>
                     {isVideoRound ? '🎥 Video Challenge' : '📸 Image Challenge'}
                   </span>
@@ -558,7 +559,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 ? 'bg-amber-400/20 border-amber-400 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.35)] animate-pulse'
                 : liveMultiplier >= 2
                   ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300'
-                  : 'bg-slate-800 border-slate-700 text-slate-400'
+                  : 'bg-surface-lowest border-amber-500/20 text-slate-400'
                 }`}>
                 <Zap size={14} className={liveMultiplier >= 4 ? 'text-amber-400' : liveMultiplier >= 2 ? 'text-cyan-400' : 'text-slate-400'} />
                 <span>
@@ -570,7 +571,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
             {/* Mobile Standings Drawer Trigger Button */}
             <button
               onClick={() => setShowMobileLeaderboard(true)}
-              className="lg:hidden px-3 py-2 bg-[#181D2A] hover:bg-[#202738] border border-amber-400/40 text-amber-400 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              className="lg:hidden px-3 py-2 bg-surface-lowest hover:bg-[#1a2233] border border-amber-400/40 text-amber-300 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
               title="View Live Standings"
             >
               <Trophy size={13} />
@@ -578,9 +579,9 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
             </button>
 
             {/* Countdown Clock */}
-            <div className="flex items-center gap-2 px-3.5 py-2 bg-[#181D2A] border border-[#2D374D] rounded-xl font-mono text-sm">
+            <div className="flex items-center gap-2 px-3.5 py-2 bg-surface-lowest border border-amber-500/30 rounded-xl font-mono text-sm shadow-inner">
               <Clock size={16} className={countdown <= 10 ? 'text-rose-400 animate-pulse' : 'text-amber-400'} />
-              <span className="text-slate-400 text-xs uppercase">Clock:</span>
+              <span className="text-amber-200/60 text-xs uppercase">Clock:</span>
               <span className={`font-black text-base ${countdown <= 10 ? 'text-rose-400' : 'text-white'}`}>
                 {countdown}s
               </span>
@@ -620,17 +621,18 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 <div className="flex-1 min-h-0 h-full max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto flex items-center justify-center pointer-events-auto px-1 sm:px-2">
                   {tableState.status === 'waiting' ? (
                     /* LOBBY FELT CREST */
-                    <div className="bg-[#0B1713]/92 backdrop-blur-sm border border-amber-500/40 rounded-3xl px-6 py-5 sm:px-8 sm:py-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.85),0_0_30px_rgba(11,23,19,0.9)] max-w-md w-full animate-fade-in">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-3 shadow-inner">
+                    <div className="casino-vip-card rounded-3xl px-6 py-5 sm:px-8 sm:py-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.9)] max-w-md w-full animate-fade-in relative border border-amber-500/40">
+                      <div className="card-neon-edge" />
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center mx-auto mb-3 shadow-[0_0_15px_rgba(245,158,11,0.3)]">
                         <ShieldCheck size={24} />
                       </div>
                       <div className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold mb-1">
                         Event I • The Reality Protocol
                       </div>
-                      <h3 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1.5">
+                      <h3 className="text-xl sm:text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] uppercase tracking-wider mb-1.5">
                         Multiplayer Table Lobby
                       </h3>
-                      <p className="text-slate-400 text-xs font-mono mb-4">
+                      <p className="text-amber-200/60 text-xs font-mono mb-4">
                         {totalOccupied} of 6 Seats Occupied • {readyCount} Players Ready • {roomId.toUpperCase()}
                       </p>
 
@@ -644,9 +646,9 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                         {mySeat && (
                           <button
                             onClick={handleToggleReady}
-                            className={`py-2 px-4 rounded-xl font-mono text-xs font-black uppercase tracking-wider transition-all cursor-pointer border ${mySeat.isReady
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
-                              : 'bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300 shadow-tactile'
+                            className={`py-2 px-5 rounded-xl font-mono text-xs font-black uppercase tracking-wider transition-all cursor-pointer border ${mySeat.isReady
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                              : 'btn-marquee-gold text-slate-950 border-amber-400 shadow-tactile'
                               }`}
                           >
                             {mySeat.isReady ? 'YOU ARE READY ✓' : 'CLICK TO BECOME READY'}
@@ -660,7 +662,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                             Host Connected (Pit Boss) • Awaiting Host Start
                           </span>
                         ) : (
-                          <span className="text-slate-500">
+                          <span className="text-amber-200/50">
                             Waiting for Host to start Round 1...
                           </span>
                         )}
@@ -668,21 +670,22 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                     </div>
                   ) : tableState.status === 'betting' ? (
                     /* PER-CHALLENGE WAGER PHASE CONSOLE */
-                    <div className="bg-[#0B1019]/95 backdrop-blur-md border border-amber-500/50 rounded-3xl p-5 sm:p-6 text-center shadow-[0_10px_40px_rgba(0,0,0,0.9)] max-w-lg w-full animate-fade-in">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center mx-auto mb-2 animate-pulse">
+                    <div className="casino-vip-card rounded-3xl p-5 sm:p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.9)] max-w-lg w-full animate-fade-in relative border border-amber-500/40">
+                      <div className="card-neon-edge" />
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center mx-auto mb-2 shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse">
                         <Coins size={24} />
                       </div>
                       <div className="text-[10px] font-mono uppercase text-amber-400 font-bold mb-1 tracking-wider">
                         CHALLENGE {currentFeedIndex + 1} OF {totalFeeds} • {isVideoRound ? '🎥 VIDEO ROUND' : '📸 IMAGE ROUND'}
                       </div>
-                      <h4 className="text-xl sm:text-2xl font-display font-black text-white uppercase tracking-tight mb-1">
+                      <h4 className="text-xl sm:text-2xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] uppercase tracking-wider mb-1">
                         {isMyBetPlaced ? `Wager Placed: $${mySeat?.betAmount ?? 0}` : 'Select Wager for this Challenge'}
                       </h4>
-                      <p className="text-slate-400 text-xs font-mono mb-4">
+                      <p className="text-amber-200/60 text-xs font-mono mb-4">
                         30s Challenge • Speed Multipliers: ≤5s 5x, ≤10s 4x, ≤15s 3x, ≤20s 2x, &gt;20s 1x
                       </p>
 
-                      <div className="text-3xl font-mono font-black text-amber-400 mb-4">
+                      <div className="text-3xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] drop-shadow-[0_0_12px_rgba(244,208,104,0.4)] mb-4">
                         {countdown}s REMAINING
                       </div>
 
@@ -699,9 +702,9 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                               onClick={() => handlePlaceBet(amount)}
                               disabled={!canAfford || isMyBetPlaced || myCurrentChips <= 0}
                               className={`px-4 py-2 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 border ${isSelected
-                                ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
+                                ? 'bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] text-slate-950 border-amber-400 shadow-tactile font-bold ring-2 ring-amber-400/40'
                                 : canAfford && !isMyBetPlaced && myCurrentChips > 0
-                                  ? 'bg-[#181D2A] text-slate-200 border-[#2E374D] hover:border-amber-400/60 cursor-pointer'
+                                  ? 'bg-surface-lowest/90 text-slate-200 border-amber-500/25 hover:border-amber-400/60 cursor-pointer shadow-inner'
                                   : 'bg-[#10131B] text-slate-600 border-[#1C2230] opacity-40 cursor-not-allowed'
                                 }`}
                               title={myCurrentChips <= 0 ? 'Unable to wager with $0 chips' : undefined}
@@ -711,10 +714,17 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                           );
                         })}
                       </div>
+                      {myCurrentChips <= 0 && (
+                        <div className="mt-2.5 p-2 bg-amber-950/60 border border-amber-400/40 rounded-xl flex items-center justify-center text-center gap-2 max-w-sm mx-auto">
+                          <span className="text-[11px] font-mono text-rose-300 font-bold">
+                            Bankroll Depleted ($0 Chips)
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ) : (tableState.status === 'playing' || tableState.status === 'revealing') ? (
                     /* LIVE MEDIA CHALLENGE FEED (IMAGES & VIDEOS) */
-                    <div className="bg-[#0A0D15]/95 backdrop-blur-md border border-[#2B354D] rounded-2xl p-2 sm:p-2.5 shadow-2xl w-full h-full max-h-[52vh] sm:max-h-[56vh] flex flex-col justify-between overflow-hidden">
+                    <div className="bg-[#0A0D15]/95 backdrop-blur-md border border-[#2B354D] rounded-2xl p-1.5 sm:p-2 shadow-2xl w-full h-full flex flex-col justify-between overflow-hidden">
                       <div className="flex justify-between items-center mb-1 px-1 text-xs font-mono shrink-0">
                         <span className="text-slate-400 uppercase font-bold flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
@@ -725,7 +735,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                         </span>
                       </div>
 
-                      <div className="w-full flex-1 min-h-[260px] sm:min-h-[320px] bg-black/95 rounded-xl overflow-hidden border border-[#242C3E] relative flex items-center justify-center shadow-inner mx-auto">
+                      <div className="w-full flex-1 min-h-0 bg-black/95 rounded-xl overflow-hidden border border-[#242C3E] relative flex items-center justify-center shadow-inner mx-auto">
                         {tableState.currentVideo?.type === 'image' || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc || '') ? (
                           <img
                             key={tableState.currentVideo?.mediaSrc || tableState.currentVideo?.videoSrc}
@@ -893,45 +903,46 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
         {/* GRAND END-OF-ROUND 1 WINNERS SHOWCASE & LIVE LEADERBOARD */}
         {tableState?.status === 'settled' && (
-          <div className="fixed inset-0 z-50 bg-[#06080E]/95 backdrop-blur-lg flex items-center justify-center p-4 overflow-y-auto">
-            <div className="max-w-3xl w-full bg-[#0F1420] border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 shadow-[0_0_80px_rgba(251,191,36,0.35)] text-center my-8 animate-fade-in">
+          <div className="fixed inset-0 z-50 bg-[#06080E]/95 backdrop-blur-lg flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+            <div className="max-w-3xl w-full max-h-[96vh] casino-vip-card border-2 border-amber-500/50 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-[0_0_80px_rgba(251,191,36,0.35)] text-center my-auto animate-fade-in relative flex flex-col justify-between overflow-hidden">
+              <div className="card-neon-edge" />
               {/* Grand Trophy & Crown Header */}
-              <div className="relative inline-block mb-3">
-                <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400/20 to-amber-600/30 border border-amber-400/60 text-amber-400 flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(251,191,36,0.5)]">
-                  <Trophy size={34} />
+              <div className="relative inline-block mb-1 shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400/20 to-amber-600/30 border border-amber-400/60 text-amber-400 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(251,191,36,0.5)]">
+                  <Trophy size={26} />
                 </div>
-                <Crown size={20} className="text-amber-300 absolute -top-3 -right-2 animate-bounce" />
+                <Crown size={16} className="text-amber-300 absolute -top-2 -right-1.5 animate-bounce" />
               </div>
 
-              <div className="text-xs font-mono uppercase tracking-widest text-amber-400 font-bold mb-1">
+              <div className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-amber-400 font-bold mb-0.5 shrink-0">
                 Event I Champions Decided
               </div>
-              <h3 className="text-3xl sm:text-4xl font-display font-black text-white uppercase tracking-tight mb-2">
+              <h3 className="text-2xl sm:text-3xl font-display font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] uppercase tracking-wider mb-1 drop-shadow-[0_2px_12px_rgba(244,208,104,0.3)] shrink-0">
                 Round 1 Winners Showcase
               </h3>
-              <p className="text-slate-400 text-xs font-mono max-w-lg mx-auto mb-6">
+              <p className="text-amber-200/60 text-[11px] sm:text-xs font-mono max-w-lg mx-auto mb-3 shrink-0">
                 All 5 Image & 5 Surveillance Video challenges settled. Final scores & chip balances locked into the arena ledger.
               </p>
 
               {/* PODIUM OF TOP 3 CONTESTANTS */}
               {(tableState?.settlements?.length ?? 0) > 0 && (
-                <div className="grid grid-cols-3 gap-3 sm:gap-4 max-w-xl mx-auto mb-8 items-end">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 max-w-lg mx-auto mb-3 items-end shrink-0">
                   {/* 2nd Place (Silver) */}
                   {tableState?.settlements?.[1] && (
-                    <div className="bg-[#121826] border border-slate-400/40 rounded-2xl p-3 sm:p-4 text-center order-1 h-[190px] flex flex-col justify-between shadow-lg">
-                      <div className="w-9 h-9 rounded-xl bg-slate-400/20 border border-slate-400/40 text-slate-300 flex items-center justify-center mx-auto font-mono font-black text-sm">
+                    <div className="casino-vip-card border border-slate-300/40 rounded-xl p-2 sm:p-2.5 text-center order-1 h-[130px] sm:h-[145px] flex flex-col justify-between shadow-lg">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-b from-slate-200 to-slate-400 text-slate-950 flex items-center justify-center mx-auto font-mono font-black text-xs shadow-sm">
                         🥈 2
                       </div>
                       <div>
                         <div className="text-xs font-display font-black text-white truncate">
                           {tableState.settlements[1].username}
                         </div>
-                        <div className="text-[10px] font-mono text-slate-400">
+                        <div className="text-[9px] font-mono text-slate-400">
                           {tableState.settlements[1].score}/{totalFeeds} Correct
                         </div>
                       </div>
-                      <div className="pt-2 border-t border-[#1C2538]">
-                        <div className="text-base font-mono font-black text-amber-400">
+                      <div className="pt-1 border-t border-amber-500/20">
+                        <div className="text-sm font-mono font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] to-[#F4D068]">
                           ${(tableState.settlements[1].finalChips ?? 0).toLocaleString()}
                         </div>
                       </div>
@@ -940,23 +951,24 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
                   {/* 1st Place (Gold Champion) */}
                   {tableState?.settlements?.[0] && (
-                    <div className="bg-gradient-to-b from-[#1C2638] to-[#121826] border-2 border-amber-400 rounded-2xl p-4 sm:p-5 text-center order-2 h-[225px] flex flex-col justify-between shadow-[0_0_25px_rgba(251,191,36,0.35)]">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-400/30 border border-amber-400 text-amber-300 flex items-center justify-center mx-auto font-mono font-black text-base shadow-sm">
+                    <div className="casino-vip-card border-2 border-amber-400 rounded-xl p-2.5 sm:p-3 text-center order-2 h-[155px] sm:h-[175px] flex flex-col justify-between shadow-[0_0_30px_rgba(251,191,36,0.45)] relative">
+                      <div className="card-neon-edge" />
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] text-slate-950 flex items-center justify-center mx-auto font-mono font-black text-sm shadow-[0_0_12px_rgba(244,208,104,0.6)]">
                         🥇 1
                       </div>
                       <div>
-                        <div className="text-xs font-mono uppercase text-amber-400 font-bold tracking-wider mb-0.5">
+                        <div className="text-[9px] font-mono uppercase text-amber-400 font-bold tracking-wider mb-0.5">
                           CHAMPION
                         </div>
-                        <div className="text-sm font-display font-black text-white truncate">
+                        <div className="text-xs sm:text-sm font-display font-black text-white truncate">
                           {tableState.settlements[0].username}
                         </div>
-                        <div className="text-[11px] font-mono text-slate-300">
+                        <div className="text-[10px] font-mono text-amber-200/70">
                           {tableState.settlements[0].score}/{totalFeeds} Correct
                         </div>
                       </div>
-                      <div className="pt-2 border-t border-amber-500/40">
-                        <div className="text-lg font-mono font-black text-amber-400">
+                      <div className="pt-1.5 border-t border-amber-500/40">
+                        <div className="text-base sm:text-lg font-mono font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] to-[#F4D068]">
                           ${(tableState.settlements[0].finalChips ?? 0).toLocaleString()}
                         </div>
                       </div>
@@ -965,20 +977,20 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
 
                   {/* 3rd Place (Bronze) */}
                   {tableState?.settlements?.[2] && (
-                    <div className="bg-[#121826] border border-amber-700/40 rounded-2xl p-3 sm:p-4 text-center order-3 h-[175px] flex flex-col justify-between shadow-lg">
-                      <div className="w-9 h-9 rounded-xl bg-amber-700/20 border border-amber-700/40 text-amber-600 flex items-center justify-center mx-auto font-mono font-black text-sm">
+                    <div className="casino-vip-card border border-amber-700/50 rounded-xl p-2 sm:p-2.5 text-center order-3 h-[120px] sm:h-[135px] flex flex-col justify-between shadow-lg">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-b from-amber-600 to-amber-800 text-amber-100 flex items-center justify-center mx-auto font-mono font-black text-xs shadow-sm">
                         🥉 3
                       </div>
                       <div>
                         <div className="text-xs font-display font-black text-white truncate">
                           {tableState.settlements[2].username}
                         </div>
-                        <div className="text-[10px] font-mono text-slate-400">
+                        <div className="text-[9px] font-mono text-slate-400">
                           {tableState.settlements[2].score}/{totalFeeds} Correct
                         </div>
                       </div>
-                      <div className="pt-2 border-t border-[#1C2538]">
-                        <div className="text-base font-mono font-black text-amber-400">
+                      <div className="pt-1 border-t border-amber-500/20">
+                        <div className="text-sm font-mono font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] to-[#F4D068]">
                           ${(tableState.settlements[2].finalChips ?? 0).toLocaleString()}
                         </div>
                       </div>
@@ -988,12 +1000,12 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
               )}
 
               {/* COMPLETE RANKED LEADERBOARD TABLE */}
-              <div className="bg-[#0B0F19] border border-[#20293D] rounded-2xl overflow-hidden mb-6 text-left">
-                <div className="px-4 py-2.5 bg-[#141A28] border-b border-[#20293D] flex items-center justify-between text-[11px] font-mono text-slate-400 uppercase font-bold">
+              <div className="bg-surface-lowest/90 border border-amber-500/25 rounded-xl overflow-hidden mb-3 text-left shadow-inner flex-1 min-h-0 flex flex-col">
+                <div className="px-3 py-1.5 bg-surface-lowest border-b border-amber-500/20 flex items-center justify-between text-[10px] font-mono text-amber-200/60 uppercase font-bold shrink-0">
                   <span>Contestant Arena Standings</span>
                   <span>{totalFeeds} Challenges Completed</span>
                 </div>
-                <div className="divide-y divide-[#182133]">
+                <div className="divide-y divide-amber-500/10 overflow-y-auto flex-1 min-h-0 max-h-[140px]">
                   {tableState?.settlements?.map((s, idx) => {
                     const isMe = s.playerId === player.id;
                     const isPositive = (s.netEarnings ?? 0) >= 0;
@@ -1001,35 +1013,35 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                     return (
                       <div
                         key={s.playerId}
-                        className={`flex items-center justify-between p-3 text-xs font-mono transition-colors ${isMe
-                          ? 'bg-[#182135] font-bold'
-                          : 'hover:bg-[#101624]'
+                        className={`flex items-center justify-between p-2 text-xs font-mono transition-colors ${isMe
+                          ? 'bg-gradient-to-r from-amber-500/15 via-[#181d2a] to-amber-500/10 font-bold border-l-2 border-amber-400'
+                          : 'hover:bg-surface-lowest/80'
                           }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span className={`w-5 text-center font-bold ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-600' : 'text-slate-500'
+                        <div className="flex items-center gap-2.5">
+                          <span className={`w-4 text-center font-bold text-xs ${idx === 0 ? 'text-amber-400' : idx === 1 ? 'text-slate-300' : idx === 2 ? 'text-amber-600' : 'text-slate-500'
                             }`}>
                             #{idx + 1}
                           </span>
                           <div>
-                            <div className="font-display font-black text-white flex items-center gap-1.5">
+                            <div className="font-display font-black text-white flex items-center gap-1.5 text-xs">
                               <span>{s.username}</span>
                               {isMe && <span className="text-[9px] text-amber-400 font-mono font-bold">(YOU)</span>}
                             </div>
-                            <span className="text-[10px] text-slate-500">Seat {s.seatNumber}</span>
+                            <span className="text-[9px] text-amber-200/50">Seat {s.seatNumber}</span>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4 text-right">
+                        <div className="flex items-center gap-3 text-right">
                           <div>
-                            <span className="text-slate-300">{s.score} / {totalFeeds}</span>
+                            <span className="text-slate-300 text-[11px]">{s.score} / {totalFeeds}</span>
                             <div className={`text-[10px] font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
                               {isPositive ? `+$${s.netEarnings ?? 0}` : `-$${Math.abs(s.netEarnings ?? 0)}`}
                             </div>
                           </div>
-                          <div className="border-l border-[#20293D] pl-3 min-w-[70px]">
-                            <div className="text-[9px] text-slate-500 uppercase">Bankroll</div>
-                            <div className="font-black text-amber-400 text-sm">${(s.finalChips ?? 0).toLocaleString()}</div>
+                          <div className="border-l border-amber-500/20 pl-2.5 min-w-[60px]">
+                            <div className="text-[8px] text-amber-200/50 uppercase">Bankroll</div>
+                            <div className="font-black text-amber-400 text-xs">${(s.finalChips ?? 0).toLocaleString()}</div>
                           </div>
                         </div>
                       </div>
@@ -1039,16 +1051,16 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
               </div>
 
               {/* Celebratory Auto-proceed Counter & Proceed Button */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 shrink-0">
                 <button
                   onClick={handleFinalizeAndProceed}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-display font-black text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
+                  className="btn-marquee-gold w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-2.5 sm:py-3 font-display font-black text-xs sm:text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
                 >
                   <span>CONTINUE TO ROUND 2 & BONUS</span>
-                  <ArrowRight size={18} />
+                  <ArrowRight size={16} />
                 </button>
                 {winnersTimer > 0 && (
-                  <span className="text-xs font-mono text-slate-400">
+                  <span className="text-[11px] font-mono text-amber-200/60">
                     Auto-proceeding in <strong className="text-amber-400">{winnersTimer}s</strong>
                   </span>
                 )}
@@ -1058,11 +1070,11 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
         )}
 
         {/* BOTTOM ACTIVE PLAYER ACTION DOCK */}
-        <div className="w-full flex-shrink-0 z-40 bg-[#0E1119]/95 backdrop-blur-md border border-[#232938] rounded-xl px-3 py-2 shadow-lg mt-1.5">
+        <div className="w-full flex-shrink-0 z-40 bg-surface-lowest/95 backdrop-blur-md border border-amber-500/30 rounded-xl px-4 py-2.5 shadow-xl mt-1.5">
           <div className="w-full flex flex-wrap items-center justify-between gap-3">
             {/* Player Info Badge */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-400/10 border border-amber-400/30 text-amber-400 flex items-center justify-center font-mono font-black text-sm">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center font-mono font-black text-sm shadow-[0_0_12px_rgba(245,158,11,0.25)]">
                 S{mySeatNumber || '?'}
               </div>
               <div>
@@ -1070,7 +1082,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                   Contestant: <span className="font-bold text-white">{player.username}</span>
                 </div>
                 <div className="text-xs font-mono">
-                  Wallet: <span className="font-black text-amber-400">${(myCurrentChips ?? 0).toLocaleString()}</span>
+                  Wallet: <span className="font-black text-transparent bg-clip-text bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E]">${(myCurrentChips ?? 0).toLocaleString()}</span>
                   {mySeat?.betAmount ? (
                     <span className="text-slate-400 ml-2">| Challenge Bet: <strong className="text-white">${mySeat.betAmount}</strong></span>
                   ) : null}
@@ -1082,7 +1094,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
             {tableState?.status === 'betting' ? (
               /* PER-CHALLENGE BETTING CONTROLS */
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <span className="text-xs font-mono uppercase text-slate-400 font-bold hidden sm:inline">
+                <span className="text-xs font-mono uppercase text-amber-200/60 font-bold hidden sm:inline">
                   Challenge Bet:
                 </span>
                 {([10, 30, 'ALL_IN'] as BetAmount[]).map((amount) => {
@@ -1096,9 +1108,9 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                       onClick={() => handlePlaceBet(amount)}
                       disabled={!canAfford || isMyBetPlaced || myCurrentChips <= 0}
                       className={`px-4 sm:px-5 py-2.5 rounded-xl font-mono text-xs font-black uppercase transition-all duration-150 border ${isSelected
-                        ? 'bg-amber-400 text-slate-950 border-amber-400 shadow-tactile'
+                        ? 'bg-gradient-to-b from-[#FFF2CE] via-[#F4D068] to-[#AA7A1E] text-slate-950 border-amber-400 shadow-tactile font-bold ring-2 ring-amber-400/40'
                         : canAfford && !isMyBetPlaced && myCurrentChips > 0
-                          ? 'bg-[#181D2A] text-slate-200 border-[#2E374D] hover:border-amber-400/60 cursor-pointer'
+                          ? 'bg-surface-lowest/90 text-slate-200 border-amber-500/25 hover:border-amber-400/60 cursor-pointer shadow-inner'
                           : 'bg-[#10131B] text-slate-600 border-[#1C2230] opacity-40 cursor-not-allowed'
                         }`}
                       title={myCurrentChips <= 0 ? 'Unable to wager with $0 chips' : undefined}
@@ -1151,7 +1163,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
               </div>
             ) : (
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <span className="text-xs font-mono text-slate-400">
+                <span className="text-xs font-mono text-amber-200/60">
                   {tableState.status === 'waiting'
                     ? (mySeat ? `Seated at S${mySeatNumber} • ${mySeat.isReady ? 'Ready for Host' : 'Set Ready'}` : 'Click any vacant seat above')
                     : 'Settling challenge results...'}
@@ -1161,7 +1173,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                     onClick={handleToggleReady}
                     className={`px-3 py-1.5 font-mono font-black text-xs rounded-lg shadow-sm cursor-pointer border ${mySeat.isReady
                       ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                      : 'bg-amber-400 text-slate-950 border-amber-400 hover:bg-amber-300'
+                      : 'btn-marquee-gold text-slate-950 border-amber-400'
                       }`}
                   >
                     {mySeat.isReady ? 'Mark Not Ready' : 'Set Ready'}
@@ -1170,14 +1182,14 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                 {tableState.status === 'waiting' && !mySeat && (
                   <button
                     onClick={() => handleSelectSeat(1)}
-                    className="px-3 py-1.5 bg-amber-400 text-slate-950 font-mono font-black text-xs rounded-lg shadow-sm cursor-pointer hover:bg-amber-300"
+                    className="btn-marquee-gold px-3 py-1.5 text-slate-950 font-mono font-black text-xs rounded-lg shadow-sm cursor-pointer"
                   >
                     Take Seat 1
                   </button>
                 )}
                 <button
                   onClick={handleResetTable}
-                  className="px-2.5 py-1.5 bg-[#181D2A] hover:bg-[#202738] border border-[#2D374D] text-slate-400 hover:text-white rounded-lg font-mono text-xs cursor-pointer flex items-center gap-1"
+                  className="px-2.5 py-1.5 bg-surface-lowest/80 hover:bg-surface-lowest border border-amber-500/25 text-amber-200/70 hover:text-white rounded-lg font-mono text-xs cursor-pointer flex items-center gap-1 transition-colors"
                   title="Reset table state"
                 >
                   <RotateCcw size={12} />

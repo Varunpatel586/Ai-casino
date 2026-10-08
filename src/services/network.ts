@@ -1,6 +1,6 @@
 // WebSocket based network manager for chat functionality
 
-interface NetworkMessage {
+export interface NetworkMessage {
   type: 'chat' | 'connect' | 'connected' | 'disconnect' | 'error' | 
         'player-joined' | 'player-left' | 'player-list' |
         'host-registered' | 'host-available' | 'host-disconnected' |
@@ -14,12 +14,13 @@ interface NetworkMessage {
   senderName?: string;
   recipientId?: string;
   isPrivate?: boolean;
-  players?: string[];
+  players?: Array<string | { id: string; username: string; connected: boolean }>;
   targetPlayerId?: string;
+  username?: string;
 }
 
-type MessageCallback = (message: NetworkMessage) => void;
-type ConnectionCallback = (connected: boolean, message: string) => void;
+export type MessageCallback = (message: NetworkMessage) => void;
+export type ConnectionCallback = (connected: boolean, message: string) => void;
 
 class NetworkManager {
   private ws: WebSocket | null = null;
@@ -210,7 +211,7 @@ class NetworkManager {
   // Connect to a host (for players)
   public async connect_to_host(url: string): Promise<void> {
     this.isHost = false;
-    let finalUrl = this.normalizeWebSocketUrl(url, this.DEFAULT_PORT);
+    const finalUrl = this.normalizeWebSocketUrl(url, this.DEFAULT_PORT);
     this.connectionUrl = finalUrl;
     
     console.log(`[Network] Connecting to host at ${finalUrl}`);
@@ -220,7 +221,7 @@ class NetworkManager {
   // Connect as host
   public async connect_as_host(url: string): Promise<void> {
     this.isHost = true;
-    let finalUrl = this.normalizeWebSocketUrl(url, this.DEFAULT_PORT);
+    const finalUrl = this.normalizeWebSocketUrl(url, this.DEFAULT_PORT);
     this.connectionUrl = finalUrl;
     
     console.log(`[Network] Connecting as host at ${finalUrl}`);

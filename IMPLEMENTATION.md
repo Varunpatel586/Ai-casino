@@ -12,6 +12,92 @@ This document outlines proposed architecture, feature plans, file modifications,
 
 ## 📋 Active Implementation Plan
 
+### Plan 11: Human-Like Hinglish Persona & Realistic Typing Cadence for Round 3 AI Counterpart
+- **Status:** ✅ **Completed & Verified**
+- **Date Completed:** 2026-10-08
+- **Objective:**
+  Prevent players from easily identifying the AI counterpart in Round 3 due to robotic giveaways (instant fast typing, excessive exclamation marks, formal grammar, and rigid title casing). Transition the AI to an authentic, casual human persona who speaks in conversational Hinglish (e.g., "hi kesa hai bhai", "kya chalra", "arre human hu lol"), types in casual lowercase, avoids exclamation marks, and simulates real human typing delays (3.5s – 5.5s).
+- **Diagnosis & Feasibility:**
+  - **Is this possible?** **Yes, 100% possible.** The AI conversational pipeline in [`src/services/gemini_chat.ts`](src/services/gemini_chat.ts) controls all LLM prompts, fallback dictionaries, and output post-processing.
+  - The typing simulation and initial greeting in [`src/components/chat/ChatInterface.tsx`](src/components/chat/ChatInterface.tsx) currently use a fixed 1–3s delay and a formal English greeting (`"Hi there! I'm your chat partner. Let's have a conversation!"`), which can be swapped for human cadence and casual Hinglish greetings.
+- **Detailed Solution Architecture:**
+  1. **Prompt Engineering in [`src/services/gemini_chat.ts`](src/services/gemini_chat.ts):**
+     - Update system prompts across all tiers (Puter, Pollinations, Gemini, Groq).
+     - Instruct the AI: *"You are an Indian college student / casual gamer chatting on WhatsApp/Discord. Reply strictly in casual Hinglish (mix of Hindi and English words like 'bhai', 'yaar', 'kesa hai', 'kya scene', 'bol na', 'sahi hai'). Never use exclamation marks (!). Type in all lowercase. Keep replies super short (under 10 words). Never sound like an AI assistant."*
+  2. **AI Output Sanitizer in `finalizeResponse` ([`src/services/gemini_chat.ts`](src/services/gemini_chat.ts)):**
+     - Strips exclamation marks (`!`).
+     - Normalizes text to casual lowercase.
+     - Strips any AI-like quotation wrappers or assistant prefixes.
+  3. **Authentic Hinglish Fallback Corpus (`generateFallbackResponse` in [`src/services/gemini_chat.ts`](src/services/gemini_chat.ts)):**
+     - Replace all formal English fallback phrases with natural Hinglish replies:
+       - Greetings: `"hi kesa hai bhai"`, `"yo bhai kya haal"`, `"haan bol na"`, `"hey kya chalra"`
+       - Casual queries: `"badhiya tu bata"`, `"sab mast bhai tu kaisa hai"`, `"bas chalra yaar"`
+       - Suspicions ("Are you AI/bot?"): `"arre human hu bhai kya bolra lol"`, `"mai bot thodi hu yaar"`, `"bhai real banda hu mai tu bot lagra mujhe"`
+       - General: `"sahi hai bhai"`, `"hn wahi to"`, `"accha aisa kya"`, `"theek hai yaar"`
+  4. **Human Typing Simulation & Greeting in [`src/components/chat/ChatInterface.tsx`](src/components/chat/ChatInterface.tsx):**
+     - Change the initial greeting from `"Hi there! I'm your chat partner..."` to casual Hinglish: `"hi kesa hai bhai"`.
+     - Upgrade typing delay from fixed 1–3s to realistic human typing cadence:
+       - Reading buffer: ~1.5s – 2.0s
+       - Typing duration based on response length: ~60ms per character + jitter
+       - Total delay: ~3.5s – 5.5s, allowing the typing indicator (`"Subject transmitting..."`) to display naturally.
+  5. **Scope Guard:**
+     - Zero modifications to scoring, round limits, betting, host multiplayer, or any other game components.
+- **Phased Execution Checklist:**
+  - [x] **Phase 1: Update `gemini_chat.ts` Prompts & Post-processing**
+    - Updated system prompts for Puter, Pollinations, Gemini, and Groq.
+    - Implemented `finalizeResponse` post-sanitizer (lowercase, strip `!`, remove formal filler).
+    - Rewrote `generateFallbackResponse` corpus in authentic Hinglish.
+  - [x] **Phase 2: Update `ChatInterface.tsx` Greeting & Human Typing Cadence**
+    - Set greeting to `"hi kesa hai bhai"`.
+    - Implemented realistic human typing calculation (~3.5s - 5.5s).
+  - [x] **Phase 3: Verification & Quality Assurance**
+    - `npm run typecheck`: Passed with 0 errors.
+    - `npm run build`: Succeeded in 6.31s with 0 errors.
+    - Logged completion in `WALKTHROUGH.md`.
+
+---
+
+### Plan 10: Round 3 Partner Reply Delivery Synchronization Before Verdict Guess Modal
+- **Status:** ✅ **Completed & Verified**
+- **Date Completed:** 2026-10-08
+- **Objective:**
+  In Round 3 ("The Turing Table"), ensure that all 3 replies from the counterpart (AI or Human host) are fully received, rendered, and readable in the chat before the "Identify Your Counterpart" verdict modal appears. Also ensure counterpart assignment probability is an exact 50/50 split between AI and Human.
+- **Root Cause Analysis:**
+  In [`src/components/Round3.tsx`](src/components/Round3.tsx) lines 433–440:
+  `onSendMessage` triggered immediately when the user pressed Send on their 3rd query. A blind 2000ms timer expired before `get_ai_response()` completed its API roundtrip and simulated typing delay, causing the verdict modal to pop up prematurely and obscure the chat feed.
+- **Architectural & Design Fix:**
+  1. **Added `onReadyForVerdict?: () => void` prop to [`src/components/chat/ChatInterface.tsx`](src/components/chat/ChatInterface.tsx):**
+     - Tracked the number of partner replies received (`repliesCountRef`) per interrogation subround.
+     - In **AI mode**: when `get_ai_response()` finishes, the response is appended to messages, and typing completes:
+       - Checks if `repliesCount >= messageLimit` (3 replies).
+       - If so, waits 2.5 seconds so the player can comfortably read the counterpart's final reply, then triggers `onReadyForVerdict()`.
+     - In **Human mode**: when host message is received in `network_manager.message_callback`:
+       - Appends host reply to messages.
+       - If `repliesCount >= messageLimit` (3 replies), waits 2.5 seconds to read, then triggers `onReadyForVerdict()`.
+     - Input and send button are disabled while `isTyping` is true, preventing overlapping queries before each reply arrives.
+  2. **Updated [`src/components/Round3.tsx`](src/components/Round3.tsx):**
+     - Removed the premature timer from `onSendMessage`. `onSendMessage` now strictly updates `messagesSent`.
+     - Added keying `key={'subround-' + currentRound + '-' + actualMode}` to ensure clean mount and state reset each subround.
+     - Wired `onReadyForVerdict={() => setShowGuess(true)}` to `ChatInterface`.
+     - Changed counterpart selection probability in `selectRandomMode`: `Math.random() < 0.5 ? 'ai' : 'human'` (50/50 split).
+     - Kept all scoring, subround limits, bets, payouts, and other game elements completely untouched.
+- **Phased Execution Checklist:**
+  - [x] **Phase 1: Update `ChatInterface.tsx`**
+    - Added `onReadyForVerdict?: () => void` to `ChatInterfaceProps`.
+    - Maintained counterpart reply count (`repliesCountRef`) and timer cleanup.
+    - Disabled input while waiting for partner response (`isTyping`).
+    - Triggered `onReadyForVerdict()` after the 3rd reply is rendered + 2.5s reading delay.
+  - [x] **Phase 2: Update `Round3.tsx`**
+    - Removed premature 2s timeout in `onSendMessage`.
+    - Passed `onReadyForVerdict={() => setShowGuess(true)}`.
+    - Set 50/50 probability split in `selectRandomMode`: `Math.random() < 0.5 ? 'ai' : 'human'`.
+  - [x] **Phase 3: Verification & Quality Assurance**
+    - `npm run typecheck`: Passed with 0 errors.
+    - `npm run build`: Succeeded in 6.32s with 0 errors.
+    - Documented in `WALKTHROUGH.md`.
+
+---
+
 ### Plan 9: Round 2 Image Similarity Scoring — Perceptual Multiplier Payouts
 - **Status:** ✅ **Completed & Verified**
 - **Date Completed:** 2026-10-04
