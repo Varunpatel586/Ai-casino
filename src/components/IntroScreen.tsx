@@ -76,7 +76,7 @@ export default function IntroScreen({ onStart }: IntroScreenProps) {
           <span className="text-zinc-300">♣</span>
         </div>
         <div className="hidden sm:block uppercase tracking-[0.3em] text-[10px] text-amber-200/80 drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]">
-          ENC: 4096-BIT QUANTUM VAULT • SALON NO. 07
+          ENC: 4096-BIT QUANTUM VAULT • AI CASINO
         </div>
         <div className="flex items-center space-x-2 text-sm">
           <span className="text-zinc-300">♣</span>

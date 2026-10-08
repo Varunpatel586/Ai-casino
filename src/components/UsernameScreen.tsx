@@ -17,8 +17,9 @@ export default function UsernameScreen({ onSubmit, defaultRoom }: UsernameScreen
   useEffect(() => {
     const checkPuter = async () => {
       try {
-        if (typeof window !== 'undefined' && (window as any).puter) {
-          const puter = (window as any).puter;
+        const win = window as unknown as { puter?: { auth?: { isSignedIn?: () => boolean; getUser?: () => Promise<{ username?: string }> }; isSignedIn?: () => boolean; getUser?: () => Promise<{ username?: string }> } };
+        if (typeof window !== 'undefined' && win.puter) {
+          const puter = win.puter;
           const signedIn = typeof puter.auth?.isSignedIn === 'function'
             ? puter.auth.isSignedIn()
             : (typeof puter.isSignedIn === 'function' ? puter.isSignedIn() : false);
@@ -32,7 +33,7 @@ export default function UsernameScreen({ onSubmit, defaultRoom }: UsernameScreen
             if (user?.username) {
               setPuterUsername(user.username);
               // Pre-fill contestant moniker if empty
-              setUsername(prev => prev || user.username);
+              setUsername(prev => prev || user.username || '');
             }
           }
         }
@@ -47,8 +48,9 @@ export default function UsernameScreen({ onSubmit, defaultRoom }: UsernameScreen
   const handlePuterSignIn = async () => {
     setIsPuterLoading(true);
     try {
-      if (typeof window !== 'undefined' && (window as any).puter) {
-        const puter = (window as any).puter;
+      const win = window as unknown as { puter?: { auth?: { signIn?: () => Promise<void>; isSignedIn?: () => boolean; getUser?: () => Promise<{ username?: string }> }; signIn?: () => Promise<void>; isSignedIn?: () => boolean; getUser?: () => Promise<{ username?: string }> } };
+      if (typeof window !== 'undefined' && win.puter) {
+        const puter = win.puter;
         if (typeof puter.auth?.signIn === 'function') {
           await puter.auth.signIn();
         } else if (typeof puter.signIn === 'function') {
@@ -67,7 +69,7 @@ export default function UsernameScreen({ onSubmit, defaultRoom }: UsernameScreen
             : (typeof puter.getUser === 'function' ? await puter.getUser() : null);
           if (user?.username) {
             setPuterUsername(user.username);
-            setUsername(prev => prev || user.username);
+            setUsername(prev => prev || user.username || '');
           }
         }
       } else {
@@ -82,8 +84,9 @@ export default function UsernameScreen({ onSubmit, defaultRoom }: UsernameScreen
 
   const handlePuterSignOut = async () => {
     try {
-      if (typeof window !== 'undefined' && (window as any).puter?.auth?.signOut) {
-        await (window as any).puter.auth.signOut();
+      const win = window as unknown as { puter?: { auth?: { signOut?: () => Promise<void> } } };
+      if (typeof window !== 'undefined' && win.puter?.auth?.signOut) {
+        await win.puter.auth.signOut();
       }
       setIsPuterSignedIn(false);
       setPuterUsername(null);

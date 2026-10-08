@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Image as ImageIcon, Sparkles, Send } from 'lucide-react';
 import { BetAmount } from '../types';
 import BettingPanel from './BettingPanel';
@@ -8,6 +8,8 @@ import { compareImages, SimilarityResult } from '../services/imageSimilarity';
 interface Round1Props {
   currentChips: number;
   onComplete: (net: number) => void;
+  onBackToBonus?: () => void;
+  onChipUpdate?: (chips: number) => void;
 }
 
 interface Appraisal {
@@ -51,7 +53,7 @@ const originalImages = [
   }
 ];
 
-export default function Round1({ currentChips, onComplete }: Round1Props) {
+export default function Round1({ currentChips, onComplete, onBackToBonus, onChipUpdate: _onChipUpdate }: Round1Props) {
   const [phase, setPhase] = useState<'intro' | 'betting' | 'playing' | 'prompt' | 'generating' | 'comparison' | 'results'>('intro');
   const [currentBet, setCurrentBet] = useState<number>(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -61,27 +63,6 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
   const [promptTimeLeft, setPromptTimeLeft] = useState(60); // 1 minute for prompt phase
   const [appraisals, setAppraisals] = useState<Appraisal[]>([]);
   const [isAppraising, setIsAppraising] = useState(false);
-
-  // Timer for prompt phase
-  useEffect(() => {
-    if (phase === 'prompt' && promptTimeLeft > 0) {
-      const timer = setInterval(() => {
-        setPromptTimeLeft((prev) => {
-          if (prev <= 1) {
-            // Time's up - auto-submit with empty prompt or move to next phase
-            if (userPrompt.trim()) {
-              handlePromptSubmit();
-            } else {
-              handleNextRound();
-            }
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [phase, promptTimeLeft, userPrompt]);
 
   const handleBet = (amount: BetAmount) => {
     const bet = amount === 'ALL_IN' ? currentChips : amount;
@@ -141,6 +122,38 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
     }
   };
 
+  const userPromptRef = useRef(userPrompt);
+  userPromptRef.current = userPrompt;
+
+  const handlePromptSubmitRef = useRef(handlePromptSubmit);
+  handlePromptSubmitRef.current = handlePromptSubmit;
+
+  const handleNextRoundRef = useRef(handleNextRound);
+  handleNextRoundRef.current = handleNextRound;
+
+  // Timer for prompt phase - runs continuously regardless of user typing
+  useEffect(() => {
+    if (phase !== 'prompt') return;
+
+    const timer = setInterval(() => {
+      setPromptTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          // Time's up - auto-submit with prompt or move to next phase
+          if (userPromptRef.current.trim()) {
+            handlePromptSubmitRef.current();
+          } else {
+            handleNextRoundRef.current();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [phase]);
+
   const handleFinishRound = () => {
     const netTotal = appraisals.reduce((sum, appraisal) => sum + (appraisal?.net ?? 0), 0);
     onComplete(netTotal);
@@ -181,12 +194,23 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
             </div>
           </div>
 
-          <button
-            onClick={() => setPhase('betting')}
-            className="btn-marquee-gold w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 font-display font-black text-sm sm:text-base uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer shrink-0"
-          >
-            <span>PLACE WAGER &amp; START</span>
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
+            <button
+              onClick={() => setPhase('betting')}
+              className="btn-marquee-gold text-slate-950 font-display font-black inline-flex items-center justify-center gap-2 px-8 py-3 text-sm sm:text-base uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
+            >
+              <span className="text-slate-950 font-black">PLACE WAGER &amp; START</span>
+            </button>
+            {onBackToBonus && (
+              <button
+                type="button"
+                onClick={onBackToBonus}
+                className="py-3 px-6 bg-[#180c19] hover:bg-[#231225] border border-amber-400/35 hover:border-amber-400/70 text-amber-200/90 font-mono text-xs font-bold uppercase tracking-[0.16em] rounded-xl transition-all cursor-pointer shadow-sm active:translate-y-0.5"
+              >
+                ⬅ Back To Bonus Tables
+              </button>
+            )}
+          </div>
 
           {/* Development skip button for testing transitions */}
           <div className="mt-2 shrink-0">
@@ -207,12 +231,25 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
   if (phase === 'betting') {
     return (
       <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-2 sm:p-4 overflow-hidden select-none">
-        <div className="max-w-2xl w-full my-auto">
+        <div className="max-w-2xl w-full my-auto flex flex-col gap-2.5">
+          {onBackToBonus && (
+            <div className="flex items-center justify-between px-1">
+              <button
+                type="button"
+                onClick={onBackToBonus}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#180c19] hover:bg-[#241126] border border-amber-400/35 text-amber-300 font-mono text-xs font-bold rounded-lg transition-all cursor-pointer"
+              >
+                <span>⬅ Back To Bonus Tables</span>
+              </button>
+              <span className="text-[11px] font-mono text-amber-200/60">Intermission Side Action Available</span>
+            </div>
+          )}
           <BettingPanel 
             currentChips={currentChips} 
             onBet={handleBet} 
             minBet={10}
-            maxBet={Math.min(100, currentChips)}
+            maxBet={Math.max(10, Math.min(100, currentChips))}
+            onBackToBonus={onBackToBonus}
           />
         </div>
       </div>
@@ -258,9 +295,9 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
             <div className="text-center shrink-0">
               <button
                 onClick={handleImageSelect}
-                className="btn-marquee-gold inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 font-display font-black text-xs sm:text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
+                className="btn-marquee-gold text-slate-950 font-display font-black inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 text-xs sm:text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
               >
-                <span>I HAVE MEMORIZED THIS ARTWORK</span>
+                <span className="text-slate-950 font-black">I HAVE MEMORIZED THIS ARTWORK</span>
               </button>
             </div>
           </div>
@@ -324,10 +361,10 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
               <button
                 onClick={handlePromptSubmit}
                 disabled={!userPrompt.trim()}
-                className="btn-marquee-gold inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 disabled:opacity-40 disabled:cursor-not-allowed font-display font-black text-xs sm:text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
+                className="btn-marquee-gold text-slate-950 font-display font-black inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-2.5 sm:py-3 disabled:opacity-40 disabled:cursor-not-allowed text-xs sm:text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
               >
-                <Send size={15} />
-                <span>GENERATE AI CANVAS</span>
+                <Send size={15} className="text-slate-950" />
+                <span className="text-slate-950 font-black">GENERATE AI CANVAS</span>
               </button>
             </div>
           </div>
@@ -445,9 +482,9 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
           <div className="text-center shrink-0">
             <button
               onClick={handleNextRound}
-              className="btn-marquee-gold inline-flex items-center justify-center gap-2 px-8 py-2.5 sm:py-3 font-display font-black text-xs sm:text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
+              className="btn-marquee-gold text-slate-950 font-display font-black inline-flex items-center justify-center gap-2 px-8 py-2.5 sm:py-3 text-xs sm:text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer"
             >
-              <span>{currentImageIndex < originalImages.length - 1 ? 'NEXT ARTWORK' : 'FINALIZE ROUND 2'}</span>
+              <span className="text-slate-950 font-black">{currentImageIndex < originalImages.length - 1 ? 'NEXT ARTWORK' : 'FINALIZE ROUND 2'}</span>
             </button>
           </div>
         </div>
@@ -509,9 +546,9 @@ export default function Round1({ currentChips, onComplete }: Round1Props) {
 
           <button
             onClick={handleFinishRound}
-            className="btn-marquee-gold w-full inline-flex items-center justify-center gap-2 py-3 px-6 font-display font-black text-xs sm:text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer shrink-0"
+            className="btn-marquee-gold text-slate-950 font-display font-black w-full inline-flex items-center justify-center gap-2 py-3 px-6 text-xs sm:text-sm uppercase tracking-wider rounded-xl shadow-tactile active:translate-y-0.5 transition-all cursor-pointer shrink-0"
           >
-            <span>COLLECT WINNINGS &amp; ENTER VAULT</span>
+            <span className="text-slate-950 font-black">COLLECT WINNINGS &amp; ENTER VAULT</span>
           </button>
         </div>
       </div>

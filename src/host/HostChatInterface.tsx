@@ -1,6 +1,6 @@
 // src/host/HostChatInterface.tsx
 import { useState, useEffect, useRef } from 'react';
-import { network_manager } from '../services/network';
+import { network_manager, NetworkMessage } from '../services/network';
 import { getWsUrl } from '../services/apiConfig';
 
 interface ChatMessage {
@@ -43,7 +43,7 @@ export default function HostChatInterface() {
       } as ChatMessage]);
     }
 
-    network_manager.message_callback = (msg: any) => {
+    network_manager.message_callback = (msg: NetworkMessage) => {
       console.log('[HostChat] Received message:', msg.type, msg);
 
       if (msg.type === 'host-registered') {
@@ -55,8 +55,8 @@ export default function HostChatInterface() {
           const existingPlayer = prev.find(p => p.id === msg.clientId);
           if (existingPlayer) return prev;
           return [...prev, {
-            id: msg.clientId,
-            name: msg.username,
+            id: msg.clientId || '',
+            name: msg.username || msg.clientId || 'Unknown',
             connected: true
           }];
         });
@@ -72,16 +72,23 @@ export default function HostChatInterface() {
       } else if (msg.type === 'player-list') {
         // FIX BUG-004: was duplicated, now handled exactly once
         console.log('[HostChat] Received player-list:', msg.players);
-        setPlayers(msg.players.map((player: any) => ({
-          id: player.id,
-          name: player.username,
-          connected: player.connected
-        })));
+        if (Array.isArray(msg.players)) {
+          setPlayers(msg.players.map((player) => {
+            if (typeof player === 'string') {
+              return { id: player, name: player, connected: true };
+            }
+            return {
+              id: player.id,
+              name: player.username,
+              connected: player.connected
+            };
+          }));
+        }
 
       } else if (msg.type === 'chat') {
         const newMessage: ChatMessage = {
           id: Date.now().toString() + Math.random(),
-          text: msg.content,
+          text: msg.content || '',
           sender: msg.senderId === 'host' ? 'host' : 'player',
           timestamp: new Date(msg.timestamp),
           playerId: msg.senderId,

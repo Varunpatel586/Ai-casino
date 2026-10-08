@@ -7,6 +7,7 @@ interface NeuralWheelProps {
   selectedBet: number | null;
   result: string;
   currentChips: number;
+  onPlayed?: () => void;
 }
 
 interface WheelSegment {
@@ -16,25 +17,27 @@ interface WheelSegment {
   displayText: string;
 }
 
-const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, currentChips }) => {
+const WHEEL_SEGMENTS: WheelSegment[] = [
+  { color: '#e11d48', result: 'Lose Turn', multiplier: 0, displayText: 'LOSE' },
+  { color: '#0d9488', result: '50 Points', multiplier: 50, displayText: '50' },
+  { color: '#0284c7', result: '20 Points', multiplier: 20, displayText: '20' },
+  { color: '#059669', result: '30 Points', multiplier: 30, displayText: '30' },
+  { color: '#d97706', result: '10 Points', multiplier: 10, displayText: '10' },
+  { color: '#9333ea', result: 'Jackpot!', multiplier: 100, displayText: '100' },
+  { color: '#be123c', result: 'Try Again', multiplier: 0, displayText: 'TRY' },
+  { color: '#2563eb', result: '40 Points', multiplier: 40, displayText: '40' },
+];
+
+const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, currentChips, onPlayed }) => {
   const wheelRef = useRef<SVGSVGElement>(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [hasSpun, setHasSpun] = useState(false);
   const [wheelResult, setWheelResult] = useState<WheelSegment | null>(null);
 
-  const wheelSegments: WheelSegment[] = [
-    { color: '#e11d48', result: 'Lose Turn', multiplier: 0, displayText: 'LOSE' },
-    { color: '#0d9488', result: '50 Points', multiplier: 50, displayText: '50' },
-    { color: '#0284c7', result: '20 Points', multiplier: 20, displayText: '20' },
-    { color: '#059669', result: '30 Points', multiplier: 30, displayText: '30' },
-    { color: '#d97706', result: '10 Points', multiplier: 10, displayText: '10' },
-    { color: '#9333ea', result: 'Jackpot!', multiplier: 100, displayText: '100' },
-    { color: '#be123c', result: 'Try Again', multiplier: 0, displayText: 'TRY' },
-    { color: '#2563eb', result: '40 Points', multiplier: 40, displayText: '40' },
-  ];
+  const wheelSegments = WHEEL_SEGMENTS;
 
   useEffect(() => {
-    console.log('NeuralWheel: Component mounted with', wheelSegments.length, 'segments');
+    console.log('NeuralWheel: Component mounted with', WHEEL_SEGMENTS.length, 'segments');
   }, []);
 
   const handleSpin = () => {
@@ -43,15 +46,19 @@ const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, current
     setIsSpinning(true);
     setWheelResult(null);
     setHasSpun(true);
+    onPlayed?.();
 
-    const spins = 5 + Math.random() * 3;
+    const spinRounds = 5 + Math.floor(Math.random() * 3);
     const degreesPerSegment = 360 / wheelSegments.length;
     
-    const winningSegments = [1, 2, 3, 5, 7];
+    // Segments with multiplier > 0: 1 (50), 2 (20), 3 (30), 4 (10), 5 (100), 7 (40)
+    const winningSegments = [1, 2, 3, 4, 5, 7];
     const randomSegment = currentChips <= 0
       ? winningSegments[Math.floor(Math.random() * winningSegments.length)]
       : Math.floor(Math.random() * wheelSegments.length);
-    const totalDegrees = spins * 360 + randomSegment * degreesPerSegment;
+    
+    // Align wheel so top pointer (270 degrees) lands directly on the selected segment's center
+    const totalDegrees = spinRounds * 360 + (270 - (randomSegment * degreesPerSegment + degreesPerSegment / 2));
 
     if (wheelRef.current) {
       wheelRef.current.style.transform = 'rotate(0deg)';
@@ -68,13 +75,8 @@ const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, current
       setWheelResult(result);
       setIsSpinning(false);
 
-      let earnings = 0;
       if (result.multiplier > 0) {
-        earnings = result.multiplier;
-        onChipUpdate(currentChips + earnings);
-      } else if (currentChips <= 0) {
-        earnings = 30;
-        onChipUpdate(currentChips + earnings);
+        onChipUpdate(currentChips + result.multiplier);
       }
     }, 4000);
   };
@@ -182,13 +184,11 @@ const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, current
             <p
               className="text-xs font-mono font-bold"
               style={{
-                color: (wheelResult.multiplier > 0 || currentChips <= 0) ? '#34d399' : '#fb7185',
+                color: wheelResult.multiplier > 0 ? '#34d399' : '#fb7185',
               }}
             >
               {wheelResult.multiplier > 0
-                ? `+${wheelResult.multiplier} Chips Credited`
-                : currentChips <= 0
-                ? '+30 Chips Credited'
+                ? `+${wheelResult.multiplier} Chips Credited To Bankroll`
                 : 'No chips credited. Better luck on the main floor.'}
             </p>
           </div>
@@ -199,7 +199,7 @@ const NeuralWheel: React.FC<NeuralWheelProps> = ({ onBack, onChipUpdate, current
           {!isSpinning && !wheelResult && (
             <button
               onClick={handleSpin}
-              disabled={hasSpun}
+              disabled={isSpinning || hasSpun}
               className="btn-marquee-gold py-2.5 px-7 text-black font-extrabold text-xs sm:text-sm uppercase tracking-[0.16em] rounded-xl cursor-pointer select-none group border border-amber-200/50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Spin Wheel

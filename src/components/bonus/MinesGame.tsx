@@ -7,6 +7,7 @@ interface MinesGameProps {
   selectedBet: number | null;
   result: string;
   currentChips: number;
+  onPlayed?: () => void;
 }
 
 interface Cell {
@@ -16,7 +17,7 @@ interface Cell {
   content: string;
 }
 
-const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, currentChips }) => {
+const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, currentChips, onPlayed }) => {
   const [minesGrid, setMinesGrid] = useState<Cell[]>([]);
   const [mines, setMines] = useState<number[]>([]);
   const [gameOver, setGameOver] = useState(false);
@@ -72,6 +73,7 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipU
     onChipUpdate(currentChips - amount);
     setHasDeductedBet(true);
     onSelectBonusBet(amount, 'mines');
+    onPlayed?.();
   };
 
   const handleCellClick = (index: number) => {
@@ -93,6 +95,7 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipU
         newGrid[mineIndex].content = '💣';
       });
 
+      // Mine detonation wipes total bankroll to 0 directly
       onChipUpdate(0);
       setMinesGrid(newGrid);
       return;
@@ -102,11 +105,10 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipU
       setDiamondsFound(newDiamondsFound);
       setCanCashOut(true);
 
-      const winReward = Math.floor(selectedBet * 0.5);
-      onChipUpdate(currentChips + winReward);
-
       if (newRevealedCount === gridSize - mineCount) {
         setGameWon(true);
+        const profit = Math.floor((selectedBet || 0) * 0.5 * newDiamondsFound);
+        onChipUpdate(currentChips + (selectedBet || 0) + profit);
       }
     }
 
@@ -116,6 +118,8 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipU
   const handleCashOut = () => {
     if (!canCashOut || gameOver || gameWon) return;
     setGameWon(true);
+    const profit = Math.floor((selectedBet || 0) * 0.5 * diamondsFound);
+    onChipUpdate(currentChips + (selectedBet || 0) + profit);
   };
 
   const getCellClass = (cell: Cell) => {
@@ -240,7 +244,7 @@ const MinesGame: React.FC<MinesGameProps> = ({ onBack, onSelectBonusBet, onChipU
               Mine Detonated!
             </p>
             <p className="text-xs font-mono">
-              You uncovered a mine in the security vault. Bankroll cleared to 0.
+              You uncovered a mine in the security vault. Bankroll reduced to $0.
             </p>
           </div>
         )}

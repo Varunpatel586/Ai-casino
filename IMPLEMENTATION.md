@@ -12,6 +12,39 @@ This document outlines proposed architecture, feature plans, file modifications,
 
 ## 📋 Active Implementation Plan
 
+### Plan 10: Round 3 Partner Reply Delivery Synchronization Before Verdict Guess Modal
+- **Status:** ✅ **Completed & Verified**
+- **Date Completed:** 2026-10-08
+- **Objective:**
+  In Round 3 ("The Turing Table"), ensure that all 3 replies from the counterpart (AI or Human host) are fully received, rendered, and readable in the chat before the "Identify Your Counterpart" verdict modal appears.
+- **Root Cause Analysis:**
+  In [`src/components/Round3.tsx`](src/components/Round3.tsx), `onSendMessage` previously started a premature blind 2-second timer as soon as query 3 was submitted, opening the verdict modal before the AI or host could deliver reply 3.
+- **Architectural & Design Fix:**
+  1. **Add `onReadyForVerdict?: () => void` prop to [`src/components/chat/ChatInterface.tsx`](src/components/chat/ChatInterface.tsx):**
+     - Counterpart replies are tracked via `repliesReceivedRef`.
+     - In **AI mode**, once `get_ai_response()` completes, the response is appended to the message feed, and typing ends, if `nextReplies >= messageLimit` (3), a 2.5-second timer allows the player to read the message before triggering `onReadyForVerdict()`.
+     - In **Human mode**, when host chat messages arrive via WebSocket, the same counter checks `nextReplies >= messageLimit` and triggers `onReadyForVerdict()` after 2.5s.
+     - Input is disabled while `isTyping` is active to prevent message spamming.
+  2. **Update [`src/components/Round3.tsx`](src/components/Round3.tsx):**
+     - Removed premature `setTimeout` from `onSendMessage`.
+     - Connected `onReadyForVerdict={() => setShowGuess(true)}`.
+     - Added keying (`key={'subround-' + currentRound}`) to ensure fresh mount and reset on each subround.
+- **Phased Execution Checklist:**
+  - [x] **Phase 1: Update `ChatInterface.tsx`**
+    - Added `onReadyForVerdict` to `ChatInterfaceProps`.
+    - Maintained counterpart reply tracking and timer cleanup.
+    - Disabled input while waiting for partner response / typing.
+    - Triggered `onReadyForVerdict()` only after reply 3 is rendered.
+  - [x] **Phase 2: Update `Round3.tsx`**
+    - Removed premature 2s timeout in `onSendMessage`.
+    - Connected `onReadyForVerdict={() => setShowGuess(true)}`.
+  - [x] **Phase 3: Verification & Quality Assurance**
+    - `npm run typecheck`: Passed with 0 errors.
+    - `npm run build`: Production bundle built successfully.
+    - Documented in `WALKTHROUGH.md`.
+
+---
+
 ### Plan 9: Round 2 Image Similarity Scoring — Perceptual Multiplier Payouts
 - **Status:** ✅ **Completed & Verified**
 - **Date Completed:** 2026-10-04

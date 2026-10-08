@@ -55,6 +55,34 @@ function App() {
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const playerRef = useRef(player);
 
+  // Track played bonus games per stage so returning to bonus tables NEVER resets them
+  const [playedBonusGames, setPlayedBonusGames] = useState<Record<string, string[]>>(() => {
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      try {
+        const saved = sessionStorage.getItem('ai_casino_played_bonus_games');
+        if (saved) return JSON.parse(saved);
+      } catch (_) {}
+    }
+    return { '1.5': [], '2.5': [], '3.5': [] };
+  });
+
+  const handleMarkBonusGamePlayed = (stageKey: string, gameName: string) => {
+    setPlayedBonusGames(prev => {
+      const stageGames = prev[stageKey] || [];
+      if (stageGames.includes(gameName)) return prev;
+      const updated = {
+        ...prev,
+        [stageKey]: [...stageGames, gameName]
+      };
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        try {
+          sessionStorage.setItem('ai_casino_played_bonus_games', JSON.stringify(updated));
+        } catch (_) {}
+      }
+      return updated;
+    });
+  };
+
   // Starting Lobby -> Player Name Insertion & Room Setup
   const handleStartGame = () => {
     setScreen('username');
@@ -166,7 +194,8 @@ function App() {
   const handleBonus1Complete = (earnings: number) => {
     const current = playerRef.current;
     console.log('App: handleBonus1Complete called with earnings:', earnings);
-    const finalChips = current.chips + earnings;
+    const calculatedChips = current.chips + earnings;
+    const finalChips = Math.max(0, calculatedChips);
     console.log('App: Updating player chips from', current.chips, 'to', finalChips);
     const updatedPlayer = {
       ...current,
@@ -181,7 +210,7 @@ function App() {
   };
 
   const handleRound2Complete = (net: number) => {
-    const newChips = player.chips + net;
+    const newChips = Math.max(0, player.chips + net);
     const updatedPlayer = {
       ...player,
       chips: newChips,
@@ -195,7 +224,8 @@ function App() {
 
   const handleBonus2Complete = (earnings: number) => {
     const current = playerRef.current;
-    const finalChips = current.chips + earnings;
+    const calculatedChips = current.chips + earnings;
+    const finalChips = Math.max(0, calculatedChips);
     const updatedPlayer = {
       ...current,
       chips: finalChips,
@@ -213,7 +243,7 @@ function App() {
     const wrongCount = 3 - correctCount; // Round 3 has 3 subrounds
     const earnings = correctCount * bet - wrongCount * bet;
 
-    const newChips = player.chips + earnings;
+    const newChips = Math.max(0, player.chips + earnings);
     const updatedPlayer = {
       ...player,
       chips: newChips,
@@ -268,6 +298,13 @@ function App() {
     // Auto sign out from Puter when starting a new player session
     signOutPuter();
 
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      try {
+        sessionStorage.removeItem('ai_casino_played_bonus_games');
+      } catch (_) {}
+    }
+    setPlayedBonusGames({ '1.5': [], '2.5': [], '3.5': [] });
+
     setPlayer({
       id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       username: '',
@@ -303,18 +340,50 @@ function App() {
       case 'round1':
         return <MultiplayerRound1 player={player} roomId={roomId} onComplete={handleRound1Complete} onChipUpdate={handleChipUpdate} />;
       case 'round2':
-        return <Round1 currentChips={player.chips} onComplete={handleRound2Complete} />;
+        return (
+          <Round1
+            currentChips={player.chips}
+            onComplete={handleRound2Complete}
+            onBackToBonus={() => {
+              setPlayer(prev => ({ ...prev, currentRound: 1.5 }));
+              setScreen('bonus');
+            }}
+            onChipUpdate={handleChipUpdate}
+          />
+        );
       case 'round3':
-        return <Round3 currentChips={player.chips} onComplete={handleRound3Complete} username={player.username} />;
-      case 'bonus':
-        // Check if this is bonus after round 1, round 2, or round 3
-        if (player.currentRound === 1.5) {
-          return <BonusRounds currentChips={player.chips} onComplete={handleBonus1Complete} onChipUpdate={handleChipUpdate} currentRound={1.5} />;
-        } else if (player.currentRound === 2.5) {
-          return <BonusRounds currentChips={player.chips} onComplete={handleBonus2Complete} onChipUpdate={handleChipUpdate} currentRound={2.5} />;
-        } else {
-          return <BonusRounds currentChips={player.chips} onComplete={handleBonusComplete} onChipUpdate={handleChipUpdate} currentRound={3.5} />;
-        }
+        return (
+          <Round3
+            currentChips={player.chips}
+            onComplete={handleRound3Complete}
+            username={player.username}
+            onBackToBonus={() => {
+              setPlayer(prev => ({ ...prev, currentRound: 2.5 }));
+              setScreen('bonus');
+            }}
+            onChipUpdate={handleChipUpdate}
+          />
+        );
+      case 'bonus': {
+        const stageNum = player.currentRound === 1.5 ? 1.5 : player.currentRound === 2.5 ? 2.5 : 3.5;
+        const stageKey = String(stageNum);
+        const onCompleteHandler = stageNum === 1.5
+          ? handleBonus1Complete
+          : stageNum === 2.5
+            ? handleBonus2Complete
+            : handleBonusComplete;
+
+        return (
+          <BonusRounds
+            currentChips={player.chips}
+            onComplete={onCompleteHandler}
+            onChipUpdate={handleChipUpdate}
+            currentRound={stageNum}
+            playedGames={playedBonusGames[stageKey] || []}
+            onMarkGamePlayed={(gameName) => handleMarkBonusGamePlayed(stageKey, gameName)}
+          />
+        );
+      }
       case 'leaderboard':
         return (
           <Leaderboard

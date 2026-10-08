@@ -34,8 +34,12 @@ export default class ErrorBoundary extends Component<Props, State> {
           stack: error?.stack,
           componentStack: errorInfo?.componentStack,
         }),
-      }).catch(() => {});
-    } catch (_) {}
+      }).catch((err) => {
+        console.warn('[ErrorBoundary] Failed to log error to backend:', err);
+      });
+    } catch (err) {
+      console.warn('[ErrorBoundary] Failed to dispatch error log:', err);
+    }
   }
 
   private handleReset = () => {

@@ -130,18 +130,17 @@ The user just said: '${message}'`;
 
     // Tier 1: Puter.js
     try {
-      // @ts-ignore - puter injected via script tag
       const signedIn = window.puter && (typeof window.puter.auth?.isSignedIn === 'function' 
         ? window.puter.auth.isSignedIn() 
         : (typeof window.puter.isSignedIn === 'function' ? window.puter.isSignedIn() : false));
         
       if (signedIn) {
          console.log('Attempting Puter AI Chat...');
-         // @ts-ignore
+         // @ts-expect-error - puter injected via script tag
          const puterPromise = window.puter.ai.chat(pollinationsPrompt, { model: 'gpt-4o-mini' });
          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Puter timeout')), 8000));
          const res = await Promise.race([puterPromise, timeoutPromise]);
-         // @ts-ignore
+         // @ts-expect-error - puter response structure
          aiText = typeof res === 'string' ? res : (res?.message?.content || res?.toString());
          
          if (aiText && aiText.length > 2) {
@@ -221,9 +220,9 @@ The user just said: '${message}'`;
         
         const geminiPromise = model.generateContent(fullPrompt);
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini timeout')), 5000));
-        const result: any = await Promise.race([geminiPromise, timeoutPromise]);
+        const result = (await Promise.race([geminiPromise, timeoutPromise])) as { response: { text: () => string } };
         
-        const response = await result.response;
+        const response = result.response;
         aiText = response.text().trim();
         console.log('Received response from Gemini:', aiText);
         return finalizeResponse(aiText);

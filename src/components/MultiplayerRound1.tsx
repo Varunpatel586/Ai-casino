@@ -301,7 +301,7 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
     setMyAnswer(answer);
     setLockedTimeTaken(elapsed);
     setLockedMultiplier(liveMultiplier);
-    multiplayerSocket.submitAnswer(roomIdRef.current, player.id, currentFeedIndex, answer);
+    multiplayerSocket.submitAnswer(roomIdRef.current, player.id, currentFeedIndex, answer, elapsed);
   };
 
   const handleSelectSeat = (seatNum: number) => {
@@ -714,6 +714,13 @@ export default function MultiplayerRound1({ player, onComplete, roomId: propRoom
                           );
                         })}
                       </div>
+                      {myCurrentChips <= 0 && (
+                        <div className="mt-2.5 p-2 bg-amber-950/60 border border-amber-400/40 rounded-xl flex items-center justify-center text-center gap-2 max-w-sm mx-auto">
+                          <span className="text-[11px] font-mono text-rose-300 font-bold">
+                            Bankroll Depleted ($0 Chips)
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ) : (tableState.status === 'playing' || tableState.status === 'revealing') ? (
                     /* LIVE MEDIA CHALLENGE FEED (IMAGES & VIDEOS) */

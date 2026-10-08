@@ -125,13 +125,22 @@ export function setPlayerReady(roomId, playerId, isReady) {
   return getPlayer(roomId, playerId);
 }
 
-export function updateRoomStatus(roomId, status, currentFeedIndex = 0, roundTimer = 45, feedStartTime = null) {
-  const stmt = db.prepare(`
-    UPDATE rooms 
-    SET status = ?, current_feed_index = ?, round_timer = ?, feed_start_time = ?, updated_at = ?
-    WHERE room_id = ?
-  `);
-  stmt.run(status, currentFeedIndex, roundTimer, feedStartTime, Date.now(), roomId);
+export function updateRoomStatus(roomId, status, currentFeedIndex = 0, roundTimer = 45, feedStartTime = undefined) {
+  if (feedStartTime !== undefined) {
+    const stmt = db.prepare(`
+      UPDATE rooms 
+      SET status = ?, current_feed_index = ?, round_timer = ?, feed_start_time = ?, updated_at = ?
+      WHERE room_id = ?
+    `);
+    stmt.run(status, currentFeedIndex, roundTimer, feedStartTime, Date.now(), roomId);
+  } else {
+    const stmt = db.prepare(`
+      UPDATE rooms 
+      SET status = ?, current_feed_index = ?, round_timer = ?, updated_at = ?
+      WHERE room_id = ?
+    `);
+    stmt.run(status, currentFeedIndex, roundTimer, Date.now(), roomId);
+  }
 }
 
 export function getPlayersInRoom(roomId) {

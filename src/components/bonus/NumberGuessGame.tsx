@@ -7,6 +7,7 @@ interface NumberGuessGameProps {
   selectedBet: number | null;
   result: string;
   currentChips: number;
+  onPlayed?: () => void;
 }
 
 const NumberGuessGame: React.FC<NumberGuessGameProps> = ({
@@ -15,6 +16,7 @@ const NumberGuessGame: React.FC<NumberGuessGameProps> = ({
   onChipUpdate,
   selectedBet,
   currentChips,
+  onPlayed,
 }) => {
   const [targetNumber, setTargetNumber] = useState<number>(0);
   const [userGuess, setUserGuess] = useState<number | null>(null);
@@ -53,6 +55,7 @@ const NumberGuessGame: React.FC<NumberGuessGameProps> = ({
     const newAttempts = attempts + 1;
     setUserGuess(guess);
     setAttempts(newAttempts);
+    onPlayed?.();
 
     if (guess === targetNumber) {
       const winnings = selectedBet * 2;

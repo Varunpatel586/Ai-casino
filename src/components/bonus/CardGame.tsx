@@ -7,9 +7,10 @@ interface CardGameProps {
   selectedBet: number | null;
   result: string;
   currentChips: number;
+  onPlayed?: () => void;
 }
 
-const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, currentChips }) => {
+const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, currentChips, onPlayed }) => {
   const [winningCard, setWinningCard] = useState('');
   const [selectedCard, setSelectedCard] = useState('');
   const [showResult, setShowResult] = useState(false);
@@ -43,6 +44,7 @@ const CardGame: React.FC<CardGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
 
     setSelectedCard(cardType);
     setShowResult(true);
+    onPlayed?.();
 
     if (cardType === winningCard) {
       const winnings = selectedBet * 2;

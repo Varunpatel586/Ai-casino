@@ -7,9 +7,10 @@ interface DiceGameProps {
   selectedBet: number | null;
   result: string;
   currentChips: number;
+  onPlayed?: () => void;
 }
 
-const DiceGame: React.FC<DiceGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, currentChips }) => {
+const DiceGame: React.FC<DiceGameProps> = ({ onBack, onSelectBonusBet, onChipUpdate, selectedBet, currentChips, onPlayed }) => {
   const [dice1, setDice1] = useState<number | string>(1);
   const [dice2, setDice2] = useState<number | string>(1);
   const [rolling, setRolling] = useState(false);
@@ -34,6 +35,7 @@ const DiceGame: React.FC<DiceGameProps> = ({ onBack, onSelectBonusBet, onChipUpd
 
     setRolling(true);
     setShowResult(false);
+    onPlayed?.();
 
     const guess = parseInt(userGuess);
 

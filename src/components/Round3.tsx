@@ -13,6 +13,8 @@ interface Round3Props {
   currentChips: number;
   onComplete: (score: number, bet: number) => void;
   username: string;
+  onBackToBonus?: () => void;
+  onChipUpdate?: (chips: number) => void;
 }
 
 type ChatMode = 'ai' | 'human' | null;
@@ -21,7 +23,7 @@ type Phase = 'intro' | 'betting' | 'mode-select' | 'playing' | 'results';
 const TOTAL_SUBROUNDS = 3;
 const MESSAGES_PER_SUBROUND = 3;
 
-export default function Round3({ currentChips, onComplete, username }: Round3Props) {
+export default function Round3({ currentChips, onComplete, username, onBackToBonus, onChipUpdate: _onChipUpdate }: Round3Props) {
   const [phase, setPhase] = useState<Phase>('intro');
   const [currentBet, setCurrentBet] = useState<number>(0);
   const [actualMode, setActualMode] = useState<ChatMode>(null); // The actual randomly selected mode
@@ -69,9 +71,8 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
 
   // Handle incoming messages
   useEffect(() => {
-    const handleMessage = (message: any) => {
+    const handleMessage = (message: unknown) => {
       console.log('Received message:', message);
-      // Handle incoming chat messages
     };
 
     network_manager.message_callback = handleMessage;
@@ -81,37 +82,7 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
     };
   }, []);
 
-  // Randomly select AI or Human mode and set up connection
-  const selectRandomMode = useCallback(async () => {
-    // Randomly choose between AI and Human (70% AI, 30% Human chance)
-    const randomMode: ChatMode = Math.random() < 0.7 ? 'ai' : 'human';
-    setActualMode(randomMode);
-    setConnectionError('');
-    console.log('Selected mode (hidden from player):', randomMode);
-
-    if (randomMode === 'human') {
-
-      try {
-        selectHumanChat();
-      } catch (error: unknown) {
-        console.error('Connection error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        setConnectionError(`Failed to connect to host: ${errorMessage}`);
-        // If connection fails, fall back to AI mode
-        console.log('Falling back to AI mode due to connection failure');
-        setActualMode('ai');
-        reset_conversation();
-        setPhase('playing');
-      } finally {
-
-      }
-    } else {
-      // AI mode - start immediately
-      reset_conversation();
-      setPhase('playing');
-    }
-  }, []);
-  //If Human is selected
+  // If Human is selected
   const selectHumanChat = useCallback(async () => {
     setActualMode('human');
     setConnectionError('');
@@ -133,10 +104,36 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
 
       // Fall back to AI mode (this will be handled by the connection callback)
       console.log('🔄 Human connection failed, connection callback will handle fallback to AI mode');
-    } finally {
-
     }
   }, [username]);
+
+  // Randomly select AI or Human mode and set up connection
+  const selectRandomMode = useCallback(async () => {
+    // Randomly choose between AI and Human (70% AI, 30% Human chance)
+    const randomMode: ChatMode = Math.random() < 0.7 ? 'ai' : 'human';
+    setActualMode(randomMode);
+    setConnectionError('');
+    console.log('Selected mode (hidden from player):', randomMode);
+
+    if (randomMode === 'human') {
+      try {
+        await selectHumanChat();
+      } catch (error: unknown) {
+        console.error('Connection error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        setConnectionError(`Failed to connect to host: ${errorMessage}`);
+        // If connection fails, fall back to AI mode
+        console.log('Falling back to AI mode due to connection failure');
+        setActualMode('ai');
+        reset_conversation();
+        setPhase('playing');
+      }
+    } else {
+      // AI mode - start immediately
+      reset_conversation();
+      setPhase('playing');
+    }
+  }, [selectHumanChat]);
 
   // Handle player's guess (AI or Human)
   const handleAnswer = useCallback(async (playerGuess: 'ai' | 'human') => {
@@ -243,12 +240,23 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
             </div>
           </div>
 
-          <button
-            onClick={() => setPhase('betting')}
-            className="btn-marquee-gold w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
-          >
-            <span>PLACE WAGER &amp; START</span>
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={() => setPhase('betting')}
+              className="btn-marquee-gold inline-flex items-center justify-center gap-2 px-8 py-3 font-display font-black text-base uppercase tracking-wider rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 transition-all duration-150 cursor-pointer"
+            >
+              <span>PLACE WAGER &amp; START</span>
+            </button>
+            {onBackToBonus && (
+              <button
+                type="button"
+                onClick={onBackToBonus}
+                className="py-3 px-6 bg-[#180c19] hover:bg-[#231225] border border-amber-400/35 hover:border-amber-400/70 text-amber-200/90 font-mono text-xs font-bold uppercase tracking-[0.16em] rounded-xl transition-all cursor-pointer shadow-sm active:translate-y-0.5"
+              >
+                ⬅ Back To Bonus Tables
+              </button>
+            )}
+          </div>
 
           {/* Development skip button for testing transitions */}
           <div className="mt-2.5">
@@ -270,8 +278,26 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
   if (phase === 'betting') {
     return (
       <div className="w-full h-full flex-1 min-h-0 casino-table-bg flex items-center justify-center p-2 sm:p-4 overflow-hidden select-none">
-        <div className="max-w-2xl w-full my-auto">
-          <BettingPanel currentChips={currentChips} onBet={handleBet} />
+        <div className="max-w-2xl w-full my-auto flex flex-col gap-2.5">
+          {onBackToBonus && (
+            <div className="flex items-center justify-between px-1">
+              <button
+                type="button"
+                onClick={onBackToBonus}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#180c19] hover:bg-[#241126] border border-amber-400/35 text-amber-300 font-mono text-xs font-bold rounded-lg transition-all cursor-pointer"
+              >
+                <span>⬅ Back To Bonus Tables</span>
+              </button>
+              <span className="text-[11px] font-mono text-amber-200/60">Intermission Side Action Available</span>
+            </div>
+          )}
+          <BettingPanel 
+            currentChips={currentChips} 
+            onBet={handleBet}
+            minBet={10}
+            maxBet={Math.max(10, Math.min(100, currentChips))}
+            onBackToBonus={onBackToBonus}
+          />
         </div>
       </div>
     );
@@ -397,6 +423,7 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
           <div className="flex-1 min-h-0 casino-vip-card rounded-2xl overflow-hidden border border-amber-500/30 shadow-[0_25px_70px_rgba(0,0,0,0.9)] flex flex-col relative">
             <div className="card-neon-edge" />
             <ChatInterface 
+              key={`subround-${currentRound}`}
               mode={actualMode}
               onComplete={() => {}} // disable auto-complete
               timeLimit={120}
@@ -405,13 +432,10 @@ export default function Round3({ currentChips, onComplete, username }: Round3Pro
               messageLimit={MESSAGES_PER_SUBROUND}
               messagesSent={messagesSent}
               onSendMessage={() => {
-                const nextSent = messagesSent + 1;
-                setMessagesSent(nextSent);
-                if (nextSent >= MESSAGES_PER_SUBROUND) {
-                  setTimeout(() => {
-                    setShowGuess(true);
-                  }, 2000);
-                }
+                setMessagesSent(prev => prev + 1);
+              }}
+              onReadyForVerdict={() => {
+                setShowGuess(true);
               }}
               disableInput={messagesSent >= MESSAGES_PER_SUBROUND}
             />

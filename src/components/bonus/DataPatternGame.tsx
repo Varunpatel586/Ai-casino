@@ -7,9 +7,10 @@ interface DataPatternGameProps {
   selectedBet: number | null;
   result: string;
   currentChips: number;
+  onPlayed?: () => void;
 }
 
-const DataPatternGame: React.FC<DataPatternGameProps> = ({ onBack, onChipUpdate, currentChips }) => {
+const DataPatternGame: React.FC<DataPatternGameProps> = ({ onBack, onChipUpdate, currentChips, onPlayed }) => {
   const [pattern, setPattern] = useState('');
   const [answer, setAnswer] = useState('');
   const [userInput, setUserInput] = useState('');
@@ -42,6 +43,7 @@ const DataPatternGame: React.FC<DataPatternGameProps> = ({ onBack, onChipUpdate,
 
     setShowResult(true);
     setHasPlayed(true);
+    onPlayed?.();
 
     // Award chips for correct answer (free play)
     if (isCorrect) {

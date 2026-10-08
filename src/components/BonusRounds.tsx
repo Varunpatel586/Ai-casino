@@ -7,56 +7,103 @@ interface BonusRoundsProps {
   onComplete: (earnings: number) => void;
   onChipUpdate: (chips: number) => void;
   currentRound?: number;
+  playedGames?: string[];
+  onMarkGamePlayed?: (gameName: string) => void;
 }
 
-export default function BonusRounds({ currentChips, onComplete, onChipUpdate, currentRound }: BonusRoundsProps) {
+export default function BonusRounds({
+  currentChips,
+  onComplete,
+  onChipUpdate,
+  currentRound,
+  playedGames = [],
+  onMarkGamePlayed
+}: BonusRoundsProps) {
   const [screen, setScreen] = useState<'menu' | 'wheel' | 'cardgame' | 'datadash' | 'dicegame' | 'minesgame' | 'numberguess' | 'results'>('menu');
   const [selectedBet, setSelectedBet] = useState<number | null>(null);
 
-  const [playedGames, setPlayedGames] = useState<Set<string>>(new Set());
+  const playedGamesSet = new Set(playedGames);
 
-  const handleSelectBonusBet = (amount: number, _gameType?: string) => {
+  const handleSelectBonusBet = (amount: number) => {
     setSelectedBet(amount);
   };
 
   const markGameAsPlayed = (gameName: string) => {
-    setPlayedGames(prev => new Set([...prev, gameName]));
+    onMarkGamePlayed?.(gameName);
   };
 
   const handleWheelBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('wheel');
   };
 
   const handleCardGameBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('cardgame');
   };
 
   const handleDataDashBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('datadash');
   };
 
   const handleDiceGameBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('dicegame');
   };
 
   const handleMinesGameBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('minesgame');
   };
 
   const handleNumberGuessBack = () => {
     setScreen('menu');
     setSelectedBet(null);
-    markGameAsPlayed('numberguess');
+  };
+
+  const renderNeuralWheelButton = () => {
+    const isSettled = playedGamesSet.has('wheel');
+    return (
+      <button
+        key="wheel-button"
+        onClick={() => setScreen('wheel')}
+        disabled={isSettled}
+        className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${
+          isSettled
+            ? 'opacity-60 cursor-not-allowed border-amber-500/20'
+            : 'hover:border-amber-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(245,158,11,0.2)] active:translate-y-0.5 cursor-pointer'
+        }`}
+      >
+        <div className="card-neon-edge" />
+        <div className="flex items-start justify-between mb-2">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(245,158,11,0.35)]">
+            <Sparkles size={18} />
+          </div>
+          {isSettled ? (
+            <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-amber-400/20">
+              <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
+            </span>
+          ) : (
+            <span className="text-[10px] font-mono text-amber-300 bg-amber-950/60 border border-amber-400/40 px-2 py-0.5 rounded-full font-bold shadow-sm">
+              FREE SPIN
+            </span>
+          )}
+        </div>
+        <h3 className="text-base sm:text-lg font-display font-black text-white uppercase mb-0.5">
+          Neural Roulette
+        </h3>
+        <p className="text-zinc-300 text-xs font-sans mb-2 line-clamp-2">
+          Calibrate the probabilistic wheel for an immediate chip injection without risking your stack.
+        </p>
+        <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
+          <span className="text-amber-200/60 text-[11px]">Risk: None</span>
+          <span className="text-amber-300 font-bold flex items-center gap-1 text-[11px]">
+            {isSettled ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
+          </span>
+        </div>
+      </button>
+    );
   };
 
   if (screen === 'menu') {
@@ -87,49 +134,14 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
             {/* Round 1: Neural Wheel and Card Game */}
             {currentRound === 1.5 && (
               <>
-                <button
-                  onClick={() => setScreen('wheel')}
-                  disabled={playedGames.has('wheel')}
-                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group cursor-pointer overflow-hidden ${playedGames.has('wheel')
-                    ? 'opacity-60 cursor-not-allowed border-amber-500/20'
-                    : 'hover:border-amber-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(245,158,11,0.2)] active:translate-y-0.5'
-                    }`}
-                >
-                  <div className="card-neon-edge" />
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="w-9 h-9 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(245,158,11,0.35)]">
-                      <Sparkles size={18} />
-                    </div>
-                    {playedGames.has('wheel') ? (
-                      <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-amber-400/20">
-                        <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-mono text-amber-300 bg-amber-950/60 border border-amber-400/40 px-2 py-0.5 rounded-full font-bold shadow-sm">
-                        FREE SPIN
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-base sm:text-lg font-display font-black text-white uppercase mb-0.5">
-                    Neural Roulette
-                  </h3>
-                  <p className="text-zinc-300 text-xs font-sans mb-2 line-clamp-2">
-                    Calibrate the probabilistic wheel for an immediate chip injection without risking your stack.
-                  </p>
-                  <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
-                    <span className="text-amber-200/60 text-[11px]">Risk: None</span>
-                    <span className="text-amber-300 font-bold flex items-center gap-1 text-[11px]">
-                      ENTER TABLE <ChevronRight size={13} />
-                    </span>
-                  </div>
-                </button>
+                {renderNeuralWheelButton()}
 
                 <button
                   onClick={() => setScreen('cardgame')}
-                  disabled={playedGames.has('cardgame')}
-                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group cursor-pointer overflow-hidden ${playedGames.has('cardgame')
+                  disabled={playedGamesSet.has('cardgame')}
+                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${playedGamesSet.has('cardgame')
                     ? 'opacity-60 cursor-not-allowed border-blue-500/20'
-                    : 'hover:border-blue-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(59,130,246,0.2)] active:translate-y-0.5'
+                    : 'hover:border-blue-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(59,130,246,0.2)] active:translate-y-0.5 cursor-pointer'
                     }`}
                 >
                   <div className="card-neon-edge" />
@@ -137,7 +149,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                     <div className="w-9 h-9 rounded-lg bg-blue-500/20 border border-blue-400/40 text-blue-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(59,130,246,0.35)]">
                       <Layers size={18} />
                     </div>
-                    {playedGames.has('cardgame') ? (
+                    {playedGamesSet.has('cardgame') ? (
                       <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-blue-400/20">
                         <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
@@ -156,7 +168,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                   <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
                     <span className="text-amber-200/60 text-[11px]">Payout: 2.0x</span>
                     <span className="text-blue-300 font-bold flex items-center gap-1 text-[11px]">
-                      ENTER TABLE <ChevronRight size={13} />
+                      {playedGamesSet.has('cardgame') ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
                     </span>
                   </div>
                 </button>
@@ -168,10 +180,10 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
               <>
                 <button
                   onClick={() => setScreen('datadash')}
-                  disabled={playedGames.has('datadash')}
-                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group cursor-pointer overflow-hidden ${playedGames.has('datadash')
+                  disabled={playedGamesSet.has('datadash')}
+                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${playedGamesSet.has('datadash')
                     ? 'opacity-60 cursor-not-allowed border-emerald-500/20'
-                    : 'hover:border-emerald-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(16,185,129,0.2)] active:translate-y-0.5'
+                    : 'hover:border-emerald-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(16,185,129,0.2)] active:translate-y-0.5 cursor-pointer'
                     }`}
                 >
                   <div className="card-neon-edge" />
@@ -179,7 +191,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                     <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(16,185,129,0.35)]">
                       <Binary size={18} />
                     </div>
-                    {playedGames.has('datadash') ? (
+                    {playedGamesSet.has('datadash') ? (
                       <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-emerald-400/20">
                         <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
@@ -198,17 +210,17 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                   <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
                     <span className="text-amber-200/60 text-[11px]">Reward: +10 Chips</span>
                     <span className="text-emerald-300 font-bold flex items-center gap-1 text-[11px]">
-                      ENTER TABLE <ChevronRight size={13} />
+                      {playedGamesSet.has('datadash') ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
                     </span>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setScreen('dicegame')}
-                  disabled={playedGames.has('dicegame')}
-                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group cursor-pointer overflow-hidden ${playedGames.has('dicegame')
+                  disabled={playedGamesSet.has('dicegame')}
+                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${playedGamesSet.has('dicegame')
                     ? 'opacity-60 cursor-not-allowed border-purple-500/20'
-                    : 'hover:border-purple-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(168,85,247,0.2)] active:translate-y-0.5'
+                    : 'hover:border-purple-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(168,85,247,0.2)] active:translate-y-0.5 cursor-pointer'
                     }`}
                 >
                   <div className="card-neon-edge" />
@@ -216,7 +228,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                     <div className="w-9 h-9 rounded-lg bg-purple-500/20 border border-purple-400/40 text-purple-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(168,85,247,0.35)]">
                       <Dices size={18} />
                     </div>
-                    {playedGames.has('dicegame') ? (
+                    {playedGamesSet.has('dicegame') ? (
                       <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-purple-400/20">
                         <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
@@ -235,7 +247,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                   <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
                     <span className="text-amber-200/60 text-[11px]">Payout: 3.0x</span>
                     <span className="text-purple-300 font-bold flex items-center gap-1 text-[11px]">
-                      ENTER TABLE <ChevronRight size={13} />
+                      {playedGamesSet.has('dicegame') ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
                     </span>
                   </div>
                 </button>
@@ -247,10 +259,10 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
               <>
                 <button
                   onClick={() => setScreen('minesgame')}
-                  disabled={playedGames.has('minesgame')}
-                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group cursor-pointer overflow-hidden ${playedGames.has('minesgame')
+                  disabled={playedGamesSet.has('minesgame')}
+                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${playedGamesSet.has('minesgame')
                     ? 'opacity-60 cursor-not-allowed border-rose-500/20'
-                    : 'hover:border-rose-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(225,29,72,0.2)] active:translate-y-0.5'
+                    : 'hover:border-rose-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(225,29,72,0.2)] active:translate-y-0.5 cursor-pointer'
                     }`}
                 >
                   <div className="card-neon-edge" />
@@ -258,7 +270,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                     <div className="w-9 h-9 rounded-lg bg-rose-500/20 border border-rose-400/40 text-rose-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(225,29,72,0.35)]">
                       <Bomb size={18} />
                     </div>
-                    {playedGames.has('minesgame') ? (
+                    {playedGamesSet.has('minesgame') ? (
                       <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-rose-400/20">
                         <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
@@ -277,17 +289,17 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                   <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
                     <span className="text-amber-200/60 text-[11px]">Type: Cash-Out Matrix</span>
                     <span className="text-rose-300 font-bold flex items-center gap-1 text-[11px]">
-                      ENTER TABLE <ChevronRight size={13} />
+                      {playedGamesSet.has('minesgame') ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
                     </span>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setScreen('numberguess')}
-                  disabled={playedGames.has('numberguess')}
-                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group cursor-pointer overflow-hidden ${playedGames.has('numberguess')
+                  disabled={playedGamesSet.has('numberguess')}
+                  className={`casino-vip-card relative p-3.5 sm:p-4 rounded-xl border transition-all text-left group overflow-hidden ${playedGamesSet.has('numberguess')
                     ? 'opacity-60 cursor-not-allowed border-emerald-500/20'
-                    : 'hover:border-emerald-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(16,185,129,0.2)] active:translate-y-0.5'
+                    : 'hover:border-emerald-400 shadow-[0_10px_30px_rgba(0,0,0,0.8),0_0_15px_rgba(16,185,129,0.2)] active:translate-y-0.5 cursor-pointer'
                     }`}
                 >
                   <div className="card-neon-edge" />
@@ -295,7 +307,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                     <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center group-hover:scale-105 transition-transform shadow-[0_0_12px_rgba(16,185,129,0.35)]">
                       <Target size={18} />
                     </div>
-                    {playedGames.has('numberguess') ? (
+                    {playedGamesSet.has('numberguess') ? (
                       <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-400 bg-[#180c19] px-2 py-0.5 rounded-full border border-emerald-400/20">
                         <CheckCircle2 size={11} className="text-emerald-400" /> SETTLED
                       </span>
@@ -314,7 +326,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
                   <div className="flex items-center justify-between text-xs font-mono pt-2 border-t border-amber-400/20">
                     <span className="text-amber-200/60 text-[11px]">Payout: 2.0x</span>
                     <span className="text-emerald-300 font-bold flex items-center gap-1 text-[11px]">
-                      ENTER TABLE <ChevronRight size={13} />
+                      {playedGamesSet.has('numberguess') ? 'SETTLED' : 'ENTER TABLE'} <ChevronRight size={13} />
                     </span>
                   </div>
                 </button>
@@ -322,11 +334,11 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
             )}
           </div>
 
-          <div className="flex flex-col items-center flex-shrink-0 mt-1">
+          <div className="flex flex-col items-center flex-shrink-0 mt-2">
             <button
               onClick={() => {
                 if (currentChips <= 0) {
-                  onChipUpdate(30); // Guaranteed starter bailout if wheel was skipped
+                  onChipUpdate(30);
                 }
                 onComplete(0);
               }}
@@ -352,6 +364,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('wheel')}
       />
     );
   }
@@ -365,6 +378,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('datadash')}
       />
     );
   }
@@ -378,6 +392,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('cardgame')}
       />
     );
   }
@@ -391,6 +406,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('dicegame')}
       />
     );
   }
@@ -404,6 +420,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('minesgame')}
       />
     );
   }
@@ -417,6 +434,7 @@ export default function BonusRounds({ currentChips, onComplete, onChipUpdate, cu
         selectedBet={selectedBet}
         result=""
         currentChips={currentChips}
+        onPlayed={() => markGameAsPlayed('numberguess')}
       />
     );
   }

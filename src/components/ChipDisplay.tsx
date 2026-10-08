@@ -29,11 +29,11 @@ export default function ChipDisplay({ chips = 0, username }: ChipDisplayProps) {
           </div>
         </div>
 
-        {/* Center Hallmark with Card Suits (Desktop only) */}
-        <div className="hidden md:flex items-center gap-2.5 px-4 py-1 rounded-full bg-[#1b0d18]/90 border border-amber-400/40 shadow-[0_0_15px_rgba(245,158,11,0.25)] text-[10px] font-mono tracking-[0.25em] text-amber-200/80 uppercase">
+        {/* Center Hallmark with Game Name (Desktop only) */}
+        <div className="hidden md:flex items-center gap-2.5 px-4 py-1 rounded-full bg-[#1b0d18]/90 border border-amber-400/40 shadow-[0_0_15px_rgba(245,158,11,0.25)] text-xs font-display font-black tracking-[0.2em] text-amber-200 uppercase">
           <span className="text-rose-500 drop-shadow-[0_0_6px_rgba(244,63,94,0.7)] text-xs">♠</span>
           <span className="text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.7)] text-xs">♥</span>
-          <span>SALON NO. 07 • QUANTUM VAULT</span>
+          <span className="white-metallic-text font-black tracking-[0.25em] text-sm">AI CASINO</span>
           <span className="text-amber-300 text-xs">♦</span>
           <span className="text-zinc-300 text-xs">♣</span>
         </div>

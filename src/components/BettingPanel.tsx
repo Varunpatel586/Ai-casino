@@ -7,9 +7,17 @@ interface BettingPanelProps {
   disabled?: boolean;
   minBet?: number;
   maxBet?: number;
+  onBackToBonus?: () => void;
 }
 
-export default function BettingPanel({ currentChips, onBet, disabled, minBet = 10, maxBet = 100 }: BettingPanelProps) {
+export default function BettingPanel({
+  currentChips,
+  onBet,
+  disabled,
+  minBet = 10,
+  maxBet = 100,
+  onBackToBonus,
+}: BettingPanelProps) {
   const bets: { 
     amount: BetAmount; 
     label: string; 
@@ -68,6 +76,8 @@ export default function BettingPanel({ currentChips, onBet, disabled, minBet = 1
       sublabel: string;
     };
   }[];
+
+  const isBankrollDepleted = currentChips < minBet;
 
   return (
     <div className="casino-vip-card rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden select-none">
@@ -135,7 +145,7 @@ export default function BettingPanel({ currentChips, onBet, disabled, minBet = 1
                 <div className="absolute inset-0 bg-[#08040a]/90 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-2 text-center">
                   <AlertCircle size={18} className="text-rose-400 mb-1" />
                   <span className="text-xs font-mono font-bold text-zinc-300">Insufficient Chips</span>
-                  <span className="text-[10px] text-zinc-400 font-mono">{currentChips <= 0 ? 'Bankroll: $0 (Watch mode)' : `Need $${betValue}`}</span>
+                  <span className="text-[10px] text-zinc-400 font-mono">{currentChips <= 0 ? 'Bankroll: $0' : `Need $${betValue}`}</span>
                 </div>
               )}
             </button>
@@ -143,9 +153,44 @@ export default function BettingPanel({ currentChips, onBet, disabled, minBet = 1
         })}
       </div>
 
+      {/* Bankroll Depleted Recovery Banner - Never get stuck */}
+      {isBankrollDepleted && (
+        <div className="mt-4 p-3.5 sm:p-4 rounded-xl border border-amber-400/40 bg-gradient-to-r from-amber-950/70 via-[#180c19] to-rose-950/70 text-center shadow-[0_0_25px_rgba(245,158,11,0.2)] animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-center gap-1.5 text-rose-400 font-mono text-xs uppercase tracking-widest font-bold mb-1">
+            <AlertCircle size={15} />
+            <span>Bankroll Depleted — Insufficient Chips for Minimum Wager (${minBet})</span>
+          </div>
+          <p className="text-zinc-300 text-xs font-sans max-w-md mx-auto mb-3">
+            You do not have enough chips to place a table wager. Return to the side tables to rebuild your bankroll.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2.5">
+            {onBackToBonus && (
+              <button
+                type="button"
+                onClick={onBackToBonus}
+                className="btn-marquee-gold px-5 py-2 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl cursor-pointer shadow-md hover:scale-105 active:scale-95 transition-all"
+              >
+                ⬅ Back To Side Tables
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Current Chips Readout Bar */}
       <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-amber-400/20 flex flex-wrap justify-between items-center text-xs font-mono text-amber-200/70">
-        <span>MIN WAGER: ${minBet}</span>
+        <div className="flex items-center gap-3">
+          <span>MIN WAGER: ${minBet}</span>
+          {onBackToBonus && !isBankrollDepleted && (
+            <button
+              type="button"
+              onClick={onBackToBonus}
+              className="text-amber-400 hover:text-amber-300 underline underline-offset-4 cursor-pointer transition-colors"
+            >
+              ⬅ Back to Side Tables
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <span>ACTIVE WALLET:</span>
           <span className="text-amber-300 font-bold text-sm tabular-nums">${(currentChips ?? 0).toLocaleString()}</span>

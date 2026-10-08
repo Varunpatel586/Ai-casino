@@ -1,26 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, ShieldAlert, Clock } from 'lucide-react';
-import { network_manager } from '../../services/network';
+import { network_manager, NetworkMessage } from '../../services/network';
 import { get_ai_response } from '../../services/gemini_chat';
-
-// Import NetworkMessage type for proper typing
-type NetworkMessage = {
-  type: 'chat' | 'connect' | 'connected' | 'disconnect' | 'error' |
-        'player-joined' | 'player-left' | 'player-list' |
-        'host-registered' | 'host-available' | 'host-disconnected' |
-        'register-host' | 'player-join' | 'private-message' | 'player-private-message';
-  content?: string;
-  message?: string;
-  timestamp: number;
-  senderId?: string;
-  clientId?: string;
-  isHost?: boolean;
-  senderName?: string;
-  recipientId?: string;
-  isPrivate?: boolean;
-  players?: string[];
-  targetPlayerId?: string;
-};
 
 type Message = {
   id: string;
@@ -39,14 +20,27 @@ interface ChatInterfaceProps {
   messagesSent?: number;
   onSendMessage?: () => void;
   disableInput?: boolean;
+  onReadyForVerdict?: () => void;
 }
 
-export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, messageLimit, messagesSent, onSendMessage, disableInput }: ChatInterfaceProps) {
+export default function ChatInterface({
+  mode,
+  onComplete,
+  timeLimit,
+  onTimeUp,
+  messageLimit,
+  messagesSent,
+  onSendMessage,
+  disableInput,
+  onReadyForVerdict
+}: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const repliesReceivedRef = useRef(0);
+  const verdictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
   // Generate unique message ID
@@ -59,6 +53,7 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
     // Clean up previous mode setup
     network_manager.message_callback = null;
     network_manager.connection_callback = null;
+    repliesReceivedRef.current = 0;
 
     const GREETING = "Hi there! I'm your chat partner. Let's have a conversation!";
     let greetingTimer: ReturnType<typeof setTimeout>;
@@ -116,7 +111,7 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
         if (typeof msg === 'string') {
           try {
             parsedMsg = JSON.parse(msg) as NetworkMessage;
-          } catch (e) {
+          } catch {
             // If it's plain text, treat it as a chat message
             parsedMsg = {
               type: 'chat',
@@ -137,7 +132,7 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
             try {
               const nestedMessage = JSON.parse(parsedMsg.content);
               displayText = nestedMessage.content || parsedMsg.content;
-            } catch (e) {
+            } catch {
               displayText = parsedMsg.content;
             }
           } else {
@@ -150,6 +145,15 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
             sender: parsedMsg.senderId === 'host' ? 'host' : 'human',
             timestamp: parsedMsg.timestamp ? new Date(parsedMsg.timestamp) : new Date()
           }]);
+          setIsTyping(false);
+
+          const nextReplies = repliesReceivedRef.current + 1;
+          repliesReceivedRef.current = nextReplies;
+          if (typeof messageLimit === 'number' && nextReplies >= messageLimit) {
+            verdictTimerRef.current = setTimeout(() => {
+              if (onReadyForVerdict) onReadyForVerdict();
+            }, 2500);
+          }
         }
       };
 
@@ -159,10 +163,11 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
     // Clean up
     return () => {
       clearTimeout(greetingTimer);
+      if (verdictTimerRef.current) clearTimeout(verdictTimerRef.current);
       network_manager.message_callback = null;
       network_manager.connection_callback = null;
     };
-  }, [mode]);
+  }, [mode, messageLimit, onReadyForVerdict]);
 
 
 
@@ -187,7 +192,7 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    if (disableInput) return;
+    if (disableInput || isTyping) return;
     if (typeof messageLimit === 'number' && typeof messagesSent === 'number' && messagesSent >= messageLimit) return;
 
     // Add user message
@@ -217,6 +222,14 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
             timestamp: new Date()
           }]);
           setIsTyping(false);
+
+          const nextReplies = repliesReceivedRef.current + 1;
+          repliesReceivedRef.current = nextReplies;
+          if (typeof messageLimit === 'number' && nextReplies >= messageLimit) {
+            verdictTimerRef.current = setTimeout(() => {
+              if (onReadyForVerdict) onReadyForVerdict();
+            }, 2500);
+          }
         }, 1000 + Math.random() * 2000); // 1-3 second delay
       } catch (error) {
         console.error('Error getting AI response:', error);
@@ -227,9 +240,18 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
           sender: 'ai',
           timestamp: new Date()
         }]);
+
+        const nextReplies = repliesReceivedRef.current + 1;
+        repliesReceivedRef.current = nextReplies;
+        if (typeof messageLimit === 'number' && nextReplies >= messageLimit) {
+          verdictTimerRef.current = setTimeout(() => {
+            if (onReadyForVerdict) onReadyForVerdict();
+          }, 2500);
+        }
       }
     } else {
       // Send to human chat (privately to host)
+      setIsTyping(true);
       network_manager.send_private_message_to_host(input);
     }
   };
@@ -349,16 +371,20 @@ export default function ChatInterface({ mode, onComplete, timeLimit, onTimeUp, m
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              disableInput || (remainingMessages !== null && remainingMessages <= 0)
-                ? "Interrogation limit reached. Submit your verdict above."
-                : "Type interrogation query..."
+              timeLeft <= 0
+                ? "Time expired."
+                : isTyping
+                  ? "Target is transmitting response..."
+                  : disableInput || (remainingMessages !== null && remainingMessages <= 0)
+                    ? "Interrogation limit reached. Awaiting verdict..."
+                    : "Type interrogation query..."
             }
             className="flex-1 bg-surface-lowest border border-amber-500/25 rounded-xl px-4 py-2.5 text-white placeholder-amber-200/40 font-sans text-sm focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400/50 disabled:opacity-40 disabled:cursor-not-allowed shadow-inner"
-            disabled={timeLeft <= 0 || disableInput || (remainingMessages !== null && remainingMessages <= 0)}
+            disabled={timeLeft <= 0 || disableInput || isTyping || (remainingMessages !== null && remainingMessages <= 0)}
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || timeLeft <= 0 || disableInput || (remainingMessages !== null && remainingMessages <= 0)}
+            disabled={!input.trim() || timeLeft <= 0 || disableInput || isTyping || (remainingMessages !== null && remainingMessages <= 0)}
             className="btn-marquee-gold px-5 py-2.5 rounded-xl shadow-tactile active:shadow-tactile-pressed active:translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center text-black font-bold"
           >
             <Send size={18} />
