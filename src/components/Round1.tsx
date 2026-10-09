@@ -211,18 +211,6 @@ export default function Round1({ currentChips, onComplete, onBackToBonus, onChip
               </button>
             )}
           </div>
-
-          {/* Development skip button for testing transitions */}
-          <div className="mt-2 shrink-0">
-            <button
-              onClick={() => {
-                handleFinishRound();
-              }}
-              className="text-[11px] font-mono text-slate-500 hover:text-amber-400/70 underline underline-offset-4 transition-colors cursor-pointer"
-            >
-              Skip Round (Dev Test)
-            </button>
-          </div>
         </div>
       </div>
     );
